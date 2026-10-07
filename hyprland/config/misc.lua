@@ -16,6 +16,10 @@ hl.config({
         vrr = 3,
         -- If a lock screen crashes, a new one can take over (and unlock) instead of leaving the session stuck
         allow_session_lock_restore = true,
+        -- Any key or mouse movement switches screens back on, also behind the lock screen (it holds the input,
+        -- so Noctalia's idle resume never sees it and the screens stayed black)
+        key_press_enables_dpms = true,
+        mouse_move_enables_dpms = true,
     },
     render = {
         direct_scanout = 2,
