@@ -1,7 +1,7 @@
 --!nonstrict
 -- Every Claude Code account is a config dir (~/.claude, or whatever CLAUDE_CONFIG_DIR points at).
 -- In each, Claude Code writes sessions/<pid>.json with status busy|idle|waiting (+ waitingFor).
--- Files of crashed sessions linger, so keep only those whose pid is still alive.
+-- Files of crashed sessions linger, so keep only those whose process is still that claude (see isLive).
 -- Per-session details (title, current tool, cost, ...) come from the transcript via details.sh,
 -- re-read only when the transcript's mtime changes. Recently closed sessions come from recent.sh.
 local PLUGIN = noctalia.pluginDir()
@@ -311,13 +311,33 @@ local function track(sessions)
   return gone
 end
 
+-- Is the session file's process still that claude? Pids are reused (after a reboot a stale file's pid can belong
+-- to k3s-agent or cadvisor), so compare the start time Claude Code saved (procStart, field 22 of
+-- /proc/<pid>/stat) and fall back to the process name for files without it.
+local function isLive(s)
+  local stat = noctalia.readFile("/proc/" .. tostring(s.pid) .. "/stat")
+  if not stat then return false end
+  if s.procStart then
+    -- fields after the ")" that closes the command name start at field 3 (state); field 22 is the 20th
+    local rest = string.match(stat, "^.*%)%s+(.*)$") or ""
+    local i = 0
+    for field in string.gmatch(rest, "%S+") do
+      i += 1
+      if i == 20 then return field == tostring(s.procStart) end
+    end
+    return false
+  end
+  local comm = noctalia.readFile("/proc/" .. tostring(s.pid) .. "/comm") or ""
+  return noctalia.string.trim(comm) == "claude"
+end
+
 local function readSessions(a, into)
   local dir = a.dir .. "/sessions"
   for _, name in ipairs(noctalia.listDir(dir) or {}) do
     local path = string.find(name, "/") and name or dir .. "/" .. name
     if string.sub(path, -5) == ".json" then
       local s = noctalia.json.decode(noctalia.readFile(path) or "")
-      if type(s) == "table" and s.pid and noctalia.fileExists("/proc/" .. tostring(s.pid)) then
+      if type(s) == "table" and s.pid and isLive(s) then
         into[#into + 1] = {
           pid = s.pid,
           account = a.dir,
