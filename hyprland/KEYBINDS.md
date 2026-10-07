@@ -32,7 +32,7 @@ Keys marked "jumps" go to the app if it is already open and start it if not.
 | `Super+O` | Obsidian (jumps; starts it if closed) |
 | `Super+C` | Chrome, signed in, with tabs (jumps) |
 | `Super+Shift+C` | Chrome incognito window (nothing saved) |
-| `Super+D` | Discord in Vesktop (jumps) |
+| `Super+D` | Discord in Vesktop (jumps; opens on an empty workspace of the right screen) |
 | `Super+Shift+T` | Teams (jumps) |
 | `Super+Shift+Z` | Zoom (jumps) |
 | `Super+V` | VS Code (jumps) |

@@ -109,7 +109,18 @@ local function focusOrLaunch(class, cmd)
         end
     end
 end
-hl.bind(mainMod .. " + D", focusOrLaunch("vesktop", "vesktop"))
+-- Vesktop: jump to it when open, otherwise start it on the next empty workspace of the right screen
+-- (switch first, as for YouTube Music below: a new window lands on the workspace active when its process started)
+hl.bind(mainMod .. " + D", function()
+    local w = hl.get_windows({ class = "vesktop" })[1]
+    if w then
+        hl.dispatch(hl.dsp.focus({ window = "address:" .. w.address }))
+    else
+        hl.dispatch(hl.dsp.focus({ monitor = SIDE_SCREEN }))
+        hl.dispatch(hl.dsp.focus({ workspace = "emptym" }))
+        hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "vesktop"))
+    end
+end)
 hl.bind(mainMod .. " + SHIFT + T", focusOrLaunch("chrome-teams.microsoft.com__-Default", "google-chrome-stable --app=https://teams.microsoft.com/"))
 hl.bind(mainMod .. " + SHIFT + Z", focusOrLaunch("chrome-app.zoom.us__wc_home-Default", "google-chrome-stable --app=https://app.zoom.us/wc/home"))
 -- Windows desktop (WinApps, see h1n054ur-setup): focus it, or open it on the next empty workspace
