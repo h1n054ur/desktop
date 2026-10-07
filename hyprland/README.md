@@ -38,7 +38,7 @@ git clone https://github.com/h1n054ur/hyprland-h1n054ur ~/.config/hypr
 cp ~/.config/hypr/host/example.lua ~/.config/hypr/host/"$(cat /etc/hostname)".lua
 ```
 
-Then edit your host file: put your screens' descriptions from `hyprctl monitors` in `MONITOR1` (right) and `MONITOR2` (left, the main one), and their positions. `Hyprland --verify-config` checks the result. The apps the binds start come from [h1n054ur-setup](https://github.com/h1n054ur/h1n054ur-setup); the lock screen and session menu from [quickshell-h1n054ur](https://github.com/h1n054ur/quickshell-h1n054ur).
+Then edit your host file: put your screens' descriptions from `hyprctl monitors` in `MAIN_SCREEN` (left, the main one) and `SIDE_SCREEN` (right), and their positions. `Hyprland --verify-config` checks the result. The apps the binds start come from [h1n054ur-setup](https://github.com/h1n054ur/h1n054ur-setup); the lock screen and session menu from [quickshell-h1n054ur](https://github.com/h1n054ur/quickshell-h1n054ur).
 
 ## What's here
 

@@ -102,8 +102,14 @@ if want screens || want hyprland || want login; then
       SINGLE=1; IFS=$'\t' read -r _ MAIN_DESC MAIN_W _ _ <<< "${MONS[0]}"
       box "screens" "${CYN}one screen${R} ${FG}$MAIN_DESC${R}" "${DIM}all ten workspaces share it${R}"
     else
-      opts=(); for m in "${MONS[@]}"; do IFS=$'\t' read -r n d w h r <<< "$m"; opts+=("$n  ${w}x${h}@${r}  $d"); done
-      if [ "$YES" = 1 ] || [ ! -t 0 ]; then idx=0; else choose "which screen is your main one? it goes on the left" idx "${opts[@]}"; fi
+      # label each screen by where it sits now (MONS is sorted left to right), since port names say nothing
+      opts=(); i=0; last=$(( ${#MONS[@]} - 1 ))
+      for m in "${MONS[@]}"; do
+        IFS=$'\t' read -r n d w h r <<< "$m"
+        case $i in 0) at="left  " ;; "$last") at="right " ;; *) at="middle" ;; esac
+        opts+=("$at  $n  ${w}x${h}@${r}  $d"); i=$((i + 1))
+      done
+      if [ "$YES" = 1 ] || [ ! -t 0 ]; then idx=0; else choose "which screen is your main one? it becomes the left one, with workspaces 1-5" idx "${opts[@]}"; fi
       IFS=$'\t' read -r _ MAIN_DESC MAIN_W _ _ <<< "${MONS[$idx]}"
       side=$(( idx == 0 ? 1 : 0 )); IFS=$'\t' read -r _ SIDE_DESC _ _ _ <<< "${MONS[$side]}"
       box "screens" "${GRN}main (left)${R}  ${FG}$MAIN_DESC${R}" "${CYN}right${R}        ${FG}$SIDE_DESC${R}" \
@@ -122,9 +128,9 @@ write_host_file() {
   [ -n "$MAIN_DESC" ] || return 0
   local body
   if [ "$SINGLE" = 1 ]; then
-    body=$(printf -- '-- written by h1n054ur install.sh (%s): one screen\nMONITOR1 = "desc:%s"\nMONITOR2 = MONITOR1\nMONITOR3 = ""\nPRIMARY_MONITOR = MONITOR1\nKITTY_WORKSPACE = "2"\n' "$STAMP" "$MAIN_DESC")
+    body=$(printf -- '-- written by h1n054ur install.sh (%s): one screen, so both roles use it\nMAIN_SCREEN = "desc:%s"\nSIDE_SCREEN = MAIN_SCREEN\nKITTY_WORKSPACE = "2"\n' "$STAMP" "$MAIN_DESC")
   else
-    body=$(printf -- '-- written by h1n054ur install.sh (%s): MONITOR2 is the main screen on the left, MONITOR1 the right one\nMONITOR1 = "desc:%s"\nMONITOR2 = "desc:%s"\nMONITOR3 = ""\nPRIMARY_MONITOR = MONITOR1\n\nhl.monitor({ output = MONITOR2, mode = "preferred", position = "0x0", scale = "1" })\nhl.monitor({ output = MONITOR1, mode = "preferred", position = "%sx0", scale = "1" })\n' "$STAMP" "$SIDE_DESC" "$MAIN_DESC" "$MAIN_W")
+    body=$(printf -- '-- written by h1n054ur install.sh (%s)\n-- MAIN_SCREEN: the left screen, workspaces 1-5 and the full bar. SIDE_SCREEN: the right one, workspaces 6-10\nMAIN_SCREEN = "desc:%s"\nSIDE_SCREEN = "desc:%s"\n\nhl.monitor({ output = MAIN_SCREEN, mode = "preferred", position = "0x0", scale = "1" })\nhl.monitor({ output = SIDE_SCREEN, mode = "preferred", position = "%sx0", scale = "1" })\n' "$STAMP" "$MAIN_DESC" "$SIDE_DESC" "$MAIN_W")
   fi
   [ -e "$f" ] && backup "$f"
   act "write $f" bash -c 'mkdir -p "$(dirname "$1")" && printf "%s\n" "$2" > "$1"' _ "$f" "$body"
