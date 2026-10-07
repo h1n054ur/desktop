@@ -1,0 +1,4 @@
+# YouTube needs a JavaScript runtime to unlock formats; deno is the default, bun is installed here
+--js-runtimes bun
+# YouTube Premium login from Chrome (install.sh enables this when ~/.config/google-chrome exists)
+#--cookies-from-browser chrome

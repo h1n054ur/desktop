@@ -1,0 +1,29 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": { "type": "none" },
+  "display": {
+    "separator": " ",
+    "key": { "width": 14 },
+    "color": { "keys": "bright_cyan", "title": "bright_green" },
+    "bar": { "width": 18, "char": { "elapsed": "▰", "total": "▱" }, "border": { "left": "", "right": "" } },
+    "percent": { "type": ["bar", "num"], "color": { "green": "bright_green", "yellow": "yellow", "red": "bright_red" } },
+    "size": { "ndigits": 1 }
+  },
+  "modules": [
+    { "type": "custom", "format": "\u001b[1;32m┌──[ \u001b[1;37msys.status\u001b[1;32m ]────────────────────────────────────────┐" },
+    { "type": "os",       "key": "│ \uf31b  os",       "format": "{pretty-name} {arch}" },
+    { "type": "kernel",   "key": "│ \uf17c  kernel",   "format": "{release}" },
+    { "type": "uptime",   "key": "│ \uf017  uptime" },
+    { "type": "packages", "key": "│ \uf487  pkgs" },
+    { "type": "shell",    "key": "│ \uf120  shell",    "format": "{pretty-name} {version}" },
+    { "type": "terminal", "key": "│ \ue795  term" },
+    { "type": "cpu",      "key": "│ \uf4bc  cpu",      "format": "{name} ({cores-logical}T)", "showPeCoreCount": false },
+    { "type": "memory",   "key": "│ \uf2db  mem" },
+    { "type": "disk",     "key": "│ 󰋊  disk",     "folders": "C:\\" },
+    { "type": "loadavg",  "key": "│ \uf0e4  load" },
+    { "type": "localip",  "key": "│ 󰈀  lan",      "namePrefix": "Ethernet", "defaultRouteOnly": false, "showIpv6": false, "compact": true },
+    { "type": "localip",  "key": "│ 󰖂  tailnet",  "namePrefix": "Tailscale", "defaultRouteOnly": false, "showIpv6": false, "compact": true },
+    { "type": "datetime", "key": "│ \uf073  clock",    "format": "{year}-{month-pretty}-{day-pretty} {hour-pretty}:{minute-pretty} {timezone-name}" },
+    { "type": "custom",   "format": "\u001b[1;32m└───────────────────────────────────────────────────────────┘" }
+  ]
+}

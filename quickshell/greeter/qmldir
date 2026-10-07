@@ -1,0 +1,4 @@
+singleton Theme 1.0 Theme.qml
+LoginScreen 1.0 LoginScreen.qml
+ClockScreen 1.0 ClockScreen.qml
+GradientText 1.0 GradientText.qml

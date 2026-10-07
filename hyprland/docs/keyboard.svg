@@ -1,0 +1,147 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1240 712" font-family="CaskaydiaCove Nerd Font Mono, JetBrains Mono, monospace">
+<defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#39ff14"/><stop offset="1" stop-color="#00e5ff"/></linearGradient></defs>
+<rect width="1240" height="712" rx="18" fill="#06090a"/>
+<text x="28" y="46" fill="#e6f1ee" font-size="26" font-weight="700">Super + key</text>
+<text x="28" y="74" fill="#7d8f8a" font-size="15">green: workspaces on the left (main) screen · cyan: on the right screen · Shift + a number sends the window there</text>
+<rect x="28" y="100" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="37" y="124" fill="#e6f1ee" font-size="16" font-weight="700">Esc</text>
+<text x="37" y="159" fill="#9fb2ac" font-size="12">kill</text>
+<rect x="28" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="37" y="211" fill="#e6f1ee" font-size="16" font-weight="700">`</text>
+<text x="37" y="246" fill="#9fb2ac" font-size="12">launcher</text>
+<rect x="108" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#39ff14" stroke-width="2"/>
+<text x="117" y="211" fill="#e6f1ee" font-size="16" font-weight="700">1</text>
+<text x="117" y="246" fill="#39ff14" font-size="12">ws 1</text>
+<rect x="188" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#39ff14" stroke-width="2"/>
+<text x="197" y="211" fill="#e6f1ee" font-size="16" font-weight="700">2</text>
+<text x="197" y="246" fill="#39ff14" font-size="12">ws 2</text>
+<rect x="268" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#39ff14" stroke-width="2"/>
+<text x="277" y="211" fill="#e6f1ee" font-size="16" font-weight="700">3</text>
+<text x="277" y="246" fill="#39ff14" font-size="12">ws 3</text>
+<rect x="348" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#39ff14" stroke-width="2"/>
+<text x="357" y="211" fill="#e6f1ee" font-size="16" font-weight="700">4</text>
+<text x="357" y="246" fill="#39ff14" font-size="12">ws 4</text>
+<rect x="428" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#39ff14" stroke-width="2"/>
+<text x="437" y="211" fill="#e6f1ee" font-size="16" font-weight="700">5</text>
+<text x="437" y="246" fill="#39ff14" font-size="12">ws 5</text>
+<rect x="508" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#00e5ff" stroke-width="2"/>
+<text x="517" y="211" fill="#e6f1ee" font-size="16" font-weight="700">6</text>
+<text x="517" y="246" fill="#4de8ff" font-size="12">ws 6</text>
+<rect x="588" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#00e5ff" stroke-width="2"/>
+<text x="597" y="211" fill="#e6f1ee" font-size="16" font-weight="700">7</text>
+<text x="597" y="246" fill="#4de8ff" font-size="12">ws 7</text>
+<rect x="668" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#00e5ff" stroke-width="2"/>
+<text x="677" y="211" fill="#e6f1ee" font-size="16" font-weight="700">8</text>
+<text x="677" y="246" fill="#4de8ff" font-size="12">ws 8</text>
+<rect x="748" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#00e5ff" stroke-width="2"/>
+<text x="757" y="211" fill="#e6f1ee" font-size="16" font-weight="700">9</text>
+<text x="757" y="246" fill="#4de8ff" font-size="12">ws 9</text>
+<rect x="828" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#00e5ff" stroke-width="2"/>
+<text x="837" y="211" fill="#e6f1ee" font-size="16" font-weight="700">0</text>
+<text x="837" y="246" fill="#4de8ff" font-size="12">ws 10</text>
+<rect x="908" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="917" y="211" fill="#e6f1ee" font-size="16" font-weight="700">-</text>
+<text x="917" y="246" fill="#9fb2ac" font-size="12">zoom −</text>
+<rect x="988" y="187" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="997" y="211" fill="#e6f1ee" font-size="16" font-weight="700">=</text>
+<text x="997" y="246" fill="#9fb2ac" font-size="12">calc</text>
+<rect x="28" y="274" width="113" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="37" y="298" fill="#e6f1ee" font-size="16" font-weight="700">Tab</text>
+<text x="37" y="333" fill="#9fb2ac" font-size="12">windows</text>
+<rect x="148" y="274" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="157" y="298" fill="#e6f1ee" font-size="16" font-weight="700">Q</text>
+<text x="157" y="333" fill="#9fb2ac" font-size="12">close</text>
+<rect x="228" y="274" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="237" y="298" fill="#e6f1ee" font-size="16" font-weight="700">W</text>
+<text x="237" y="333" fill="#9fb2ac" font-size="12">Windows</text>
+<rect x="308" y="274" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="317" y="298" fill="#e6f1ee" font-size="16" font-weight="700">E</text>
+<text x="317" y="333" fill="#9fb2ac" font-size="12">files</text>
+<rect x="388" y="274" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="397" y="298" fill="#e6f1ee" font-size="16" font-weight="700">R</text>
+<text x="397" y="333" fill="#9fb2ac" font-size="12">resize</text>
+<rect x="468" y="274" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="477" y="298" fill="#e6f1ee" font-size="16" font-weight="700">T</text>
+<text x="477" y="333" fill="#9fb2ac" font-size="12">kitty</text>
+<rect x="548" y="274" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="557" y="298" fill="#e6f1ee" font-size="16" font-weight="700">Y</text>
+<text x="557" y="333" fill="#9fb2ac" font-size="12">yazi</text>
+<rect x="628" y="274" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="637" y="298" fill="#3d4f4a" font-size="16" font-weight="700">U</text>
+<rect x="708" y="274" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="717" y="298" fill="#3d4f4a" font-size="16" font-weight="700">I</text>
+<rect x="788" y="274" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="797" y="298" fill="#e6f1ee" font-size="16" font-weight="700">O</text>
+<text x="797" y="333" fill="#9fb2ac" font-size="12">Obsidian</text>
+<rect x="868" y="274" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="877" y="298" fill="#e6f1ee" font-size="16" font-weight="700">P</text>
+<text x="877" y="333" fill="#9fb2ac" font-size="12">Bitwarden</text>
+<rect x="948" y="274" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="957" y="298" fill="#3d4f4a" font-size="16" font-weight="700">[</text>
+<rect x="1028" y="274" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="1037" y="298" fill="#3d4f4a" font-size="16" font-weight="700">]</text>
+<rect x="172" y="361" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="181" y="385" fill="#e6f1ee" font-size="16" font-weight="700">A</text>
+<text x="181" y="420" fill="#9fb2ac" font-size="12">notifs</text>
+<rect x="252" y="361" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="261" y="385" fill="#e6f1ee" font-size="16" font-weight="700">S</text>
+<text x="261" y="420" fill="#9fb2ac" font-size="12">scratch</text>
+<rect x="332" y="361" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="341" y="385" fill="#e6f1ee" font-size="16" font-weight="700">D</text>
+<text x="341" y="420" fill="#9fb2ac" font-size="12">Discord</text>
+<rect x="412" y="361" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="421" y="385" fill="#e6f1ee" font-size="16" font-weight="700">F</text>
+<text x="421" y="420" fill="#9fb2ac" font-size="12">Ferdium</text>
+<rect x="492" y="361" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="501" y="385" fill="#3d4f4a" font-size="16" font-weight="700">G</text>
+<rect x="572" y="361" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="581" y="385" fill="#3d4f4a" font-size="16" font-weight="700">H</text>
+<rect x="652" y="361" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="661" y="385" fill="#e6f1ee" font-size="16" font-weight="700">J</text>
+<text x="661" y="420" fill="#9fb2ac" font-size="12">split</text>
+<rect x="732" y="361" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="741" y="385" fill="#3d4f4a" font-size="16" font-weight="700">K</text>
+<rect x="812" y="361" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="821" y="385" fill="#e6f1ee" font-size="16" font-weight="700">L</text>
+<text x="821" y="420" fill="#9fb2ac" font-size="12">lock</text>
+<rect x="892" y="361" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="901" y="385" fill="#3d4f4a" font-size="16" font-weight="700">;</text>
+<rect x="972" y="361" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="981" y="385" fill="#3d4f4a" font-size="16" font-weight="700">'</text>
+<rect x="1052" y="361" width="153" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="1061" y="385" fill="#e6f1ee" font-size="16" font-weight="700">Enter</text>
+<text x="1061" y="420" fill="#9fb2ac" font-size="12">maximise</text>
+<rect x="212" y="448" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="221" y="472" fill="#e6f1ee" font-size="16" font-weight="700">Z</text>
+<text x="221" y="507" fill="#9fb2ac" font-size="12">settings</text>
+<rect x="292" y="448" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="301" y="472" fill="#e6f1ee" font-size="16" font-weight="700">X</text>
+<text x="301" y="507" fill="#9fb2ac" font-size="12">control</text>
+<rect x="372" y="448" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="381" y="472" fill="#e6f1ee" font-size="16" font-weight="700">C</text>
+<text x="381" y="507" fill="#9fb2ac" font-size="12">Chrome</text>
+<rect x="452" y="448" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="461" y="472" fill="#e6f1ee" font-size="16" font-weight="700">V</text>
+<text x="461" y="507" fill="#9fb2ac" font-size="12">VS Code</text>
+<rect x="532" y="448" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="541" y="472" fill="#e6f1ee" font-size="16" font-weight="700">B</text>
+<text x="541" y="507" fill="#9fb2ac" font-size="12">Calibre</text>
+<rect x="612" y="448" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="621" y="472" fill="#3d4f4a" font-size="16" font-weight="700">N</text>
+<rect x="692" y="448" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="701" y="472" fill="#3d4f4a" font-size="16" font-weight="700">M</text>
+<rect x="772" y="448" width="73" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="781" y="472" fill="#3d4f4a" font-size="16" font-weight="700">,</text>
+<rect x="852" y="448" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="861" y="472" fill="#e6f1ee" font-size="16" font-weight="700">.</text>
+<text x="861" y="507" fill="#9fb2ac" font-size="12">emoji</text>
+<rect x="932" y="448" width="73" height="73" rx="9" fill="#101816" stroke="#3d4f4a" stroke-width="1.2"/>
+<text x="941" y="472" fill="#e6f1ee" font-size="16" font-weight="700">/</text>
+<text x="941" y="507" fill="#9fb2ac" font-size="12">keybinds</text>
+<rect x="308" y="535" width="121" height="73" rx="9" fill="#101816" stroke="url(#g)" stroke-width="2"/>
+<text x="317" y="559" fill="#e6f1ee" font-size="16" font-weight="700">Super</text>
+<rect x="436" y="535" width="473" height="73" rx="9" fill="#0b1110" stroke="#1d2a26" stroke-width="1.2"/>
+<text x="445" y="559" fill="#3d4f4a" font-size="16" font-weight="700">Space</text>
+<text x="28" y="662" fill="#7d8f8a" font-size="14">also: Super+Shift+C incognito · Super+Shift+V clipboard · Super+Alt+C session menu · Super+Arrows focus</text>
+<text x="28" y="686" fill="#7d8f8a" font-size="14">the full list, including Shift, Ctrl and Alt combos, is in KEYBINDS.md</text>
+</svg>

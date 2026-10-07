@@ -1,0 +1,9 @@
+#!/bin/sh
+# Queue YouTube / YouTube Music links in rmpc. rmpc 0.11 only accepts youtube.com and youtu.be,
+# so music.youtube.com links are rewritten to www.youtube.com (same video and playlist ids).
+# `ytm liked` queues your Liked Music (needs the YouTube login, see README).
+[ $# -ge 1 ] || { echo "usage: ytm <url>... | ytm liked" >&2; exit 1; }
+for u in "$@"; do
+  [ "$u" = liked ] && u="https://www.youtube.com/playlist?list=LM"
+  rmpc addyt "$(printf '%s' "$u" | sed 's#://music\.youtube\.com/#://www.youtube.com/#')" || exit
+done

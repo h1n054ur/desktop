@@ -1,0 +1,9 @@
+# >>> h1n054ur-terminal >>>
+export PATH="$HOME/.local/bin:$PATH"
+alias matrix='cmatrix -ab -u 4'
+if [[ $- == *i* && -t 1 && -z "${WELCOME_SHOWN:-}" && -z "${WELCOME_OFF:-}" && $(tput cols) -ge 70 ]]; then
+  export WELCOME_SHOWN=1
+  welcome
+fi
+eval "$(starship init bash)"
+# <<< h1n054ur-terminal <<<

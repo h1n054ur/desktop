@@ -1,0 +1,64 @@
+# The CI image comes from the repository variable CI_IMAGE (this instance's registry, desktop-ci:1);
+# SPLIT_TOKEN is a secret that can push to the split repos.
+# Checks on every push and pull request; on main (and on <folder>/vX.Y.Z tags) it then splits every folder in
+# splits.toml into its own repo. Runs in our CI image (tools/ci-image): splitsh-lite, gitleaks, python3,
+# shellcheck are baked in, so no job installs anything. Cloning uses plain git, because the image has no node
+# for actions/checkout.
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ["*/v*"]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: false   # a split must never be cut off half way
+
+jobs:
+  checks:
+    runs-on: docker
+    container:
+      image: ${{ vars.CI_IMAGE }}
+      credentials:   # this instance needs a login even for public packages
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.SPLIT_TOKEN }}
+    timeout-minutes: 10
+    steps:
+      - name: Clone (full history, for the secret scan)
+        run: |
+          git clone --quiet "https://oauth2:${{ secrets.GITHUB_TOKEN }}@${GITHUB_SERVER_URL#https://}/${{ github.repository }}.git" repo
+          git -C repo checkout --quiet "${{ github.sha }}"
+      - name: Secret scan (whole history)
+        working-directory: repo
+        run: gitleaks git --redact --no-banner .
+      - name: Keybind list matches the config
+        working-directory: repo/hyprland
+        run: python3 tools/check_keybinds.py
+      - name: ShellCheck
+        working-directory: repo
+        run: shellcheck -x install.sh setup/install.sh setup/lib/ui.sh tools/split.sh quickshell/greeter/*.sh quickshell/shell/tests/nested.sh kitty/install.sh
+
+  split:
+    needs: checks
+    if: github.event_name == 'push'
+    runs-on: docker
+    container:
+      image: ${{ vars.CI_IMAGE }}
+      credentials:   # this instance needs a login even for public packages
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.SPLIT_TOKEN }}
+    timeout-minutes: 15
+    steps:
+      - name: Clone
+        run: |
+          git clone --quiet "https://oauth2:${{ secrets.GITHUB_TOKEN }}@${GITHUB_SERVER_URL#https://}/${{ github.repository }}.git" repo
+          git -C repo checkout --quiet "${{ github.sha }}"
+      - name: Split and push
+        working-directory: repo
+        env:
+          SPLIT_TOKEN: ${{ secrets.SPLIT_TOKEN }}
+        run: |
+          export SPLIT_URL="https://oauth2:${SPLIT_TOKEN}@${GITHUB_SERVER_URL#https://}/${GITHUB_REPOSITORY_OWNER}"
+          if [ "${{ github.ref_type }}" = tag ]; then tools/split.sh --tag "${{ github.ref_name }}"; else tools/split.sh; fi

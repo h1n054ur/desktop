@@ -1,0 +1,29 @@
+id          = "hani/glow-stats"
+name        = "Glow Stats"
+version     = "0.1.0"
+plugin_api  = 32
+author      = "hani"
+license     = "MIT"
+icon        = "cpu"
+description = "System stats (CPU, CPU temperature, GPU temperature, RAM) with glow icons that heat up from cool to red as load or temperature rises."
+tags        = ["bar", "system", "monitor"]
+
+[[widget]]
+id    = "stat"
+entry = "widget.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center system"
+
+  [[widget.setting]]
+  key       = "stat"
+  type      = "select"
+  label_key = "settings.stat.label"
+  default   = "cpu"
+  options   = [ { value = "cpu", label_key = "settings.stat.cpu" }, { value = "cpu_temp", label_key = "settings.stat.cpu_temp" }, { value = "gpu_temp", label_key = "settings.stat.gpu_temp" }, { value = "ram", label_key = "settings.stat.ram" } ]
+
+  [[widget.setting]]
+  key       = "show_value"
+  type      = "bool"
+  label_key = "settings.show_value.label"
+  default   = true

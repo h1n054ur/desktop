@@ -1,0 +1,36 @@
+# WinApps Windows VM (dockur/windows). Based on winapps-org/winapps compose.yaml.
+# Office 365 runs here and is streamed to Linux as RemoteApp windows.
+name: "winapps"
+volumes:
+  data:
+services:
+  windows:
+    image: ghcr.io/dockur/windows:latest
+    container_name: WinApps
+    environment:
+      VERSION: "10"           # only used for a fresh install; this one came from a Ghost Spectre Win10 Pro ISO
+      RAM_SIZE: "${WINAPPS_RAM:-8G}"      # per machine: uwsm/env.d/10-host.sh
+      CPU_CORES: "${WINAPPS_CPUS:-4}"
+      DISK_SIZE: "64G"
+      SAMBA: "N"              # no \\host.lan\Data share; files go via WinApps' RDP drive only
+      USERNAME: "CHANGE_ME"
+      PASSWORD: "CHANGE_ME"           # long random password; same value as RDP_PASS in winapps.conf
+    ports:
+      - "127.0.0.1:8006:8006"        # VNC web console
+      - "127.0.0.1:3389:3389/tcp"    # RDP, localhost only
+      - "127.0.0.1:3389:3389/udp"
+      # Desktop only: RDP on its Tailscale address so the laptop can use this Windows (winapps-target desktop).
+      # Elsewhere it falls back to an unused localhost port.
+      - "${WINAPPS_TAILNET_RDP:-127.0.0.1:13389}:3389/tcp"
+      - "${WINAPPS_TAILNET_RDP:-127.0.0.1:13389}:3389/udp"
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+    stop_grace_period: 120s
+    restart: on-failure
+    volumes:
+      - data:/storage
+      - ./oem:/oem
+    devices:
+      - /dev/kvm
+      - /dev/net/tun

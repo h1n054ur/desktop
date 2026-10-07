@@ -1,0 +1,195 @@
+# h1n054ur theme for Noctalia: dark #06090a pills with #1d2a26 borders, #39ff14 / #00e5ff accents,
+# CaskaydiaCove Mono everywhere, floating panels. Include it from config.toml:
+#
+#   [include]
+#   files = [ "~/desktop/noctalia-theme/noctalia/h1n054ur.toml" ]
+#
+# Anything set in config.toml itself wins over this file (per-screen layouts, location, idle, ...).
+# Needs the glow plugins (github.com/h1n054ur/noctalia-glow-plugins) and, for the "claude" widget,
+# github.com/h1n054ur/noctalia-claude-sessions.
+
+[theme]
+mode = "dark"
+source = "custom"
+custom_palette = "h1n054ur"
+
+    [theme.templates]
+    builtin_ids = [ "btop", "gtk3", "gtk4", "kcolorscheme", "kitty", "qt", "alacritty" ]
+
+# Locking belongs to the h1n054ur shell (quickshell -c h1n054ur) and hypridle; Noctalia's own lock stays off so
+# two lockers never fight over the session (that crashed Noctalia on 2026-10-08)
+[lockscreen]
+enabled = false
+lock_before_suspend = false
+
+[shell]
+# One font for the whole shell: panels, launcher, control centre
+font_family = "CaskaydiaCove Nerd Font Mono"
+
+    # Launcher: smaller icons and tighter rows
+    [shell.launcher]
+    compact = true
+
+    # Panels float as their own dark cards, since the bar itself is transparent
+    [shell.panel]
+    open_near_click_control_center = true
+    control_center_placement = "floating"
+    launcher_placement = "floating"
+    clipboard_placement = "floating"
+    wallpaper_placement = "floating"
+    polkit_placement = "floating"
+    session_placement = "floating"
+    session_position = "center"
+    borders = true
+    shadow = true
+    floating_offset = 8
+    transparency_mode = "solid"
+
+[bar.default]
+# Transparent bar 6 px from the top; every widget or group is its own dark pill
+background_opacity = 0.0
+compositor_blur = false
+shadow = false
+concave_edge_corners = false
+margin_edge = 6
+margin_ends = 8
+radius = 0
+thickness = 34
+scale = 1.10
+color = "on_surface"
+font_family = "CaskaydiaCove Nerd Font Mono"
+widget_spacing = 8
+capsule = true
+capsule_fill = "#06090a"
+capsule_opacity = 0.92
+capsule_border = "#1d2a26"
+capsule_border_width = 1.0
+capsule_thickness = 0.9
+capsule_padding = 10
+# Main screen: workspaces, search, time (date on hover), weather | window title, media (only while playing) | stats, volume + network + power
+start = [ "workspaces", "launcher", "group:time", "glow_weather" ]
+center = [ "gw_title_short", "group:media" ]
+end = [ "group:stats", "group:system" ]
+
+    # Time only; hovering slides out the day and date
+    [[bar.default.capsule_group]]
+    id = "time"
+    members = [ "clock", "clock_date" ]
+    fill = "#06090a"
+    border = "#1d2a26"
+    opacity = 0.92
+    padding = 10.0
+    accordion = true
+    accordion_direction = "end"
+
+    # CPU, CPU temp, GPU temp, RAM, always open
+    [[bar.default.capsule_group]]
+    id = "stats"
+    members = [ "gs_cpu", "gs_cpu_temp", "gs_gpu_temp", "gs_ram" ]
+    fill = "#06090a"
+    border = "#1d2a26"
+    opacity = 0.92
+    padding = 10.0
+
+    # Volume, network, power
+    [[bar.default.capsule_group]]
+    id = "system"
+    members = [ "gp_volume", "gp_network", "session" ]
+    fill = "#06090a"
+    border = "#1d2a26"
+    opacity = 0.92
+    padding = 10.0
+
+    # Album art, title and the visualiser
+    [[bar.default.capsule_group]]
+    id = "media"
+    members = [ "media", "audio_vis" ]
+    fill = "#06090a"
+    border = "#1d2a26"
+    opacity = 0.92
+    padding = 10.0
+
+[widget.workspaces]
+style = "regular"
+show_labels = true
+label_source = "id"
+active_pill_size = 1.6
+inactive_pill_size = 1.0
+pill_scale = 0.80
+focused_color = "primary"
+occupied_color = "surface_variant"
+empty_color = "#06090a"
+
+[widget.launcher]
+custom_image = "~/.local/share/glow-icons/panel/search-active.png"
+color = "primary"
+
+[widget.clock]
+color = "primary"
+format = "{:%H:%M}"
+
+[widget.clock_date]
+type = "clock"
+color = "on_surface_variant"
+format = "{:%a %d %b}"
+
+[widget.glow_weather]
+type = "hani/glow-weather:bar"
+
+[widget.media]
+hide_when_no_media = true
+title_scroll = "on_hover"
+rotate_album_art = true
+artist_first = true
+art_size = 20
+
+[widget.audio_vis]
+type = "audio_visualizer"
+width = 56
+bands = 16
+color_1 = "primary"
+color_2 = "tertiary"
+
+[widget.gw_title]
+type = "hani/glow-window:title"
+
+# Shorter title so the title and the media pill fit in the middle together
+[widget.gw_title_short]
+type = "hani/glow-window:title"
+max_width = 340
+
+[widget.gs_cpu]
+type = "hani/glow-stats:stat"
+stat = "cpu"
+
+[widget.gs_cpu_temp]
+type = "hani/glow-stats:stat"
+stat = "cpu_temp"
+
+[widget.gs_gpu_temp]
+type = "hani/glow-stats:stat"
+stat = "gpu_temp"
+
+[widget.gs_ram]
+type = "hani/glow-stats:stat"
+stat = "ram"
+
+[widget.gp_volume]
+type = "hani/glow-panel:volume"
+
+[widget.gp_network]
+type = "hani/glow-panel:network"
+
+[widget.session]
+custom_image = "~/.local/share/glow-icons/panel/power.png"
+color = "error"
+
+    # The power icon opens the h1n054ur session menu (quickshell -c h1n054ur)
+    [widget.session.actions]
+    left = "exec quickshell -c h1n054ur ipc call session toggle"
+
+[widget.tray]
+capsule = true
+
+[widget.claude]
+type = "hani/claude-sessions:bar"

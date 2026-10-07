@@ -1,0 +1,12 @@
+{
+  "settings": {
+    "refresh": { "label": "Refresh every (minutes)", "description": "How often to fetch weather and air quality from Open-Meteo." },
+    "latitude": { "label": "Latitude override" },
+    "longitude": { "label": "Longitude override" },
+    "coords": { "description": "Leave both at 0 to use Noctalia's own location." },
+    "temperature": { "label": "Bar temperature", "feels": "Feels like", "actual": "Actual" },
+    "sparkline": { "label": "Bar sparkline (next 12 hours)", "temp": "Temperature", "rain": "Rain chance", "off": "Off" },
+    "show_aqi": { "label": "Show air quality dot" },
+    "show_condition": { "label": "Show condition text (Clear, Rain…)" }
+  }
+}

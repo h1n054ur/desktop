@@ -1,0 +1,37 @@
+#!/bin/bash
+# Open the full Windows desktop (WinApps) on the first empty workspace of the focused monitor,
+# or focus it if it's already open. Files passed in are queued for Windows to open inside that
+# desktop (a watcher in Windows reads \\tsclient\home\.queue). Windows only sees ~/Documents,
+# ~/Downloads and ~/Desktop.
+queue="$HOME/.cache/winapps-queue"
+[ "$1" = "windows" ] && shift
+for f in "$@"; do
+    r=$(realpath -- "$f")
+    case $r in
+        "$HOME"/Documents/*|"$HOME"/Downloads/*|"$HOME"/Desktop/*)
+            win='\\tsclient\home'$(printf '%s' "${r#"$HOME"}" | tr '/' '\\')
+            tmp=$(mktemp "$queue/.XXXXXX")
+            printf '%s' "$win" > "$tmp" && mv "$tmp" "$queue/$(date +%s%N).txt" ;;
+        *)
+            notify-send -i dialog-warning "Can't open in Windows" \
+                "Windows only sees Documents, Downloads and Desktop. Move $(basename -- "$r") into one of them and open it again." ;;
+    esac
+done
+if hyprctl clients -j | jq -e '.[] | select(.class == "Microsoft Windows")' >/dev/null; then
+    hyprctl dispatch 'hl.dsp.focus({ window = "class:^(Microsoft Windows)$" })' >/dev/null
+else
+    hyprctl dispatch 'hl.dsp.focus({ workspace = "emptym" })' >/dev/null
+    # Launch through Hyprland only now: it pins a new window to the workspace that was active
+    # when its process started, so exec'ing here would land it back on the old workspace
+    hyprctl dispatch "hl.dsp.exec_cmd('$HOME/.local/bin/winapps windows')" >/dev/null
+    # FreeRDP's window asks for a fixed size, so Hyprland floats it despite the tile rule, and an
+    # unset sent right at map time is ignored; keep tiling it until it sticks so it fills the workspace
+    for _ in $(seq 1 120); do
+        win=$(hyprctl clients -j | jq -c 'first(.[] | select(.class == "Microsoft Windows" and .mapped)) // empty')
+        if [ -n "$win" ]; then
+            [ "$(jq -r .floating <<<"$win")" = false ] && break
+            hyprctl dispatch "hl.dsp.window.float({ action = 'unset', window = 'address:$(jq -r .address <<<"$win")' })" >/dev/null
+        fi
+        sleep 0.5
+    done
+fi

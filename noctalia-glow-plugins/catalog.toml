@@ -1,0 +1,54 @@
+# Noctalia plugins catalog for this source: one [[plugin]] row per plugin subdirectory.
+# Each plugin's own plugin.toml stays authoritative.
+
+[[plugin]]
+id = "hani/glow-panel"
+name = "Glow Panel"
+version = "0.1.0"
+updated_at = 1791403365
+added_at = 1791403365
+author = "hani"
+license = "MIT"
+icon = "volume"
+description = "Glow-icon volume and network bar widgets: volume level and mute; Ethernet link, or Wi-Fi with a glow icon per signal strength."
+plugin_api = 32
+tags = ["bar", "audio", "network"]
+
+[[plugin]]
+id = "hani/glow-stats"
+name = "Glow Stats"
+version = "0.1.0"
+updated_at = 1791403365
+added_at = 1791403365
+author = "hani"
+license = "MIT"
+icon = "cpu"
+description = "System stats (CPU, CPU temperature, GPU temperature, RAM) with glow icons that heat up from cool to red as load or temperature rises."
+plugin_api = 32
+tags = ["bar", "system", "monitor"]
+
+[[plugin]]
+id = "hani/glow-weather"
+name = "Glow Weather"
+version = "0.1.0"
+updated_at = 1791403365
+added_at = 1791403365
+author = "hani"
+license = "MIT"
+icon = "cloud"
+description = "Glow-icon weather: feels-like temperature, 12-hour sparkline and air quality on the bar; hourly graph, 7-day forecast, AQI, UV and sun times in a panel. Data from Open-Meteo."
+plugin_api = 32
+tags = ["bar", "weather", "panel", "service"]
+
+[[plugin]]
+id = "hani/glow-window"
+name = "Per-Screen Window Title"
+version = "0.1.0"
+updated_at = 1791403365
+added_at = 1791403365
+author = "hani"
+license = "MIT"
+icon = "app-window"
+description = "Each bar shows the window selected on its own screen's visible workspace (Hyprland), and hides when that workspace is empty."
+plugin_api = 32
+tags = ["bar", "hyprland", "window"]

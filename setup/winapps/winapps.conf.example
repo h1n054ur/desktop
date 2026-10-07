@@ -1,0 +1,41 @@
+##################################
+#   WINAPPS CONFIGURATION FILE   #
+##################################
+# Docker VM: ~/.config/winapps/compose.yaml (Windows 10 + Microsoft 365).
+
+RDP_USER="CHANGE_ME"
+# FreeRDP 3.32 ignores RDP_ASKPASS, so the password lives here (file is mode 600).
+RDP_ASKPASS=""
+RDP_PASS="CHANGE_ME"
+RDP_DOMAIN=""
+RDP_IP="127.0.0.1"
+RDP_PORT="3389"
+VM_NAME="RDPWindows"
+WAFLAVOR="docker"
+RDP_SCALE="100"
+REMOVABLE_MEDIA="/run/media"
+
+# Windows sees \\tsclient\home = ~/.winshare, which only links Documents, Downloads
+# and Desktop. Files elsewhere in ~ are not reachable from Windows.
+RDP_FLAGS="/cert:tofu /sound /microphone /drive:home,$HOME/.winshare"
+RDP_FLAGS_NON_WINDOWS=""
+RDP_FLAGS_WINDOWS=""
+
+DEBUG="true"
+AUTOPAUSE="on"
+AUTOPAUSE_TIME="1800"
+FREERDP_COMMAND=""
+PORT_TIMEOUT="5"
+RDP_TIMEOUT="60"
+APP_SCAN_TIMEOUT="60"
+BOOT_TIMEOUT="120"
+HIDEF="on"
+
+# Which Windows this machine uses (shared file; the choice lives in ~/.config/winapps/target, not synced):
+#   local   = the Windows container on this machine (default; works offline)
+#   desktop = the desktop's container over Tailscale (laptop only; no local RAM or disk used)
+# Switch with: winapps-target local | desktop
+if [ "$(cat "$HOME/.config/winapps/target" 2>/dev/null)" = "desktop" ]; then
+    WAFLAVOR="manual"
+    RDP_IP="TAILNET_IP_OF_THE_PC_RUNNING_WINDOWS"
+fi

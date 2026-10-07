@@ -1,0 +1,6 @@
+{
+  "settings": {
+    "stat": { "label": "Stat", "cpu": "CPU usage", "cpu_temp": "CPU temperature", "gpu_temp": "GPU temperature", "ram": "RAM used" },
+    "show_value": { "label": "Show value" }
+  }
+}

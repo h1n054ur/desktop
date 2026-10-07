@@ -1,0 +1,26 @@
+id          = "hani/glow-window"
+name        = "Per-Screen Window Title"
+version     = "0.1.0"
+plugin_api  = 32
+author      = "hani"
+license     = "MIT"
+icon        = "app-window"
+description = "Each bar shows the window selected on its own screen's visible workspace (Hyprland), and hides when that workspace is empty."
+tags        = ["bar", "hyprland", "window"]
+dependencies = ["hyprctl", "python3"]
+
+[[service]]
+id    = "watch"
+entry = "service.luau"
+
+[[widget]]
+id    = "title"
+entry = "widget.luau"
+
+  [[widget.setting]]
+  key       = "max_width"
+  type      = "int"
+  label_key = "settings.max_width.label"
+  default   = 420
+  min       = 80
+  max       = 1200

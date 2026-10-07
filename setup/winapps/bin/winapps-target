@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Pick which Windows WinApps uses on this machine: its own container (local) or the desktop's over Tailscale.
+#   winapps-target            show the current choice
+#   winapps-target local      this machine's container (works offline)
+#   winapps-target desktop    the desktop's container (needs Tailscale and the desktop on)
+set -euo pipefail
+f="$HOME/.config/winapps/target"
+case "${1:-}" in
+    "") echo "WinApps uses: $(cat "$f" 2>/dev/null || echo local)" ;;
+    local) rm -f "$f"; echo "WinApps uses: local"
+           notify-send --app-name=WinApps "WinApps" "Using this machine's Windows" 2>/dev/null || true ;;
+    desktop)
+        [[ "$(cat /etc/hostname)" == "desktop" ]] && { echo "this is the desktop; it always uses its own container"; exit 1; }
+        echo desktop > "$f"; echo "WinApps uses: desktop (over Tailscale)"
+        if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx WinApps; then
+            docker compose --file "$HOME/.config/winapps/compose.yaml" pause >/dev/null 2>&1 && echo "paused the local container to free RAM"
+        fi
+        notify-send --app-name=WinApps "WinApps" "Using the desktop's Windows over Tailscale" 2>/dev/null || true ;;
+    *) echo "usage: winapps-target [local|desktop]" >&2; exit 2 ;;
+esac

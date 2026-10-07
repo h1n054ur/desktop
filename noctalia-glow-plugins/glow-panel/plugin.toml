@@ -1,0 +1,34 @@
+id          = "hani/glow-panel"
+name        = "Glow Panel"
+version     = "0.1.0"
+plugin_api  = 32
+author      = "hani"
+license     = "MIT"
+icon        = "volume"
+description = "Glow-icon volume and network bar widgets: volume level and mute; Ethernet link, or Wi-Fi with a glow icon per signal strength."
+tags        = ["bar", "audio", "network"]
+dependencies = ["pactl", "wpctl"]
+
+[[widget]]
+id    = "volume"
+entry = "volume.luau"
+
+  [widget.actions]
+  left        = "panel-toggle control-center audio"
+  right       = "volume-mute"
+  scroll_up   = "volume-up"
+  scroll_down = "volume-down"
+
+  [[widget.setting]]
+  key       = "show_value"
+  type      = "bool"
+  label_key = "settings.show_value.label"
+  default   = true
+
+[[widget]]
+id    = "network"
+entry = "network.luau"
+
+  [widget.actions]
+  left = "panel-toggle control-center network"
+

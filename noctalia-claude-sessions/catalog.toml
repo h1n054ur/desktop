@@ -1,0 +1,15 @@
+# Noctalia plugins catalog for this source: one [[plugin]] row per plugin subdirectory.
+# The plugin's own plugin.toml stays authoritative.
+
+[[plugin]]
+id = "hani/claude-sessions"
+name = "Claude Sessions"
+version = "1.5.2"
+updated_at = 1791402743
+added_at = 1791402743
+author = "hani (fork of lfdominguez/claude-sessions 1.5.2, MIT)"
+license = "MIT"
+icon = "brain"
+description = "Live Claude Code sessions: what each is doing, which need you, plan limits, and jump to its terminal. Fork with a floating panel."
+plugin_api = 24
+tags = ["bar", "panel", "launcher", "service", "ai", "development", "productivity", "hyprland", "niri", "sway"]

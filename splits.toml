@@ -1,0 +1,34 @@
+# Which folder becomes which repository. CI (.forgejo/workflows/split.yml) reads this file.
+# Each repo is private on Forgejo (h1n054ur/<repo>) and push-mirrored to github.com/h1n054ur/<repo>.
+
+[[split]]
+folder = "terminal"
+repo = "h1n054ur-terminal"
+
+[[split]]
+folder = "kitty"
+repo = "kitty-config"
+
+[[split]]
+folder = "noctalia-theme"
+repo = "noctalia-h1n054ur"
+
+[[split]]
+folder = "noctalia-glow-plugins"
+repo = "noctalia-glow-plugins"
+
+[[split]]
+folder = "noctalia-claude-sessions"
+repo = "noctalia-claude-sessions"
+
+[[split]]
+folder = "quickshell"
+repo = "quickshell-h1n054ur"
+
+[[split]]
+folder = "hyprland"
+repo = "hyprland-h1n054ur"
+
+[[split]]
+folder = "setup"
+repo = "h1n054ur-setup"
