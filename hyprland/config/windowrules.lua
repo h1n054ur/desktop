@@ -99,14 +99,6 @@ hl.window_rule({
     no_shortcuts_inhibit = true,
 })
 
--- Ferdium: web services such as Outlook use Chromium's keyboard lock, which asks Hyprland to stop handling
--- shortcuts while they have focus (Super+number then went to Outlook). Hyprland binds keep working.
-hl.window_rule({
-    name  = "ferdium-keep-binds",
-    match = { class = "^(ferdium)$" },
-    no_shortcuts_inhibit = true,
-})
-
 -- Ignore maximize requests from all apps. You'll probably like this.
 hl.window_rule({
     name  = "suppress-maximize-events",
