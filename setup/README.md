@@ -80,6 +80,20 @@ flowchart LR
 - The container pauses itself after 30 idle minutes (`AUTOPAUSE`). Sign out through Start, not by closing the window: Windows allows one session per user.
 - **A second machine:** the laptop can use the desktop's Windows over Tailscale instead of running its own. `winapps-target desktop` switches, `winapps-target local` switches back. For that, the desktop publishes RDP on its Tailscale address (`WINAPPS_TAILNET_RDP` in the compose file).
 
+## 4. Apps that start in the tray
+
+Some apps open a window at login on whichever screen has focus. Two of them need a hand:
+
+- **Bitwarden:** Settings, then turn on *Show tray icon* and *Start to tray icon*. It starts hidden; Super+P opens it.
+- **Surfshark:** its *Launch minimized* setting doesn't hide the window on Hyprland. [`bin/start-to-tray`](bin/start-to-tray) starts an app, waits for its first window and closes it, and the app keeps running in the tray. Copy it to `~/.local/bin` and point Surfshark's login entry at it:
+
+```sh
+install -m 755 bin/start-to-tray ~/.local/bin/
+sed -i "s#^Exec=.*#Exec=$HOME/.local/bin/start-to-tray Surfshark /opt/Surfshark/surfshark#" ~/.config/autostart/surfshark.desktop
+```
+
+The first argument is the window class (`hyprctl clients` shows it), the rest is the command. It works for any app that keeps running when its window is closed.
+
 ## Part of h1n054ur/desktop
 
 This repo is generated from the `setup/` folder of [h1n054ur/desktop](https://github.com/h1n054ur/desktop). It is read-only: open issues and pull requests there.

@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# start-to-tray <window class> <command...>: start an app at login and close its first window, so it sits in the tray.
+# For apps that ignore their own "start minimized" setting (Surfshark). Gives up after 60 s.
+class=$1; shift
+"$@" &
+for _ in $(seq 120); do
+  if hyprctl clients -j | python3 -c 'import json,sys; sys.exit(0 if any(c["class"] == sys.argv[1] for c in json.load(sys.stdin)) else 1)' "$class"; then
+    sleep 1   # let it finish drawing, or the close can be ignored
+    hyprctl dispatch "hl.dsp.window.close({ window = \"class:^($class)\$\" })" >/dev/null
+    exit 0
+  fi
+  sleep 0.5
+done
