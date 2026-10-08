@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Hold-to-talk for Handy on Wayland: `handy-ptt down` on key press, `handy-ptt up` on key release
-# (`up-ctrl` on any Ctrl release).
+# Hold-to-talk for Handy on Wayland: `handy-ptt down` on key press, `handy-ptt up` on key release (Right Alt).
 # Handy only offers a toggle (`handy --toggle-transcription`), so blind press/release toggles drift out of step
-# whenever a release is missed (e.g. Ctrl let go before Space). This checks whether Handy is really recording,
+# whenever a release is missed or runs before its press. This checks whether Handy is really recording,
 # by its live PipeWire capture stream (alsa_capture.handy, open only while recording), and only toggles when
-# the state needs to change. `up` is also bound to releasing Ctrl, so the order the keys come up never matters.
+# the state needs to change.
 # After a stop it presses Enter once Handy has typed the text, but only into the assistant panel (Super+Space)
 # or a kitty window running Claude Code, so dictated requests send themselves there and nowhere else.
 set -u
@@ -36,7 +35,7 @@ enter_after_paste() {  # waits for Handy to finish typing (or to give up), then 
     done
 }
 
-# Serialise down/up (Space release and Ctrl release can both fire) and remember a start that is still opening:
+# Serialise down/up (a quick tap can start them out of order) and remember a start that is still opening:
 # after a few idle minutes Handy reloads its model and its mic stream takes ~330 ms to appear, so an early
 # release must wait for the recording to exist before stopping it, or it would be left listening.
 run="${XDG_RUNTIME_DIR:-/tmp}"
@@ -68,14 +67,14 @@ case "${1:-}" in
         log_event "down: start"
         handy --toggle-transcription
         ;;
-    up|up-ctrl)  # up: Space released; up-ctrl: any Ctrl released (also fires for Ctrl+C etc.)
+    up)
         if [ -e "$starting" ]; then
             rm -f "$starting"
             wait_for yes || { log_event "$1: start never appeared"; exit 0; }
         elif ! recording; then
-            # a Space release before its press was handled: tell that press not to start
-            [ "$1" = up ] && date +%s%N > "$released"
-            log_event "$1: not recording (marker: $([ "$1" = up ] && echo yes || echo no))"
+            # a release before its press was handled: tell that press not to start
+            date +%s%N > "$released"
+            log_event "up: not recording, marked"
             exit 0
         fi
         recording || exit 0
@@ -86,6 +85,6 @@ case "${1:-}" in
         wait_for no || log_event "$1: still recording 2 s after stop"
         enter_after_paste "$log" "$from" 9>&- & disown
         ;;
-    *) echo "usage: handy-ptt down|up|up-ctrl" >&2; exit 2 ;;
+    *) echo "usage: handy-ptt down|up" >&2; exit 2 ;;
 esac
 exit 0

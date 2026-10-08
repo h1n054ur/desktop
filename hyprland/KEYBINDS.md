@@ -27,7 +27,7 @@ Keys marked "jumps" go to the app if it is already open and start it if not.
 |---|---|
 | ``Super+` `` | App search (fuzzel launcher, press again to close) |
 | `Super+Space` | Assistant: a drop-down Claude that does what you ask ("put Jellyfin on the right screen"); press again to hide |
-| `Ctrl+Space` (hold) | Dictation (Handy, offline): hold and talk, let go and the text is typed where you are |
+| `Right Alt` (hold) | Dictation (Handy, offline): hold and talk, let go and the text is typed where you are |
 | `Super+T` | kitty |
 | `Super+F` | Ferdium (jumps) |
 | `Super+W` | Windows desktop through WinApps: Office, OneDrive, FileMaker (jumps, or opens on an empty workspace) |

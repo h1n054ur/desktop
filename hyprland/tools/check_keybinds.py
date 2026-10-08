@@ -17,8 +17,8 @@ KEYS = {"Return": "Enter", "grave": "`", "period": ".", "slash": "/", "equal": "
         "mouse_up": "wheel", "mouse_down": "wheel", "mouse:272": "left mouse drag", "mouse:273": "right mouse drag",
         "code:82": "Minus", "code:86": "Plus", "Escape": "Escape", "Print": "Print"}
 # hardware keys, mouse-only and other binds the page describes in words instead of key names
-# Control_L/R: release-only helpers of the Ctrl+Space dictation row (handy-ptt up), not shortcuts of their own
-SKIP = re.compile(r"XF86|switch:|code:(82|86)$|Control_[LR]\b")
+# Alt_R: the dictation key (Right Alt, held); its press and release halves are one row in KEYBINDS.md
+SKIP = re.compile(r"XF86|switch:|code:(82|86)$|Alt_R\b")
 
 
 def combo(expr: str) -> str:

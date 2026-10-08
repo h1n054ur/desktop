@@ -158,12 +158,12 @@ hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle co
 hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles
 -- Assistant: a drop-down Claude (Haiku) that drives the desktop (setup/bin/assistant, setup/assistant/CLAUDE.md); press again to hide
 hl.bind(mainMod .. " + Space",      hl.dsp.exec_cmd("assistant"))
--- Dictation (Handy, offline): hold Ctrl+Space and talk, let go and the text is typed. handy-ptt starts/stops only
--- when Handy's real state needs it (its mic stream), and Ctrl's own release also stops it, so key order never matters
-hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy-ptt down"))
-hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy-ptt up"), { release = true })
-hl.bind("CONTROL + Control_L",      hl.dsp.exec_cmd("handy-ptt up-ctrl"), { release = true, non_consuming = true })
-hl.bind("CONTROL + Control_R",      hl.dsp.exec_cmd("handy-ptt up-ctrl"), { release = true, non_consuming = true })
+-- Dictation (Handy, offline): hold Right Alt and talk, let go and the text is typed. One key, so nothing is held
+-- when the text arrives. handy-ptt starts/stops only when Handy's real state needs it (its mic stream).
+-- On this keyboard the press arrives as plain Alt_R and the release as ALT + Alt_R (an ALT + Alt_R press bind
+-- would also fire on release, so there is none)
+hl.bind("Alt_R",                    hl.dsp.exec_cmd("handy-ptt down"))
+hl.bind("ALT + Alt_R",              hl.dsp.exec_cmd("handy-ptt up"), { release = true })
 hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(h1nCall .. "lock lock"))
 hl.bind(mainMod .. " + ALT + C",    hl.dsp.exec_cmd(h1nCall .. "session toggle"))
 hl.bind(mainMod .. " + slash",      hl.dsp.exec_cmd(noctCall .. "panel-toggle kenn/keybind-cheatsheet:cheatsheet")) -- searchable keybind cheat sheet
