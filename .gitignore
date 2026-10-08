@@ -3,3 +3,5 @@ quickshell/greeter/assets/right.png
 quickshell/greeter/monitors.lua
 setup/winapps/oem/filemaker/*
 !setup/winapps/oem/filemaker/README.md
+__pycache__/
+*.pyc
