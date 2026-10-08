@@ -157,7 +157,7 @@ hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle
 hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
 hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles
 -- Dictation (Handy, offline): hold Ctrl+Space and talk, let go and the text is typed. Press and release each toggle
--- Handy (set to toggle mode); Handy waits 500 ms before typing so Ctrl is up by then (a held Ctrl would turn letters into shortcuts)
+-- Handy (set to toggle mode; its own push-to-talk mode gets these toggles out of step)
 hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy --toggle-transcription"))
 hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy --toggle-transcription"), { release = true })
 hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(h1nCall .. "lock lock"))
