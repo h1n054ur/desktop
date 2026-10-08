@@ -77,6 +77,33 @@ def resolve(query, ws):
     sys.exit(f"ferdium-go: no Ferdium workspace or service matches '{query}' (try: ferdium-go --map)")
 
 
+def hypr(*args):
+    return subprocess.run(["hyprctl", *args], capture_output=True, text=True, check=False).stdout
+
+
+def active():
+    try:
+        return json.loads(hypr("activewindow", "-j") or "{}")
+    except ValueError:
+        return {}
+
+
+def focus_ferdium():
+    """Hide the assistant panel (it holds the keyboard), then focus Ferdium for real, starting it if needed."""
+    subprocess.run(["assistant", "hide"], check=False)
+    time.sleep(0.25)
+    running = any(c.get("class") == "ferdium" for c in json.loads(hypr("clients", "-j") or "[]"))
+    if not running:
+        subprocess.run(["presskeys", "super+f"], check=False)   # Hani's Super+F bind starts it on workspace 1
+    for _ in range(80 if not running else 20):
+        hypr("dispatch", "hl.dsp.focus({ window = 'class:ferdium' })")
+        if active().get("class") == "ferdium":
+            time.sleep(0.5)   # Ferdium ignores shortcuts pressed right after it gets focus
+            return True
+        time.sleep(0.1)
+    return False
+
+
 def main():
     args = sys.argv[1:]
     if not args or args[0] in ("-h", "--help"):
@@ -85,12 +112,28 @@ def main():
         for w in layout(refresh=True):
             print(f"Ctrl+Alt+{w['number']}  {w['name']}: " + ", ".join(f"{i} {s}" for i, s in enumerate(w["services"], 1)))
         return
-    number, tab = resolve(" ".join(args), layout())
-    keys = ["super+f", "wait:0.5", f"ctrl+alt+{number}"]
-    if tab:
-        keys += ["wait:0.3"] + ([f"ctrl+{tab}"] if tab <= 9 else ["ctrl+1"] + ["ctrl+tab"] * (tab - 1))
-    subprocess.run(["presskeys", *keys], check=True)
-    print(f"Ferdium workspace {number}" + (f", tab {tab}" if tab else ""))
+    ws = layout()
+    number, tab = resolve(" ".join(args), ws)
+    service = next((w["services"][tab - 1] for w in ws if w["number"] == number), None) if tab else None
+    if not focus_ferdium():
+        sys.exit("ferdium-go: Ferdium did not get focus, nothing pressed")
+    stepped = ["ctrl+1"] + ["ctrl+tab"] * ((tab or 1) - 1)
+    direct = [f"ctrl+{tab}"] if tab and tab <= 9 else stepped
+    # Ctrl+N first; if the title shows the wrong service (Ctrl+2 never reaches Ferdium here), Ctrl+1 then Ctrl+Tab
+    attempts = [[f"ctrl+alt+{number}"] + (["wait:0.4"] + direct if tab else [])]
+    if tab and direct != stepped:
+        attempts.append([f"ctrl+alt+{number}", "wait:0.4"] + stepped)
+    title = ""
+    for keys in attempts:
+        if active().get("class") != "ferdium" and not focus_ferdium():
+            sys.exit("ferdium-go: lost focus to another window, stopped")
+        subprocess.run(["presskeys", *keys], check=True)
+        time.sleep(0.6)
+        title = active().get("title", "")
+        if not service or service.lower() in title.lower():
+            print(f"Ferdium: {service or 'workspace ' + str(number)}" + (f" (workspace {number}, tab {tab})" if tab else ""))
+            return
+    sys.exit(f"ferdium-go: tried Ctrl+{tab} and Ctrl+1 + Ctrl+Tab, but Ferdium shows '{title}', not {service}")
 
 
 if __name__ == "__main__":

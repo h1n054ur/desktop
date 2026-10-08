@@ -150,7 +150,7 @@ def ferdium_services():
 def ferdium_target(words, cfg):
     """'ferdium youtube', 'ferdium workspace 9', 'ferdium comms', or a Ferdium-only service name on its own."""
     if re.search(r"\bferdium\b", words):
-        rest = re.sub(r"\bferdium\b|\b(workspace|tab|in|on|the|to|my)\b", " ", LEAD.sub("", words))
+        rest = re.sub(r"\bferdium\b|\b(workspace|tab|in|inside|on|the|to|my|app)\b", " ", LEAD.sub("", words))
         rest = re.sub(r"\s+", " ", rest).strip()
         return rest or "ferdium"
     rest = LEAD.sub("", words)
@@ -161,6 +161,7 @@ def ferdium_target(words, cfg):
 
 def run_ferdium(target):
     if target == "ferdium":
+        sh("assistant", "hide")
         argv = ["presskeys", "super+f"]
     else:
         argv = ["ferdium-go", target]
@@ -168,7 +169,8 @@ def run_ferdium(target):
     log(f"ferdium: ran {' '.join(argv)} rc={r.returncode} {r.stdout.strip()} {r.stderr.strip()}")
     if r.returncode == 0:
         notify(r.stdout.strip() or "Ferdium")
-        sh("assistant", "hide")
+    else:
+        notify("Ferdium: " + (r.stderr.strip().split(": ", 1)[-1] or "failed"))
     return r.returncode == 0
 
 
@@ -177,11 +179,11 @@ IMPERATIVE = re.compile(r"^(?:please\s+)?(open|launch|start|switch to|go to|brin
 
 def run_place(app, where, going):
     argv = ["place", "focus", app] if going and not where else ["place", app] + (where or ["here"])
+    sh("assistant", "hide")   # the panel holds the keyboard: hide it before acting
     r = sh(*argv)
     log(f"code: ran {' '.join(argv)} rc={r.returncode}")
     if r.returncode == 0:
         notify(" ".join(argv[1:]))
-        sh("assistant", "hide")
     return r.returncode == 0
 
 
@@ -189,6 +191,10 @@ def fast_path(text, cfg):
     """Run a known command when Laya is sure and the words carry what it needs. True when handled."""
     words = normalise(text)
     log(f"heard: {words!r}")
+    # never act on text that is not plain English: a wrong-language transcript must not run a command
+    if re.search(r"[^\x00-\x7f\u2018\u2019]", words):
+        log("not plain English text, to the panel")
+        return False
     # 0. Ferdium first, so "ferdium workspace 9" never becomes "go to workspace 9"
     target = ferdium_target(words, cfg)
     if target:
@@ -233,11 +239,12 @@ def fast_path(text, cfg):
         log(f"{choice}: missing {[a for a in cmd.get('args', []) if fill.get(a) is None]}, to the panel")
         return False
     if "keys" in cmd:  # an exact key sequence, e.g. ["super+f", "ctrl+alt+9", "ctrl+1"]
+        if choice != "hide_panel":
+            sh("assistant", "hide")
         r = sh("presskeys", *cmd["keys"])
         log(f"keys {' '.join(cmd['keys'])} rc={r.returncode}")
         if r.returncode == 0:
             notify(choice.replace("_", " "))
-            sh("assistant", "hide")
         return r.returncode == 0
     argv = []
     for part in cmd["run"]:
@@ -245,13 +252,13 @@ def fast_path(text, cfg):
             argv += fill["where"]
         else:
             argv.append(part.replace("{app}", fill["app"] or "").replace("{number}", fill["number"] or ""))
+    if choice != "hide_panel":
+        sh("assistant", "hide")
     r = sh(*argv)
     log(f"ran {' '.join(argv)} rc={r.returncode}")
     if r.returncode != 0:
         return False
     notify(f"{choice.replace('_', ' ')}" + (f" ({via})" if via == "laya" else ""))
-    if choice != "hide_panel":
-        sh("assistant", "hide")
     return True
 
 

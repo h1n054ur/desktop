@@ -13,7 +13,7 @@ state="$run/assistant-visible"
 pressed="$run/assistant-key-down"
 
 toggle() {
-    if pgrep -f '[i]nstance-group assistant' >/dev/null; then
+    if pgrep -f '[i]nstance-group=assistant' >/dev/null; then
         if [ -e "$state" ]; then rm -f "$state"; else : > "$state"; fi
     else
         : > "$state"
@@ -26,7 +26,8 @@ toggle() {
 
 case "${1:-toggle}" in
     toggle) toggle ;;
-    hide) if [ -e "$state" ]; then toggle; fi ;;
+    hide)  # only ever hides: a stale state file with no panel running must not start one
+        if [ -e "$state" ] && pgrep -f '[i]nstance-group=assistant' >/dev/null; then toggle; else rm -f "$state"; fi ;;
     key-down) date +%s%N > "$pressed" ;;
     key-up)
         [ -e "$pressed" ] || exit 0
