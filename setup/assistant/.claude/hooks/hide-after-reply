@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Claude Code Stop hook: once the assistant has answered, give Hani 2 s to read the reply, then hide the panel.
+# It stays open when the reply ends with a question (a confirmation like "send? (y/n)" needs an answer).
+set -u
+transcript=$(jq -r '.transcript_path // empty')
+last=""
+if [ -n "$transcript" ] && [ -f "$transcript" ]; then
+    last=$(jq -rs '[.[] | select(.type == "assistant") | .message.content[]? | select(.type == "text") | .text] | last // ""' \
+        "$transcript" 2>/dev/null || true)
+fi
+last=$(printf '%s' "$last" | sed -e 's/[[:space:]]*$//')
+case "$last" in
+    *"?"|*"?)"|*"(y/n)") exit 0 ;;
+esac
+( sleep 2; assistant hide ) >/dev/null 2>&1 &
+disown
+exit 0

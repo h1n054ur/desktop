@@ -24,5 +24,17 @@
       "Read(/home/hani/Notes/shortcuts.md)",
       "Read(/home/hani/.config/hypr/config/binds.lua)"
     ]
+  },
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/hide-after-reply"
+          }
+        ]
+      }
+    ]
   }
 }

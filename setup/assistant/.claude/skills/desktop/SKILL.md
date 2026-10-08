@@ -34,7 +34,7 @@ The full list, kept in sync with the live binds, is Hani's cheat sheet `/home/ha
 `grep -i <word>` it when Hani asks "what's the shortcut for X" or wants something a shortcut does. If something is not
 there, the live binds in `/home/hani/.config/hypr/config/binds.lua` are the final word. Highlights:
 Super+T kitty, Super+C Helium browser, Super+F Ferdium, Super+V VSCodium, Super+B Calibre, Super+Shift+B Foliate,
-Super+M YouTube Music, Super+Shift+M rmpc music, Super+N Notes, Super+` app search (fuzzel), Super+Space this
+Super+M YouTube Music, Super+Shift+M rmpc music, Super+N Notes, Super+` app search (fuzzel), Right Ctrl (tap) this
 assistant, Right Alt (hold) dictation, Print region screenshot (Super+Print whole screen), Super+1..0 workspaces,
 Super+Shift+1..0 send the window there.
 

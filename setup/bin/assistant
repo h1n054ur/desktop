@@ -1,17 +1,36 @@
 #!/usr/bin/env bash
-# Super+Space: show or hide the desktop assistant, a kitty drop-down running Claude (Haiku) in setup/assistant
-# (CLAUDE.md + the desktop skill tell it how to drive the desktop). The first press starts it; later presses toggle
-# it (same instance group). Hyprland reports the panel the same when hidden, so its state is remembered in
-# $XDG_RUNTIME_DIR/assistant-visible, which handy-ptt reads to press Enter after dictating into it.
+# The desktop assistant: a kitty drop-down running Claude (Haiku) in setup/assistant (CLAUDE.md + the desktop
+# skill tell it how to drive the desktop).
+#   assistant                    show or hide it (the first call starts it)
+#   assistant hide               hide it if it is shown (the Stop hook does this after each reply)
+#   assistant key-down|key-up    Right Ctrl: a quick tap (< 350 ms) toggles it, so Right Ctrl combos never do
+# Hyprland reports the panel the same when hidden, so its state is remembered in $XDG_RUNTIME_DIR/assistant-visible,
+# which handy-ptt also reads to press Enter after dictating into it.
 set -eu
 here="$(cd "$(dirname "$(readlink -f "$0")")/../assistant" && pwd)"
-state="${XDG_RUNTIME_DIR:-/tmp}/assistant-visible"
-if pgrep -f '[i]nstance-group assistant' >/dev/null; then
-    if [ -e "$state" ]; then rm -f "$state"; else : > "$state"; fi
-else
-    : > "$state"
-fi
-# a fresh Claude session: drop variables inherited from any Claude Code session that started this
-for v in $(compgen -e | grep -E '^CLAUDE' || true); do unset "$v"; done
-exec kitten quick-access-terminal --instance-group assistant -c "$here/quick-access.conf" \
-    sh -c "cd '$here' && exec claude --model haiku"
+run="${XDG_RUNTIME_DIR:-/tmp}"
+state="$run/assistant-visible"
+pressed="$run/assistant-key-down"
+
+toggle() {
+    if pgrep -f '[i]nstance-group assistant' >/dev/null; then
+        if [ -e "$state" ]; then rm -f "$state"; else : > "$state"; fi
+    else
+        : > "$state"
+    fi
+    # a fresh Claude session: drop variables inherited from any Claude Code session that started this
+    for v in $(compgen -e | grep -E '^CLAUDE' || true); do unset "$v"; done
+    exec kitten quick-access-terminal --instance-group assistant -c "$here/quick-access.conf" \
+        sh -c "cd '$here' && exec claude --model haiku"
+}
+
+case "${1:-toggle}" in
+    toggle) toggle ;;
+    hide) if [ -e "$state" ]; then toggle; fi ;;
+    key-down) date +%s%N > "$pressed" ;;
+    key-up)
+        [ -e "$pressed" ] || exit 0
+        held=$(( $(date +%s%N) - $(cat "$pressed") )); rm -f "$pressed"
+        if [ "$held" -lt 350000000 ]; then toggle; fi ;;
+    *) echo "usage: assistant [toggle|hide|key-down|key-up]" >&2; exit 2 ;;
+esac

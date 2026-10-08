@@ -4,7 +4,7 @@
 # whenever a release is missed or runs before its press. This checks whether Handy is really recording,
 # by its live PipeWire capture stream (alsa_capture.handy, open only while recording), and only toggles when
 # the state needs to change.
-# After a stop it presses Enter once Handy has typed the text, but only into the assistant panel (Super+Space)
+# After a stop it presses Enter once Handy has typed the text, but only into the assistant panel (Right Ctrl)
 # or a kitty window running Claude Code, so dictated requests send themselves there and nowhere else.
 set -u
 

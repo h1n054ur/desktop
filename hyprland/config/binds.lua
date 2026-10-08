@@ -156,8 +156,11 @@ hl.bind(mainMod .. " + SHIFT + Escape", hl.dsp.exec_cmd(launchPrefix .. TERMINAL
 hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle"))
 hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
 hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles
--- Assistant: a drop-down Claude (Haiku) that drives the desktop (setup/bin/assistant, setup/assistant/CLAUDE.md); press again to hide
-hl.bind(mainMod .. " + Space",      hl.dsp.exec_cmd("assistant"))
+-- Assistant: a drop-down Claude (Haiku) that drives the desktop (setup/bin/assistant, setup/assistant/CLAUDE.md).
+-- Tap Right Ctrl to show or hide it; only a quick tap (< 350 ms) counts, so Right Ctrl combos never open it. The press
+-- arrives as plain Control_R and the release as CONTROL + Control_R. It also hides itself after each reply (Stop hook).
+hl.bind("Control_R",                hl.dsp.exec_cmd("assistant key-down"))
+hl.bind("CONTROL + Control_R",      hl.dsp.exec_cmd("assistant key-up"), { release = true })
 -- Dictation (Handy, offline): hold Right Alt and talk, let go and the text is typed. One key, so nothing is held
 -- when the text arrives. handy-ptt starts/stops only when Handy's real state needs it (its mic stream).
 -- On this keyboard the press arrives as plain Alt_R and the release as ALT + Alt_R (an ALT + Alt_R press bind
