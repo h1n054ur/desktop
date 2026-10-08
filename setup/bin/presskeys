@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# presskeys: press key combos in order, through the virtual keyboard (wtype), for the voice router and the assistant.
+#   presskeys super+f ctrl+alt+9 ctrl+1      each argument is one combo; modifiers: super ctrl alt shift
+#   presskeys wait:0.6 ctrl+tab               wait:<seconds> pauses (default 0.25 s between combos)
+# Keys are wtype/xkb names: letters, digits, tab, return, escape, space, left, right, up, down, f1..f12, plus, minus.
+# Super combos fire Hyprland binds (Super+F jumps to Ferdium); the rest go to the focused window.
+set -eu
+gap=0.25
+for combo in "$@"; do
+    case "$combo" in wait:*) sleep "${combo#wait:}"; continue ;; esac
+    args=() ups=()
+    IFS=+ read -ra parts <<<"${combo,,}"
+    key=${parts[-1]}
+    for mod in "${parts[@]:0:${#parts[@]}-1}"; do
+        case "$mod" in super|logo|win) m="logo" ;; ctrl|control) m="ctrl" ;; alt) m="alt" ;; shift) m="shift" ;;
+            *) echo "presskeys: unknown modifier '$mod' in '$combo'" >&2; exit 2 ;; esac
+        args+=(-M "$m"); ups=(-m "$m" "${ups[@]}")
+    done
+    case "$key" in
+        return|enter) key=Return ;; escape|esc) key=Escape ;; tab) key=Tab ;; space) key=space ;;
+        left|right|up|down) key=${key^} ;; plus) key=plus ;; minus) key=minus ;; f[0-9]|f1[0-2]) key=${key^^} ;;
+    esac
+    wtype "${args[@]}" -k "$key" "${ups[@]}"
+    sleep "$gap"
+done

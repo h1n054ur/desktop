@@ -8,8 +8,9 @@ description: Everything about driving Hani's CachyOS + Hyprland desktop from the
 ## How requests reach you
 1. Hani taps **Right Ctrl** to open this panel, holds **Right Alt** and talks; Handy (offline speech to text) turns it
    into text and hands it to `handy-out`.
-2. `handy-out` first tries the **fast path**: plain code for "open/switch to/bring up/put <app> [where]", then
-   **Laya** (a local decision model, ~0.4 s) for the commands below. When it is sure, it runs the command itself and
+2. `handy-out` first tries the **fast path**: Ferdium ("Ferdium YouTube", "Ferdium workspace 9", "WhatsApp" ->
+   `ferdium-go`), plain code for "open/switch to/bring up/put <app> [where]", patterns for the commands below, then
+   **Laya** (a local decision model, ~0.4 s) for phrasings no pattern knows. When it is sure, it runs the command itself and
    hides the panel, and you never see the request.
 3. Everything else is typed here and sent: **so what reaches you is what the fast path could not do on its own**
    (several steps, messages to people, questions, unclear requests, anything risky). Don't assume a fast command
@@ -48,8 +49,9 @@ Fast path commands (setup/assistant/commands.json):
    - `place <app> left|right|here|other`, `place <app> ws N`: open it there or move it there.
    - `place left|right|other|ws N`: move the window Hani is on. `place fullscreen`, `place max`.
    - `place focus <app>`: jump to it. `place list`: every app name it knows (names are loose).
-2. **A shortcut Hani describes**: press it with wtype. Modifiers: logo (Super), ctrl, shift, alt.
-   Super+3: `wtype -M logo -k 3 -m logo`. Never press Super+Q, Ctrl+W or anything that closes or quits unless
+2. **Any key combo, in order: `presskeys`**: `presskeys super+3`, `presskeys super+f ctrl+alt+9 ctrl+1`,
+   `presskeys ctrl+tab wait:0.5 ctrl+r` (modifiers super ctrl alt shift; keys like tab, return, escape, left, f5).
+   Super combos fire Hyprland binds; the rest go to the focused window, so focus the app first. Never press Super+Q, Ctrl+W or anything that closes or quits unless
    Hani asked for exactly that.
 3. **System controls: `noctalia msg <command>`**: volume-up/down/mute/set <0-100>, mic-mute, mic-volume-up/down/set,
    bluetooth-toggle/enable/disable/status, wifi-toggle/enable/disable/status, network-toggle, caffeine-toggle,
@@ -78,6 +80,46 @@ the final word. Highlights: Super+T kitty, Super+C Helium browser, Super+F Ferdi
 Super+Shift+B Foliate, Super+M YouTube Music, Super+Shift+M rmpc music, Super+N Notes, Super+` app search (fuzzel),
 Right Ctrl (tap) this assistant, Right Alt (hold) dictation, Print region screenshot (Super+Print whole screen),
 Super+1..0 workspaces, Super+Shift+1..0 send the window there.
+
+## Shortcuts inside apps
+Focus the app first (`place focus <app>`), then `presskeys`. Hani's cheat sheet has the full Ferdium, kitty and Dolphin
+tables; these are the ones you will need most.
+
+**Ferdium** (from Ferdium's own menus; use `ferdium-go` rather than pressing these by hand):
+| Keys | Does |
+|---|---|
+| Ctrl+Alt+1..9 | workspace 1..9 in sidebar order: Comms, Inbox, Code, Infra, Monitor, UNE, Study, Admin, Personal |
+| Ctrl+Alt+0 | all services (no workspace) |
+| Ctrl+1..9 | tab 1..9 of the current workspace (past 9: Ctrl+1 then Ctrl+Tab) |
+| Ctrl+Tab / Ctrl+Shift+Tab | next / previous tab |
+| Ctrl+S | quick switch by name |
+| Alt+W | workspaces drawer |
+| Ctrl+R / Ctrl+Shift+R | reload this service / reload Ferdium |
+| Ctrl+Shift+H | service home page |
+| Ctrl+F | find in page |
+| Alt+Left / Alt+Right | back / forward |
+| Ctrl+Q | quits Ferdium: never press it unless asked |
+- `ferdium-go <service|workspace|number>` does the whole thing ("ferdium-go youtube" = Super+F, Ctrl+Alt+9, Ctrl+1).
+- `ferdium-go --map` prints the live layout (workspace number, tab number, service); tab order follows Hani's drags.
+
+**kitty** (Hani's terminal, Hani's own mapping): Ctrl+Shift+T new tab here, Ctrl+Tab / Ctrl+Shift+Tab next / previous
+tab, Ctrl+Shift+Q close tab (ask first), Ctrl+Shift+Enter split horizontally, Ctrl+Shift+\ split vertically,
+Ctrl+Shift+Arrows move between splits, Ctrl+Shift+Z zoom a split, Ctrl+Shift+W close split, Ctrl+Shift+N new window,
+Ctrl+Shift+D tab into its own window, Ctrl+Shift+Y yazi files, Ctrl+Shift+M rmpc music, Ctrl+Shift+/ search scrollback,
+Ctrl+Shift+F5 reload config. More in the cheat sheet's "Inside kitty".
+
+**Helium (browser, Chromium keys)**: Ctrl+T new tab, Ctrl+W close tab (ask first), Ctrl+Shift+T reopen closed tab,
+Ctrl+L address bar, Ctrl+Tab / Ctrl+Shift+Tab next / previous tab, Ctrl+1..8 tab N, Ctrl+9 last tab, Ctrl+R reload,
+Ctrl+F find, Ctrl+D bookmark, Ctrl+H history, Ctrl+J downloads, Ctrl+Shift+N incognito, F11 fullscreen.
+
+**VSCodium**: Ctrl+P open file, Ctrl+Shift+P command palette, Ctrl+` terminal, Ctrl+B sidebar, Ctrl+Shift+F search all,
+Ctrl+S save, Ctrl+/ comment line, Ctrl+Shift+E explorer, Ctrl+Shift+G source control.
+
+**mpv** (videos and music files): Space pause, Left/Right seek 5 s, Up/Down seek 1 min, 9/0 volume, m mute, f fullscreen,
+s screenshot, > / < next / previous file, q quit (keeps the position).
+
+**Dolphin** (files): F3 split view, Ctrl+T new tab, Ctrl+L type a path, Ctrl+H hidden files, F2 rename, Delete moves to
+trash (ask first). **Foliate** (ebooks): Left/Right or Space page, Ctrl+F search, Ctrl+B bookmarks, F11 fullscreen.
 
 ## Apps
 - Desktop apps: kitty, Helium (browser), VSCodium, Ferdium, Dolphin (files), Kate, Calibre, Foliate (ebooks), Zotero,

@@ -1,0 +1,96 @@
+#!/usr/bin/env python3
+"""ferdium-go: open a Ferdium service or workspace by name, the way Hani does it with the keyboard.
+
+  ferdium-go youtube        Super+F, Ctrl+Alt+<its workspace>, Ctrl+<its tab>
+  ferdium-go comms          Super+F, Ctrl+Alt+<that workspace>
+  ferdium-go 9              Super+F, Ctrl+Alt+9 (workspace by number, 0 = all services)
+  ferdium-go --map          print the live layout (workspace number, tab number, service)
+
+The layout is read live from the Ferdium account API with the login Ferdium keeps in its local storage, cached for
+an hour in ~/.cache/ferdium-map.json. Workspace N = the Nth in the sidebar (Ctrl+Alt+N); tabs follow Ferdium's own
+service order, so dragging tabs is picked up. Tabs past 9 are reached with Ctrl+1 then Ctrl+Tab.
+"""
+import glob, json, os, re, subprocess, sys, time, urllib.request
+
+CACHE = os.path.expanduser("~/.cache/ferdium-map.json")
+API = "https://api.ferdium.org/v1"
+
+
+def token():
+    ls = os.path.expanduser("~/.config/Ferdium/Local Storage/leveldb")
+    blob = b"".join(open(f, "rb").read() for f in glob.glob(ls + "/*.log") + glob.glob(ls + "/*.ldb"))
+    found = set(re.findall(rb"eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}", blob))
+    if len(found) != 1:
+        sys.exit(f"ferdium-go: expected one Ferdium login in local storage, found {len(found)}")
+    return found.pop().decode()
+
+
+def get(path, tok):
+    req = urllib.request.Request(API + path, headers={"Authorization": "Bearer " + tok})
+    with urllib.request.urlopen(req, timeout=10) as r:
+        return json.load(r)
+
+
+def build_map():
+    tok = token()
+    services = {s["id"]: s for s in get("/me/services", tok)}
+    out = []
+    for w in sorted(get("/workspace", tok), key=lambda w: w.get("order", 0)):
+        ids = [i for i in w.get("services", []) if i in services]
+        names = [services[i]["name"] for i in sorted(ids, key=lambda i: services[i].get("order", 0))]
+        out.append({"number": w.get("order", 0) + 1, "name": w["name"], "services": names})
+    with open(CACHE, "w") as f:
+        json.dump({"built": time.time(), "workspaces": out}, f, indent=1)
+    return out
+
+
+def layout(refresh=False):
+    if not refresh and os.path.exists(CACHE):
+        with open(CACHE) as f:
+            data = json.load(f)
+        if time.time() - data.get("built", 0) < 3600:
+            return data["workspaces"]
+    return build_map()
+
+
+def norm(s):
+    return re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+
+
+def resolve(query, ws):
+    q = norm(query)
+    if q.isdigit():
+        return int(q), None
+    for w in ws:
+        if norm(w["name"]) == q or norm(w["name"]) + " workspace" == q:
+            return w["number"], None
+    best = None
+    for w in ws:
+        for tab, name in enumerate(w["services"], 1):
+            n = norm(name)
+            score = 0 if n == q else 1 if n.startswith(q) or q.startswith(n) else 2 if q in n.split() or n in q else 9
+            if score < 9 and (best is None or score < best[0]):
+                best = (score, w["number"], tab)
+    if best:
+        return best[1], best[2]
+    sys.exit(f"ferdium-go: no Ferdium workspace or service matches '{query}' (try: ferdium-go --map)")
+
+
+def main():
+    args = sys.argv[1:]
+    if not args or args[0] in ("-h", "--help"):
+        print(__doc__.strip()); return
+    if args[0] == "--map":
+        for w in layout(refresh=True):
+            print(f"Ctrl+Alt+{w['number']}  {w['name']}: " + ", ".join(f"{i} {s}" for i, s in enumerate(w["services"], 1)))
+        return
+    number, tab = resolve(" ".join(args), layout())
+    keys = ["super+f", "wait:0.5", f"ctrl+alt+{number}"]
+    if tab:
+        keys += ["wait:0.3"] + ([f"ctrl+{tab}"] if tab <= 9 else ["ctrl+1"] + ["ctrl+tab"] * (tab - 1))
+    subprocess.run(["presskeys", *keys], check=True)
+    print(f"Ferdium workspace {number}" + (f", tab {tab}" if tab else ""))
+
+
+if __name__ == "__main__":
+    main()

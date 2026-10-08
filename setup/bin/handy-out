@@ -132,6 +132,46 @@ def by_pattern(words, cfg):
     return None
 
 
+FERDIUM_MAP = os.path.expanduser("~/.cache/ferdium-map.json")
+LEAD = re.compile(r"^(?:open|show|show me|go to|switch to|bring up|launch|start)\s+")
+
+
+def ferdium_services():
+    try:
+        if not os.path.exists(FERDIUM_MAP):
+            sh("ferdium-go", "--map")
+        with open(FERDIUM_MAP) as f:
+            return {re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
+                    for w in json.load(f)["workspaces"] for s in w["services"]}
+    except (OSError, ValueError, KeyError):
+        return set()
+
+
+def ferdium_target(words, cfg):
+    """'ferdium youtube', 'ferdium workspace 9', 'ferdium comms', or a Ferdium-only service name on its own."""
+    if re.search(r"\bferdium\b", words):
+        rest = re.sub(r"\bferdium\b|\b(workspace|tab|in|on|the|to|my)\b", " ", LEAD.sub("", words))
+        rest = re.sub(r"\s+", " ", rest).strip()
+        return rest or "ferdium"
+    rest = LEAD.sub("", words)
+    if rest in ferdium_services() and not find_app(rest, cfg.get("aliases", {})):
+        return rest
+    return None
+
+
+def run_ferdium(target):
+    if target == "ferdium":
+        argv = ["presskeys", "super+f"]
+    else:
+        argv = ["ferdium-go", target]
+    r = sh(*argv)
+    log(f"ferdium: ran {' '.join(argv)} rc={r.returncode} {r.stdout.strip()} {r.stderr.strip()}")
+    if r.returncode == 0:
+        notify(r.stdout.strip() or "Ferdium")
+        sh("assistant", "hide")
+    return r.returncode == 0
+
+
 IMPERATIVE = re.compile(r"^(?:please\s+)?(open|launch|start|switch to|go to|bring up|show me|show|put|move)\b")
 
 
@@ -149,6 +189,10 @@ def fast_path(text, cfg):
     """Run a known command when Laya is sure and the words carry what it needs. True when handled."""
     words = normalise(text)
     log(f"heard: {words!r}")
+    # 0. Ferdium first, so "ferdium workspace 9" never becomes "go to workspace 9"
+    target = ferdium_target(words, cfg)
+    if target:
+        return run_ferdium(target)
     # 1. plain code: "open/switch to/bring up/put <app> [where]" needs no model at all
     m = IMPERATIVE.match(words)
     if m:
@@ -188,6 +232,13 @@ def fast_path(text, cfg):
     if any(fill.get(a) is None for a in cmd.get("args", [])):
         log(f"{choice}: missing {[a for a in cmd.get('args', []) if fill.get(a) is None]}, to the panel")
         return False
+    if "keys" in cmd:  # an exact key sequence, e.g. ["super+f", "ctrl+alt+9", "ctrl+1"]
+        r = sh("presskeys", *cmd["keys"])
+        log(f"keys {' '.join(cmd['keys'])} rc={r.returncode}")
+        if r.returncode == 0:
+            notify(choice.replace("_", " "))
+            sh("assistant", "hide")
+        return r.returncode == 0
     argv = []
     for part in cmd["run"]:
         if part == "{where}":

@@ -1,6 +1,7 @@
 {
   "permissions": {
     "allow": [
+      "Bash(ferdium-go:*)",
       "Bash(grep:*)",
       "Bash(hyprctl activewindow:*)",
       "Bash(hyprctl activeworkspace:*)",
@@ -21,6 +22,7 @@
       "Bash(noctalia msg wifi-status)",
       "Bash(place:*)",
       "Bash(playerctl:*)",
+      "Bash(presskeys:*)",
       "Bash(systemctl --user status laya:*)",
       "Bash(wtype -M logo:*)",
       "Read(/home/hani/.config/hypr/config/binds.lua)",
