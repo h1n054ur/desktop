@@ -130,7 +130,7 @@ format = "{:%H:%M}"
 
 [widget.clock_date]
 type = "clock"
-color = "on_surface_variant"
+color = "primary"
 format = "{:%a %d %b}"
 
 [widget.glow_weather]
