@@ -86,18 +86,18 @@ hl.bind(mainMod .. " + F", function()
         hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "ferdium"))
     end
 end)
--- Chrome: jump to the normal (signed-in) window when open, start it otherwise; Shift opens an incognito window
+-- Helium: jump to the normal (signed-in) window when open, start it otherwise; Shift opens an incognito window
 hl.bind(mainMod .. " + C", function()
-    for _, w in ipairs(hl.get_windows({ class = "google-chrome" })) do
+    for _, w in ipairs(hl.get_windows({ class = "helium" })) do
         -- the first title says "New Incognito Tab" for the whole life of an incognito window
         if not (w.initial_title .. w.title):find("Incognito", 1, true) then
             hl.dispatch(hl.dsp.focus({ window = "address:" .. w.address }))
             return
         end
     end
-    hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "google-chrome-stable"))
+    hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "helium-browser"))
 end)
-hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd(launchPrefix .. "google-chrome-stable --incognito"))
+hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd(launchPrefix .. "helium-browser --incognito"))
 -- Call apps that can share the screen (Ferdium can't for these): jump to the window when open, start it otherwise
 local function focusOrLaunch(class, cmd)
     return function()
@@ -121,14 +121,15 @@ hl.bind(mainMod .. " + D", function()
         hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "vesktop"))
     end
 end)
-hl.bind(mainMod .. " + SHIFT + T", focusOrLaunch("chrome-teams.microsoft.com__-Default", "google-chrome-stable --app=https://teams.microsoft.com/"))
-hl.bind(mainMod .. " + SHIFT + Z", focusOrLaunch("chrome-app.zoom.us__wc_home-Default", "google-chrome-stable --app=https://app.zoom.us/wc/home"))
+hl.bind(mainMod .. " + SHIFT + T", focusOrLaunch("chrome-teams.microsoft.com__-Default", "helium-browser --app=https://teams.microsoft.com/"))
+hl.bind(mainMod .. " + SHIFT + Z", focusOrLaunch("chrome-app.zoom.us__wc_home-Default", "helium-browser --app=https://app.zoom.us/wc/home"))
 -- Windows desktop (WinApps, see h1n054ur-setup): focus it, or open it on the next empty workspace
 hl.bind(mainMod .. " + W",          hl.dsp.exec_cmd(launchPrefix .. os.getenv("HOME") .. "/.local/bin/winapps-open windows"))
 -- Obsidian (notes, ~/Notes vault): jump to it when open, start it otherwise
 hl.bind(mainMod .. " + O", focusOrLaunch("md.obsidian.Obsidian", "obsidian"))
-hl.bind(mainMod .. " + V",         focusOrLaunch("code", "code"))
+hl.bind(mainMod .. " + V",         focusOrLaunch("codium", "codium"))
 hl.bind(mainMod .. " + B",         focusOrLaunch("calibre-gui", "calibre"))
+hl.bind(mainMod .. " + SHIFT + B", focusOrLaunch("com.github.johnfactotum.Foliate", "foliate")) -- ebook reader
 -- yazi and rmpc as their own kitty windows (Ctrl+Shift+Y / Ctrl+Shift+M still work inside kitty)
 hl.bind(mainMod .. " + Y",         focusOrLaunch("yazi", TERMINAL .. " --class yazi -e yazi"))
 -- YouTube Music as a Chrome app window: jump to it when open, otherwise start it on the next empty
@@ -139,7 +140,7 @@ hl.bind(mainMod .. " + M", function()
         hl.dispatch(hl.dsp.focus({ window = "address:" .. w.address }))
     else
         hl.dispatch(hl.dsp.focus({ workspace = "emptym" }))
-        hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "google-chrome-stable --app=https://music.youtube.com/"))
+        hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "helium-browser --app=https://music.youtube.com/"))
     end
 end)
 hl.bind(mainMod .. " + SHIFT + M", focusOrLaunch("rmpc", TERMINAL .. " --class rmpc -e rmpc"))
@@ -155,7 +156,6 @@ hl.bind(mainMod .. " + SHIFT + Escape", hl.dsp.exec_cmd(launchPrefix .. TERMINAL
 hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle"))
 hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
 hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles. Super+Space stays free for h1n0 push-to-talk
-hl.bind(mainMod .. " + period",     hl.dsp.exec_cmd(noctCall .. "panel-toggle launcher /emo"))
 hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(h1nCall .. "lock lock"))
 hl.bind(mainMod .. " + ALT + C",    hl.dsp.exec_cmd(h1nCall .. "session toggle"))
 hl.bind(mainMod .. " + slash",      hl.dsp.exec_cmd(noctCall .. "panel-toggle kenn/keybind-cheatsheet:cheatsheet")) -- searchable keybind cheat sheet

@@ -25,7 +25,7 @@ Every panel floats as its own dark card with a border and shadow, because the ba
 |---|---|---|
 | ![System tab of the control centre](docs/control-centre-system.png) | ![Audio tab](docs/control-centre-audio.png) | ![Network tab](docs/control-centre-network.png) |
 
-The launcher (Super+\` here) uses compact rows in the same font:
+Noctalia's launcher uses compact rows in the same font (this setup uses [fuzzel](#fuzzel-launcher) instead, on Super+\` and the bar's search icon):
 
 ![Launcher](docs/launcher.png)
 

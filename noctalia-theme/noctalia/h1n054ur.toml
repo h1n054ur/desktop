@@ -67,7 +67,7 @@ capsule_border_width = 1.0
 capsule_thickness = 0.9
 capsule_padding = 10
 # Main screen: workspaces, search, time (date on hover), weather | window title, media (only while playing) | stats, volume + network + power
-start = [ "workspaces", "launcher", "group:time", "glow_weather" ]
+start = [ "workspaces", "search", "group:time", "glow_weather" ]
 center = [ "gw_title_short", "group:media" ]
 end = [ "group:stats", "group:system" ]
 
@@ -120,9 +120,14 @@ focused_color = "primary"
 occupied_color = "surface_variant"
 empty_color = "#06090a"
 
-[widget.launcher]
+# Search icon: opens the fuzzel app launcher (Super+` does the same)
+[widget.search]
+type = "custom_button"
 custom_image = "~/.local/share/glow-icons/panel/search-active.png"
 color = "primary"
+
+    [widget.search.actions]
+    left = "exec fuzzel"
 
 [widget.clock]
 color = "primary"

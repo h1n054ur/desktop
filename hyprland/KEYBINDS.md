@@ -30,13 +30,14 @@ Keys marked "jumps" go to the app if it is already open and start it if not.
 | `Super+F` | Ferdium (jumps) |
 | `Super+W` | Windows desktop through WinApps: Office, OneDrive, FileMaker (jumps, or opens on an empty workspace) |
 | `Super+O` | Obsidian (jumps; starts it if closed) |
-| `Super+C` | Chrome, signed in, with tabs (jumps) |
-| `Super+Shift+C` | Chrome incognito window (nothing saved) |
+| `Super+C` | Helium browser, signed in, vertical tabs (jumps) |
+| `Super+Shift+C` | Helium incognito window (nothing saved) |
 | `Super+D` | Discord in Vesktop (jumps; opens on an empty workspace of the right screen) |
 | `Super+Shift+T` | Teams (jumps) |
 | `Super+Shift+Z` | Zoom (jumps) |
-| `Super+V` | VS Code (jumps) |
+| `Super+V` | VSCodium (jumps) |
 | `Super+B` | Calibre (jumps) |
+| `Super+Shift+B` | Foliate ebook reader (jumps) |
 | `Super+Y` | yazi file manager in its own kitty window (jumps) |
 | `Super+Shift+M` | rmpc music player in its own kitty window (jumps) |
 | `Super+P` | Bitwarden app (jumps) |
@@ -95,7 +96,6 @@ Focus the window first (click it or hover it) before sending it anywhere.
 | Keys | Does |
 |---|---|
 | `Super+Shift+V` | Clipboard history |
-| `Super+.` | Emoji picker |
 | `Print` / `Super+Print` | Screenshot a region / the whole screen |
 | `Super+Alt+P` | Colour picker |
 | `Super+A` | Notifications |

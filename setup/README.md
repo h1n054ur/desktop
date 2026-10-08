@@ -26,9 +26,9 @@ The interactive run starts with the H1N054UR banner and a system check (OS, kern
 |---|---|
 | `desktop` | Hyprland and its idle, lock, wallpaper and polkit helpers, Noctalia and its greeter, greetd, Quickshell, the fuzzel launcher, rofi, clipboard history, audio and Bluetooth controls |
 | `terminal` | kitty, yazi, starship, fastfetch, zoxide, ripgrep, fd, fzf, bat, eza, btop, glances, neovim, micro, lazygit, lazydocker, the Nerd and Noto fonts |
-| `media` | MPD, rmpc and cava for music; mpv with uosc, yt-dlp, VLC, FreeTube, Stremio, the Jellyfin mpv shim; HandBrake, OBS, GIMP, Avidemux |
-| `dev` | git, GitHub CLI, Docker (with Compose, Buildx and the NVIDIA toolkit), Bun, uv, nvm, rbenv, VS Code, opencode, CMake, Ninja, ShellCheck, Caddy, cloudflared, ngrok, DBeaver, MySQL Workbench, Meld, gitleaks, and **Claude Code** (Anthropic's own installer, which keeps itself up to date) |
-| `apps` | Chrome, Zen, Ferdium, Vesktop, Obsidian, Bitwarden with rbw and rofi-rbw, Calibre, TeamSpeak, Figma, FileZilla, Remmina, Mission Center, Dolphin, Kate, Gwenview, Thunar |
+| `media` | MPD, rmpc and cava for music; mpv with uosc, yt-dlp, FreeTube, Stremio, the Jellyfin mpv shim; HandBrake, OBS, GIMP, Avidemux |
+| `dev` | git, GitHub CLI, Docker (with Compose, Buildx and the NVIDIA toolkit), Bun, uv, nvm, rbenv, VSCodium, opencode, CMake, Ninja, ShellCheck, Caddy, cloudflared, ngrok, DBeaver, MySQL Workbench, Meld, gitleaks, and **Claude Code** (Anthropic's own installer, which keeps itself up to date) |
+| `apps` | Helium (vertical tabs), Ferdium, Vesktop, Obsidian, Bitwarden with rbw and rofi-rbw, Calibre, Foliate, TeamSpeak, Figma, FileZilla, Remmina, Mission Center, Dolphin, Kate, Gwenview |
 | `winapps` | Docker, FreeRDP and KVM/QEMU for the Windows container (section 3) |
 | `mail` | aerc, himalaya, isync, notmuch, khal, calcurse, newsboat, qutebrowser, w3m, zathura, timg, yt-x |
 | `network` | Tailscale, Syncthing with its tray, rclone, WireGuard tools, Cloudflare WARP, Surfshark |

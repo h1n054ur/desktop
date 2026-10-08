@@ -2,7 +2,7 @@
 
 TERMINAL     = "kitty"
 FILE_MANAGER = "dolphin"
-BROWSER      = "google-chrome-stable"
+BROWSER      = "helium-browser"
 EDITOR       = "kate"
 CALCULATOR   = "gnome-calculator"
 
