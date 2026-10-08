@@ -155,7 +155,10 @@ hl.bind("CONTROL + SHIFT + Escape", focusOrLaunch("io.missioncenter.MissionCente
 hl.bind(mainMod .. " + SHIFT + Escape", hl.dsp.exec_cmd(launchPrefix .. TERMINAL .. " -e btop")) -- btop (was Ctrl+Shift+Esc until 2026-10-07)
 hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle"))
 hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
-hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles. Super+Space stays free for h1n0 push-to-talk
+hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles
+-- Push-to-talk dictation (Handy, offline): hold Super+Space and speak, let go and the text is typed where you are
+hl.bind(mainMod .. " + Space",      hl.dsp.exec_cmd("handy --toggle-transcription"))
+hl.bind(mainMod .. " + Space",      hl.dsp.exec_cmd("handy --toggle-transcription"), { release = true })
 hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(h1nCall .. "lock lock"))
 hl.bind(mainMod .. " + ALT + C",    hl.dsp.exec_cmd(h1nCall .. "session toggle"))
 hl.bind(mainMod .. " + slash",      hl.dsp.exec_cmd(noctCall .. "panel-toggle kenn/keybind-cheatsheet:cheatsheet")) -- searchable keybind cheat sheet
