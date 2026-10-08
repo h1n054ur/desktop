@@ -156,6 +156,9 @@ hl.bind(mainMod .. " + SHIFT + Escape", hl.dsp.exec_cmd(launchPrefix .. TERMINAL
 hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle"))
 hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
 hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles
+-- Dictation (Handy, offline): tap Ctrl+Space to start, tap again to stop. A plain toggle on press, so the keys are
+-- up before the text arrives (Handy waits 500 ms before typing); a release bind with a held modifier turns letters into shortcuts
+hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy --toggle-transcription"))
 hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(h1nCall .. "lock lock"))
 hl.bind(mainMod .. " + ALT + C",    hl.dsp.exec_cmd(h1nCall .. "session toggle"))
 hl.bind(mainMod .. " + slash",      hl.dsp.exec_cmd(noctCall .. "panel-toggle kenn/keybind-cheatsheet:cheatsheet")) -- searchable keybind cheat sheet

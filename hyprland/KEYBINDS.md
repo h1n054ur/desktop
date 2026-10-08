@@ -26,6 +26,7 @@ Keys marked "jumps" go to the app if it is already open and start it if not.
 | Keys | Opens |
 |---|---|
 | ``Super+` `` | App search (fuzzel launcher, press again to close) |
+| `Ctrl+Space` | Dictation (Handy, offline): tap to start, tap again to stop, then the text is typed where you are |
 | `Super+T` | kitty |
 | `Super+F` | Ferdium (jumps) |
 | `Super+W` | Windows desktop through WinApps: Office, OneDrive, FileMaker (jumps, or opens on an empty workspace) |
