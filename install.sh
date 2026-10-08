@@ -152,6 +152,7 @@ if want theme; then
   step "theme"
   link "$HERE/noctalia-theme/noctalia/palettes/h1n054ur.json" "$HOME/.config/noctalia/palettes/h1n054ur.json"
   link "$HERE/noctalia-theme/icons/glow" "$HOME/.local/share/glow-icons"
+  link "$HERE/noctalia-theme/fuzzel/fuzzel.ini" "$HOME/.config/fuzzel/fuzzel.ini"
   cfg="$HOME/.config/noctalia/config.toml"
   inc="files = [ \"$HERE/noctalia-theme/noctalia/h1n054ur.toml\" ]"
   if [ -f "$cfg" ] && grep -q 'noctalia-theme/noctalia/h1n054ur.toml' "$cfg"; then :

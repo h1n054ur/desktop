@@ -68,6 +68,17 @@ center = [ "gw_title" ]
 end = [ "tray" ]
 ```
 
+## Fuzzel launcher
+
+`fuzzel/fuzzel.ini` gives [fuzzel](https://codeberg.org/dnkl/fuzzel) the same look as the Noctalia launcher: the `#06090a` card with a `#1d2a26` outline, a `#39ff14` selected row with dark bold text, `#00e5ff` matches and CaskaydiaCove Nerd Font Mono. It is the app launcher on Super+\` in [hyprland-h1n054ur](https://github.com/h1n054ur/hyprland-h1n054ur) (`pkill -x fuzzel || fuzzel`, so the same key closes it).
+
+```sh
+mkdir -p ~/.config/fuzzel
+ln -s ~/noctalia-h1n054ur/fuzzel/fuzzel.ini ~/.config/fuzzel/fuzzel.ini
+```
+
+It starts apps with `uwsm app --`; empty `launch-prefix` if you do not use UWSM.
+
 ## Notes
 
 - Noctalia's bar takes one colour per fill, so the active workspace and the clock use solid `#39ff14`.

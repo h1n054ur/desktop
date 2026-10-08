@@ -14,8 +14,8 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 # ── groups ──────────────────────────────────────────────────────────────────────────────────────────
 ORDER=(desktop terminal media dev apps winapps mail network gaming)
 declare -A REPO AUR DESC
-DESC[desktop]="Hyprland, Noctalia, greetd, Quickshell, rofi, clipboard, audio"
-REPO[desktop]="hyprland hypridle hyprlock hyprpaper hyprpolkitagent hyprshot cachyos-hypr-noctalia noctalia-greeter greetd quickshell rofi cliphist wtype playerctl swaync easyeffects pavucontrol blueman"
+DESC[desktop]="Hyprland, Noctalia, greetd, Quickshell, fuzzel, rofi, clipboard, audio"
+REPO[desktop]="hyprland hypridle hyprlock hyprpaper hyprpolkitagent hyprshot cachyos-hypr-noctalia noctalia-greeter greetd quickshell fuzzel rofi cliphist wtype playerctl swaync easyeffects pavucontrol blueman"
 DESC[terminal]="kitty, yazi, starship, fastfetch, neovim, lazygit, fonts"
 REPO[terminal]="kitty yazi starship fastfetch zoxide ripgrep fd fzf bat eza btop glances neovim micro lazygit lazydocker figlet lolcat cmatrix ttf-cascadia-code-nerd ttf-meslo-nerd noto-fonts noto-fonts-cjk noto-fonts-emoji noto-fonts-extra"
 DESC[media]="MPD, rmpc, cava, mpv, VLC, FreeTube, OBS, GIMP, HandBrake"
