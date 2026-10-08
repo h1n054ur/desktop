@@ -1,0 +1,200 @@
+{
+  "_doc": "Fast voice commands for handy-out: Laya picks one of these (or 'other', which goes to the Haiku panel). criteria is what Laya matches the words against; run is the command, with {app}, {where} and {number} filled in by code from the words. Keep risky things (Bluetooth, Wi-Fi, power, sending, deleting) out of here: Haiku asks first.",
+  "floor": 0.85,
+  "commands": [
+    {
+      "id": "media_toggle",
+      "criteria": "pause, resume, play or stop the music or the video",
+      "run": [
+        "playerctl",
+        "play-pause"
+      ]
+    },
+    {
+      "id": "media_next",
+      "criteria": "skip to the next song or track",
+      "run": [
+        "playerctl",
+        "next"
+      ]
+    },
+    {
+      "id": "media_previous",
+      "criteria": "go back to the previous song or track",
+      "run": [
+        "playerctl",
+        "previous"
+      ]
+    },
+    {
+      "id": "volume_up",
+      "criteria": "make the sound louder, turn the volume up",
+      "run": [
+        "noctalia",
+        "msg",
+        "volume-up"
+      ]
+    },
+    {
+      "id": "volume_down",
+      "criteria": "make the sound quieter, turn the volume down",
+      "run": [
+        "noctalia",
+        "msg",
+        "volume-down"
+      ]
+    },
+    {
+      "id": "volume_mute",
+      "criteria": "mute or unmute the sound",
+      "run": [
+        "noctalia",
+        "msg",
+        "volume-mute"
+      ]
+    },
+    {
+      "id": "volume_set",
+      "criteria": "set the volume to a given number or percent",
+      "args": [
+        "number"
+      ],
+      "run": [
+        "noctalia",
+        "msg",
+        "volume-set",
+        "{number}"
+      ]
+    },
+    {
+      "id": "place_app",
+      "criteria": "open a named app, or put or move a named app onto the left, right or other screen or onto a workspace",
+      "args": [
+        "app",
+        "where"
+      ],
+      "run": [
+        "place",
+        "{app}",
+        "{where}"
+      ]
+    },
+    {
+      "id": "move_window",
+      "criteria": "move this window, the current window, to the left, right or other screen or to a workspace",
+      "args": [
+        "where"
+      ],
+      "run": [
+        "place",
+        "{where}"
+      ]
+    },
+    {
+      "id": "focus_app",
+      "criteria": "switch to, show or go to a named app without moving it",
+      "args": [
+        "app"
+      ],
+      "run": [
+        "place",
+        "focus",
+        "{app}"
+      ]
+    },
+    {
+      "id": "fullscreen",
+      "criteria": "make this window fullscreen, or leave fullscreen",
+      "run": [
+        "place",
+        "fullscreen"
+      ]
+    },
+    {
+      "id": "workspace",
+      "criteria": "go to or switch to workspace number N",
+      "args": [
+        "number"
+      ],
+      "run": [
+        "hyprctl",
+        "dispatch",
+        "hl.dsp.focus({ workspace = '{number}' })"
+      ]
+    },
+    {
+      "id": "screenshot",
+      "criteria": "take a screenshot or screen capture",
+      "run": [
+        "noctalia",
+        "msg",
+        "screenshot-region"
+      ]
+    },
+    {
+      "id": "dnd_toggle",
+      "criteria": "turn do not disturb on or off, silence notifications",
+      "run": [
+        "noctalia",
+        "msg",
+        "notification-dnd-toggle"
+      ]
+    },
+    {
+      "id": "nightlight_toggle",
+      "criteria": "turn the night light or blue light filter on or off",
+      "run": [
+        "noctalia",
+        "msg",
+        "nightlight-toggle"
+      ]
+    },
+    {
+      "id": "caffeine_toggle",
+      "criteria": "keep the screen awake, or let it sleep again (caffeine)",
+      "run": [
+        "noctalia",
+        "msg",
+        "caffeine-toggle"
+      ]
+    },
+    {
+      "id": "wallpaper_next",
+      "criteria": "change the wallpaper, next wallpaper",
+      "run": [
+        "noctalia",
+        "msg",
+        "wallpaper-next"
+      ]
+    },
+    {
+      "id": "hide_panel",
+      "criteria": "close or hide this assistant panel, never mind, that's all",
+      "run": [
+        "assistant",
+        "hide"
+      ]
+    }
+  ],
+  "aliases": {
+    "youtube music": "YouTube Music",
+    "yt music": "YouTube Music",
+    "music app": "YouTube Music",
+    "vs code": "VSCodium",
+    "vscode": "VSCodium",
+    "code editor": "VSCodium",
+    "editor": "VSCodium",
+    "browser": "Helium",
+    "web browser": "Helium",
+    "terminal": "kitty",
+    "file manager": "Dolphin",
+    "files app": "Dolphin",
+    "ebook": "Foliate",
+    "e-book": "Foliate",
+    "camera": "Snapshot",
+    "notes": "Notes (SilverBullet)",
+    "teams": "Microsoft Teams",
+    "pdf": "Stirling PDF"
+  },
+  "floor_with_app": 0.3
+}

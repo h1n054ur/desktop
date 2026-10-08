@@ -1,0 +1,15 @@
+# Laya, the local decision model for voice commands (handy-out asks it which command was meant, ~0.4 s on the
+# CPU, ~1.7 GB RAM). colibri built in ~/src/colibri (make -C c laya), the model in ~/Models/laya (hf download
+# convaiinnovations/laya). Link into ~/.config/systemd/user/ and `systemctl --user enable --now laya`.
+[Unit]
+Description=Laya decision model (colibri, System One API on 127.0.0.1:8765)
+
+[Service]
+WorkingDirectory=%h/src/colibri/c
+ExecStart=%h/src/colibri/c/coli serve --host 127.0.0.1 --port 8765 --model %h/Models/laya
+Restart=on-failure
+RestartSec=5
+Nice=5
+
+[Install]
+WantedBy=default.target

@@ -4,35 +4,12 @@
 # whenever a release is missed or runs before its press. This checks whether Handy is really recording,
 # by its live PipeWire capture stream (alsa_capture.handy, open only while recording), and only toggles when
 # the state needs to change.
-# After a stop it presses Enter once Handy has typed the text, but only into the assistant panel (Right Ctrl)
-# or a kitty window running Claude Code, so dictated requests send themselves there and nowhere else.
+# Where the text goes (typed, sent, or run as a command) is handy-out's job: Handy calls it with the text.
 set -u
 
 recording() {
     pactl -f json list source-outputs 2>/dev/null |
         jq -e 'any(.[]; .properties["node.name"] == "alsa_capture.handy")' >/dev/null
-}
-
-wants_enter() {
-    [ -e "${XDG_RUNTIME_DIR:-/tmp}/assistant-visible" ] && return 0
-    # Claude Code puts a status symbol at the start of the terminal title (✳ idle, spinner frames while working)
-    hyprctl activewindow -j 2>/dev/null |
-        jq -e '.class == "kitty" and (.title | test("^[✳✶✻✽✢·◐◓◑◒] "))' >/dev/null
-}
-
-enter_after_paste() {  # waits for Handy to finish typing (or to give up), then presses Enter if wanted
-    local log=$1 from=$2 line size
-    for _ in $(seq 200); do
-        sleep 0.1
-        size=$(stat -c %s "$log" 2>/dev/null || echo 0)
-        [ "$size" -lt "$from" ] && from=0   # Handy rolled its log over: read the new file from the start
-        line=$(tail -c +"$((from + 1))" "$log" 2>/dev/null |
-            grep -m1 -E 'Text pasted successfully|no audio samples|cancellation|Transcription result: *$')
-        case "$line" in
-            *"Text pasted successfully"*) if wants_enter; then wtype -k Return; log_event "pasted, Enter"; else log_event "pasted, no Enter"; fi; return ;;
-            ?*) return ;;
-        esac
-    done
 }
 
 # Serialise down/up (a quick tap can start them out of order) and remember a start that is still opening:
@@ -78,12 +55,9 @@ case "${1:-}" in
             exit 0
         fi
         recording || exit 0
-        log=~/.local/share/com.pais.handy/logs/handy.log
-        from=$(stat -c %s "$log" 2>/dev/null || echo 0)
         log_event "$1: stop"
         handy --toggle-transcription
         wait_for no || log_event "$1: still recording 2 s after stop"
-        enter_after_paste "$log" "$from" 9>&- & disown
         ;;
     *) echo "usage: handy-ptt down|up" >&2; exit 2 ;;
 esac

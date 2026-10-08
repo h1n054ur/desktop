@@ -1,0 +1,194 @@
+#!/usr/bin/env python3
+"""handy-out: where Handy's dictation goes (Handy's "external script" paste method calls this with the text).
+
+- Assistant panel open (tap Right Ctrl): a known desktop command (setup/assistant/commands.json) chosen by Laya, the
+  local decision model (colibri, ~0.4 s on the CPU), runs right away when Laya is sure enough; anything else is typed
+  into the panel and sent, for Claude (Haiku).
+- A kitty window running Claude Code: typed and sent.
+- Anything else: just typed.
+Laya only picks which command; the app, the screen and numbers are read from the words here, in code.
+Every decision goes to the journal: journalctl -t handy-out
+"""
+import json
+import os
+import re
+import subprocess
+import sys
+import urllib.request
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+COMMANDS = os.path.join(HERE, "..", "assistant", "commands.json")
+LAYA = os.environ.get("HANDY_LAYA_URL", "http://127.0.0.1:8765/v1/systemone")
+RUN = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+CLAUDE_TITLE = re.compile(r"^[✳✶✻✽✢·◐◓◑◒] ")
+WINDOW_COMMANDS = {"place_app", "move_window", "focus_app"}
+NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
+           "ten": 10, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
+           "eighty": 80, "ninety": 90, "hundred": 100, "half": 50, "max": 100, "maximum": 100}
+
+
+def log(msg):
+    subprocess.run(["logger", "-t", "handy-out", "--", msg], check=False)
+
+
+def sh(*cmd, **kw):
+    return subprocess.run(list(cmd), capture_output=True, text=True, check=False, **kw)
+
+
+def panel_open():
+    return os.path.exists(os.path.join(RUN, "assistant-visible"))
+
+
+def claude_window():
+    try:
+        w = json.loads(sh("hyprctl", "activewindow", "-j").stdout or "{}")
+    except json.JSONDecodeError:
+        return False
+    return w.get("class") == "kitty" and bool(CLAUDE_TITLE.match(w.get("title", "")))
+
+
+def type_text(text, enter):
+    sh("wtype", "--", text)
+    if enter:
+        sh("wtype", "-k", "Return")
+
+
+def app_names(aliases):
+    """Every app place knows (desktop entries and app windows), longest first, plus the spoken aliases."""
+    names = {}
+    for line in sh("place", "list").stdout.splitlines():
+        name = line.split(" -> ")[0].strip()
+        if name:
+            names[name.lower()] = name
+            short = re.sub(r"\s*\(.*\)$", "", name).lower()   # "Files (FileBrowser)" -> "files"
+            names.setdefault(short, name)
+    for spoken, target in aliases.items():
+        names[spoken.lower()] = target
+    return sorted(names.items(), key=lambda kv: -len(kv[0]))
+
+
+def find_app(words, aliases):
+    for spoken, target in app_names(aliases):
+        if re.search(r"\b" + re.escape(spoken) + r"\b", words):
+            return target
+    return None
+
+
+def find_where(words):
+    m = re.search(r"\b(?:workspace|desktop|space)\s+(\d+|" + "|".join(NUMBERS) + r")\b", words)
+    if m:
+        n = m.group(1)
+        return ["ws", str(NUMBERS.get(n, n))]
+    for word, where in (("other", "other"), ("left", "left"), ("right", "right"), ("main", "left"),
+                        ("second", "right"), ("this screen", "here"), ("here", "here")):
+        if re.search(r"\b" + word + r"\b", words):
+            return [where]
+    return None
+
+
+def find_number(words):
+    m = re.search(r"\b(\d{1,3})\b", words)
+    if m:
+        return m.group(1)
+    total = sum(v for k, v in NUMBERS.items() if re.search(r"\b" + k + r"\b", words) and k not in ("half", "max", "maximum"))
+    for k in ("half", "max", "maximum"):
+        if re.search(r"\b" + k + r"\b", words):
+            return str(NUMBERS[k])
+    return str(total) if total else None
+
+
+def ask_laya(text, cfg):
+    criteria = {c["id"]: c["criteria"] for c in cfg["commands"]}
+    criteria["other"] = "anything else: a question, a message to someone, several steps, or something not listed"
+    body = {"model": "jev-latest", "state": text, "questions": {
+        "command": {"type": "choice", "instructions": "Which desktop command is this spoken request asking for?",
+                    "criteria": criteria},
+        "noise": {"type": "noul", "instructions": "Is this an accidental or meaningless utterance (a cough, "
+                                                  "filler words, half a sentence) rather than a request?"}}}
+    req = urllib.request.Request(LAYA, data=json.dumps(body).encode(), headers={"Content-Type": "application/json"})
+    with urllib.request.urlopen(req, timeout=2) as r:
+        a = json.load(r)["answers"]
+    return a["command"]["choice"], a["command"]["confidence"], a["noise"]["noul"]
+
+
+IMPERATIVE = re.compile(r"^(?:please\s+)?(open|launch|start|switch to|go to|bring up|show me|show|put|move)\b")
+
+
+def run_place(app, where, going):
+    argv = ["place", "focus", app] if going and not where else ["place", app] + (where or ["here"])
+    r = sh(*argv)
+    log(f"code: ran {' '.join(argv)} rc={r.returncode}")
+    if r.returncode == 0:
+        sh("assistant", "hide")
+    return r.returncode == 0
+
+
+def fast_path(text, cfg):
+    """Run a known command when Laya is sure and the words carry what it needs. True when handled."""
+    words = text.lower().strip(" .!?")
+    # plain code first: "open/switch to/bring up/put <app> [where]" needs no model at all
+    m = IMPERATIVE.match(words)
+    if m:
+        app = find_app(words, cfg.get("aliases", {}))
+        if app:
+            return run_place(app, find_where(words), m.group(1) in ("switch to", "go to", "show me", "show", "bring up"))
+    try:
+        choice, conf, noise = ask_laya(text, cfg)
+    except Exception as e:  # Laya down or slow: Haiku gets it, as before routing existed
+        log(f"laya unavailable ({e.__class__.__name__}), to the panel")
+        return False
+    app = find_app(words, cfg.get("aliases", {}))
+    where = find_where(words)
+    floor = cfg.get("floor", 0.85)
+    # code before models: a named app turns any window or workspace pick into "put that app there" (or "go to
+    # it"), and because code has found the app itself, a lower bar is enough
+    if app and choice in WINDOW_COMMANDS | {"workspace"}:
+        going = re.search(r"\b(switch to|go to|show me|bring up)\b", words)
+        choice = "focus_app" if going and not where else "place_app"
+        floor = cfg.get("floor_with_app", 0.3)
+    log(f"laya: {choice} conf={conf:.2f} noise={noise:.2f} app={app} where={where}")
+    if noise >= 0.9:
+        log("dropped as noise")
+        return True
+    if choice == "other" or conf < floor:
+        return False
+    cmd = next(c for c in cfg["commands"] if c["id"] == choice)
+    fill = {"app": app, "where": where or (["here"] if choice == "place_app" else None),
+            "number": find_number(words)}
+    if any(fill.get(a) is None for a in cmd.get("args", [])):
+        log(f"{choice}: missing {[a for a in cmd.get('args', []) if fill.get(a) is None]}, to the panel")
+        return False
+    argv = []
+    for part in cmd["run"]:
+        if part == "{where}":
+            argv += fill["where"]
+        else:
+            argv.append(part.replace("{app}", fill["app"] or "").replace("{number}", fill["number"] or ""))
+    r = sh(*argv)
+    log(f"ran {' '.join(argv)} rc={r.returncode}")
+    if r.returncode != 0:
+        return False
+    if choice != "hide_panel":
+        sh("assistant", "hide")
+    return True
+
+
+def main():
+    text = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else sys.stdin.read()
+    text = text.strip()
+    if not text:
+        return
+    if panel_open():
+        with open(COMMANDS) as f:
+            cfg = json.load(f)
+        if not fast_path(text, cfg):
+            type_text(text, enter=True)
+    elif claude_window():
+        type_text(text, enter=True)
+        log("typed into Claude Code, Enter")
+    else:
+        type_text(text, enter=False)
+
+
+if __name__ == "__main__":
+    main()
