@@ -156,6 +156,8 @@ hl.bind(mainMod .. " + SHIFT + Escape", hl.dsp.exec_cmd(launchPrefix .. TERMINAL
 hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle"))
 hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
 hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles
+-- Assistant: a drop-down Claude (Haiku) that drives the desktop (setup/bin/assistant, setup/assistant/CLAUDE.md); press again to hide
+hl.bind(mainMod .. " + Space",      hl.dsp.exec_cmd("assistant"))
 -- Dictation (Handy, offline): hold Ctrl+Space and talk, let go and the text is typed. handy-ptt starts/stops only
 -- when Handy's real state needs it (its mic stream), and Ctrl's own release also stops it, so key order never matters
 hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy-ptt down"))

@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(place:*)",
+      "Bash(hyprctl clients:*)",
+      "Bash(hyprctl monitors:*)",
+      "Bash(hyprctl activewindow:*)",
+      "Bash(hyprctl activeworkspace:*)",
+      "Bash(hyprctl workspaces:*)",
+      "Bash(hyprctl dispatch:*)",
+      "Bash(playerctl:*)",
+      "Bash(pactl get-:*)",
+      "Bash(wpctl get-volume:*)"
+    ]
+  }
+}

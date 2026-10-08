@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Super+Space: show or hide the desktop assistant, a kitty drop-down running Claude (Haiku) in setup/assistant,
+# whose CLAUDE.md tells it how to drive the desktop (place, hyprctl). The first press starts it; later presses
+# toggle it (same instance group).
+set -eu
+here="$(cd "$(dirname "$(readlink -f "$0")")/../assistant" && pwd)"
+exec kitten quick-access-terminal --instance-group assistant -c "$here/quick-access.conf" \
+    sh -c "cd '$here' && exec claude --model haiku"
