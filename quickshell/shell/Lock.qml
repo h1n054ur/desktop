@@ -25,6 +25,8 @@ Scope {
         property string status: ""
         property bool busy: false
         property string pending: ""
+        // a key typed on a clock screen, for the sign-in panel (LoginScreen) to apply
+        signal forwardedKey(int key, string text)
 
         function submit(text) {
             if (busy) return;
@@ -107,6 +109,7 @@ Scope {
             readonly property bool isLogin: surface.screen && surface.screen.x === lockRoot.leftX
             Loader {
                 anchors.fill: parent
+                focus: true
                 sourceComponent: surface.isLogin ? loginComp : clockComp
             }
             Component { id: loginComp; LoginScreen { shell: lockState; clock: sysClock } }

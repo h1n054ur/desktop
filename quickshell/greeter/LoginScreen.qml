@@ -1,5 +1,6 @@
 // Left screen: the h1n054ur banner and a terminal-style sign-in panel over the dimmed wallpaper
 import QtQuick
+import QtQuick.Window
 import Quickshell
 
 Item {
@@ -91,7 +92,24 @@ Item {
                         Keys.onReturnPressed: { const t = text; text = ""; login.shell.submit(t) }
                         Keys.onEnterPressed: { const t = text; text = ""; login.shell.submit(t) }
                         Keys.onEscapePressed: { text = ""; if (login.shell.preview) Qt.quit() }
-                        Component.onCompleted: forceActiveFocus()
+                        // Take the keyboard whenever typing should land here: on start, when the check is over
+                        // (a disabled field drops focus) and whenever this window gets keyboard focus
+                        readonly property bool windowActive: Window.active
+                        function grab() { if (enabled) forceActiveFocus(); }
+                        Component.onCompleted: grab()
+                        onEnabledChanged: grab()
+                        onWindowActiveChanged: if (windowActive) grab()
+                    }
+                    // Keys typed while another screen has the keyboard (its clock forwards them here)
+                    Connections {
+                        target: login.shell
+                        function onForwardedKey(key, text) {
+                            if (!pw.enabled) return;
+                            if (key === Qt.Key_Return || key === Qt.Key_Enter) { const t = pw.text; pw.text = ""; login.shell.submit(t); }
+                            else if (key === Qt.Key_Escape) pw.text = "";
+                            else if (key === Qt.Key_Backspace) pw.text = pw.text.slice(0, -1);
+                            else if (text !== "" && text.charCodeAt(0) >= 32) pw.text += text;
+                        }
                     }
                 }
             }

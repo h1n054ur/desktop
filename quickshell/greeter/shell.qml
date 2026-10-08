@@ -29,6 +29,8 @@ ShellRoot {
 
     property string status: ""
     property bool busy: false
+    // a key typed on a clock screen (only the lock screen sends these; here only the sign-in screen gets the keyboard)
+    signal forwardedKey(int key, string text)
     // shared with the lock screen, which sets its own wording
     readonly property string hint: "enter to sign in"
     readonly property string busyHint: "signing in..."
@@ -88,6 +90,7 @@ ShellRoot {
 
             Loader {
                 anchors.fill: parent
+                focus: true
                 sourceComponent: win.isLogin ? loginScreen : clockScreen
             }
         }
