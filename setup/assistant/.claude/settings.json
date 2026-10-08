@@ -9,8 +9,20 @@
       "Bash(hyprctl workspaces:*)",
       "Bash(hyprctl dispatch:*)",
       "Bash(playerctl:*)",
-      "Bash(pactl get-:*)",
-      "Bash(wpctl get-volume:*)"
+      "Bash(noctalia msg volume-:*)",
+      "Bash(noctalia msg mic-:*)",
+      "Bash(noctalia msg screenshot-:*)",
+      "Bash(noctalia msg notification-:*)",
+      "Bash(noctalia msg nightlight-:*)",
+      "Bash(noctalia msg caffeine-:*)",
+      "Bash(noctalia msg wallpaper-:*)",
+      "Bash(noctalia msg bluetooth-status)",
+      "Bash(noctalia msg wifi-status)",
+      "Bash(noctalia msg status)",
+      "Bash(grep:*)",
+      "Bash(wtype -M logo:*)",
+      "Read(/home/hani/Notes/shortcuts.md)",
+      "Read(/home/hani/.config/hypr/config/binds.lua)"
     ]
   }
 }

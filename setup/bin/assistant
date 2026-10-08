@@ -1,8 +1,17 @@
 #!/usr/bin/env bash
-# Super+Space: show or hide the desktop assistant, a kitty drop-down running Claude (Haiku) in setup/assistant,
-# whose CLAUDE.md tells it how to drive the desktop (place, hyprctl). The first press starts it; later presses
-# toggle it (same instance group).
+# Super+Space: show or hide the desktop assistant, a kitty drop-down running Claude (Haiku) in setup/assistant
+# (CLAUDE.md + the desktop skill tell it how to drive the desktop). The first press starts it; later presses toggle
+# it (same instance group). Hyprland reports the panel the same when hidden, so its state is remembered in
+# $XDG_RUNTIME_DIR/assistant-visible, which handy-ptt reads to press Enter after dictating into it.
 set -eu
 here="$(cd "$(dirname "$(readlink -f "$0")")/../assistant" && pwd)"
+state="${XDG_RUNTIME_DIR:-/tmp}/assistant-visible"
+if pgrep -f '[i]nstance-group assistant' >/dev/null; then
+    if [ -e "$state" ]; then rm -f "$state"; else : > "$state"; fi
+else
+    : > "$state"
+fi
+# a fresh Claude session: drop variables inherited from any Claude Code session that started this
+for v in $(compgen -e | grep -E '^CLAUDE' || true); do unset "$v"; done
 exec kitten quick-access-terminal --instance-group assistant -c "$here/quick-access.conf" \
     sh -c "cd '$here' && exec claude --model haiku"

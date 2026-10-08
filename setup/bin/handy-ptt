@@ -4,6 +4,8 @@
 # whenever a release is missed (e.g. Ctrl let go before Space). This checks whether Handy is really recording,
 # by its live PipeWire capture stream (alsa_capture.handy, open only while recording), and only toggles when
 # the state needs to change. `up` is also bound to releasing Ctrl, so the order the keys come up never matters.
+# After a stop it presses Enter once Handy has typed the text, but only into the assistant panel (Super+Space)
+# or a kitty window running Claude Code, so dictated requests send themselves there and nowhere else.
 set -u
 
 recording() {
@@ -11,9 +13,35 @@ recording() {
         jq -e 'any(.[]; .properties["node.name"] == "alsa_capture.handy")' >/dev/null
 }
 
+wants_enter() {
+    [ -e "${XDG_RUNTIME_DIR:-/tmp}/assistant-visible" ] && return 0
+    # Claude Code puts a status symbol at the start of the terminal title (✳ idle, spinner frames while working)
+    hyprctl activewindow -j 2>/dev/null |
+        jq -e '.class == "kitty" and (.title | test("^[✳✶✻✽✢·◐◓◑◒] "))' >/dev/null
+}
+
+enter_after_paste() {  # waits for Handy to finish typing (or to give up), then presses Enter if wanted
+    local log=$1 from=$2 line
+    for _ in $(seq 200); do
+        sleep 0.1
+        line=$(tail -n +"$from" "$log" | grep -m1 -E 'Text pasted successfully|no audio samples|cancellation|Transcription result: *$')
+        case "$line" in
+            *"Text pasted successfully"*) wants_enter && wtype -k Return; return ;;
+            ?*) return ;;
+        esac
+    done
+}
+
 case "${1:-}" in
     down) recording || exec handy --toggle-transcription ;;
-    up)   recording && exec handy --toggle-transcription ;;
-    *)    echo "usage: handy-ptt down|up" >&2; exit 2 ;;
+    up)
+        recording || exit 0
+        # shellcheck disable=SC2012 # newest of Handy's dated log files; plain names
+        log=$(ls -t ~/.local/share/com.pais.handy/logs/* 2>/dev/null | head -1)
+        from=$(( $(wc -l < "$log") + 1 ))
+        handy --toggle-transcription
+        enter_after_paste "$log" "$from" & disown
+        ;;
+    *) echo "usage: handy-ptt down|up" >&2; exit 2 ;;
 esac
 exit 0
