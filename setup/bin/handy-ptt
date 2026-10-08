@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Hold-to-talk for Handy on Wayland: `handy-ptt down` on key press, `handy-ptt up` on key release.
+# Hold-to-talk for Handy on Wayland: `handy-ptt down` on key press, `handy-ptt up` on key release
+# (`up-ctrl` on any Ctrl release).
 # Handy only offers a toggle (`handy --toggle-transcription`), so blind press/release toggles drift out of step
 # whenever a release is missed (e.g. Ctrl let go before Space). This checks whether Handy is really recording,
 # by its live PipeWire capture stream (alsa_capture.handy, open only while recording), and only toggles when
@@ -21,10 +22,13 @@ wants_enter() {
 }
 
 enter_after_paste() {  # waits for Handy to finish typing (or to give up), then presses Enter if wanted
-    local log=$1 from=$2 line
+    local log=$1 from=$2 line size
     for _ in $(seq 200); do
         sleep 0.1
-        line=$(tail -n +"$from" "$log" | grep -m1 -E 'Text pasted successfully|no audio samples|cancellation|Transcription result: *$')
+        size=$(stat -c %s "$log" 2>/dev/null || echo 0)
+        [ "$size" -lt "$from" ] && from=0   # Handy rolled its log over: read the new file from the start
+        line=$(tail -c +"$((from + 1))" "$log" 2>/dev/null |
+            grep -m1 -E 'Text pasted successfully|no audio samples|cancellation|Transcription result: *$')
         case "$line" in
             *"Text pasted successfully"*) wants_enter && wtype -k Return; return ;;
             ?*) return ;;
@@ -32,16 +36,51 @@ enter_after_paste() {  # waits for Handy to finish typing (or to give up), then 
     done
 }
 
+# Serialise down/up (Space release and Ctrl release can both fire) and remember a start that is still opening:
+# after a few idle minutes Handy reloads its model and its mic stream takes ~330 ms to appear, so an early
+# release must wait for the recording to exist before stopping it, or it would be left listening.
+run="${XDG_RUNTIME_DIR:-/tmp}"
+starting="$run/handy-ptt-starting"
+exec 9>"$run/handy-ptt.lock"
+flock 9
+
+wait_for() {  # wait_for yes|no: until recording() matches, at most 2 s
+    for _ in $(seq 40); do
+        if recording; then [ "$1" = yes ] && return 0; else [ "$1" = no ] && return 0; fi
+        sleep 0.05
+    done
+    return 1
+}
+
+released="$run/handy-ptt-released"
+
 case "${1:-}" in
-    down) recording || exec handy --toggle-transcription ;;
-    up)
-        recording || exit 0
-        # shellcheck disable=SC2012 # newest of Handy's dated log files; plain names
-        log=$(ls -t ~/.local/share/com.pais.handy/logs/* 2>/dev/null | head -1)
-        from=$(( $(wc -l < "$log") + 1 ))
+    down)
+        # its release already ran (the two processes can start out of order on a quick tap): nothing to do
+        if [ -e "$released" ] && [ $(( $(date +%s%N) - $(cat "$released" 2>/dev/null || echo 0) )) -lt 1000000000 ]; then
+            rm -f "$released"; exit 0
+        fi
+        rm -f "$released"
+        recording && exit 0
+        : > "$starting"
         handy --toggle-transcription
-        enter_after_paste "$log" "$from" & disown
         ;;
-    *) echo "usage: handy-ptt down|up" >&2; exit 2 ;;
+    up|up-ctrl)  # up: Space released; up-ctrl: any Ctrl released (also fires for Ctrl+C etc.)
+        if [ -e "$starting" ]; then
+            rm -f "$starting"
+            wait_for yes || exit 0
+        elif ! recording; then
+            # a Space release before its press was handled: tell that press not to start
+            [ "$1" = up ] && date +%s%N > "$released"
+            exit 0
+        fi
+        recording || exit 0
+        log=~/.local/share/com.pais.handy/logs/handy.log
+        from=$(stat -c %s "$log" 2>/dev/null || echo 0)
+        handy --toggle-transcription
+        wait_for no
+        enter_after_paste "$log" "$from" 9>&- & disown
+        ;;
+    *) echo "usage: handy-ptt down|up|up-ctrl" >&2; exit 2 ;;
 esac
 exit 0

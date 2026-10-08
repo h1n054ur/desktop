@@ -162,8 +162,8 @@ hl.bind(mainMod .. " + Space",      hl.dsp.exec_cmd("assistant"))
 -- when Handy's real state needs it (its mic stream), and Ctrl's own release also stops it, so key order never matters
 hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy-ptt down"))
 hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy-ptt up"), { release = true })
-hl.bind("CONTROL + Control_L",      hl.dsp.exec_cmd("handy-ptt up"), { release = true, non_consuming = true })
-hl.bind("CONTROL + Control_R",      hl.dsp.exec_cmd("handy-ptt up"), { release = true, non_consuming = true })
+hl.bind("CONTROL + Control_L",      hl.dsp.exec_cmd("handy-ptt up-ctrl"), { release = true, non_consuming = true })
+hl.bind("CONTROL + Control_R",      hl.dsp.exec_cmd("handy-ptt up-ctrl"), { release = true, non_consuming = true })
 hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(h1nCall .. "lock lock"))
 hl.bind(mainMod .. " + ALT + C",    hl.dsp.exec_cmd(h1nCall .. "session toggle"))
 hl.bind(mainMod .. " + slash",      hl.dsp.exec_cmd(noctCall .. "panel-toggle kenn/keybind-cheatsheet:cheatsheet")) -- searchable keybind cheat sheet
