@@ -156,10 +156,12 @@ hl.bind(mainMod .. " + SHIFT + Escape", hl.dsp.exec_cmd(launchPrefix .. TERMINAL
 hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle"))
 hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
 hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles
--- Dictation (Handy, offline): hold Ctrl+Space and talk, let go and the text is typed. Press and release each toggle
--- Handy (set to toggle mode; its own push-to-talk mode gets these toggles out of step)
-hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy --toggle-transcription"))
-hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy --toggle-transcription"), { release = true })
+-- Dictation (Handy, offline): hold Ctrl+Space and talk, let go and the text is typed. handy-ptt starts/stops only
+-- when Handy's real state needs it (its mic stream), and Ctrl's own release also stops it, so key order never matters
+hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy-ptt down"))
+hl.bind("CONTROL + Space",          hl.dsp.exec_cmd("handy-ptt up"), { release = true })
+hl.bind("CONTROL + Control_L",      hl.dsp.exec_cmd("handy-ptt up"), { release = true, non_consuming = true })
+hl.bind("CONTROL + Control_R",      hl.dsp.exec_cmd("handy-ptt up"), { release = true, non_consuming = true })
 hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(h1nCall .. "lock lock"))
 hl.bind(mainMod .. " + ALT + C",    hl.dsp.exec_cmd(h1nCall .. "session toggle"))
 hl.bind(mainMod .. " + slash",      hl.dsp.exec_cmd(noctCall .. "panel-toggle kenn/keybind-cheatsheet:cheatsheet")) -- searchable keybind cheat sheet

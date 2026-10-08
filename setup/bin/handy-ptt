@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Hold-to-talk for Handy on Wayland: `handy-ptt down` on key press, `handy-ptt up` on key release.
+# Handy only offers a toggle (`handy --toggle-transcription`), so blind press/release toggles drift out of step
+# whenever a release is missed (e.g. Ctrl let go before Space). This checks whether Handy is really recording,
+# by its live PipeWire capture stream (alsa_capture.handy, open only while recording), and only toggles when
+# the state needs to change. `up` is also bound to releasing Ctrl, so the order the keys come up never matters.
+set -u
+
+recording() {
+    pactl -f json list source-outputs 2>/dev/null |
+        jq -e 'any(.[]; .properties["node.name"] == "alsa_capture.handy")' >/dev/null
+}
+
+case "${1:-}" in
+    down) recording || exec handy --toggle-transcription ;;
+    up)   recording && exec handy --toggle-transcription ;;
+    *)    echo "usage: handy-ptt down|up" >&2; exit 2 ;;
+esac
+exit 0
