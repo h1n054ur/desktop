@@ -7,7 +7,8 @@ hl.on("hyprland.start", function ()
     -- h1n054ur lock screen + session menu (~/.config/quickshell/h1n054ur), and hypridle to lock before sleep
     hl.exec_cmd("quickshell -c h1n054ur")
     hl.exec_cmd("hypridle")
-    -- Handy: offline push-to-talk dictation in the tray (Super+Space)
+    -- Handy: offline dictation in the tray; its own shortcut is Ctrl+Space (not a Hyprland bind: a Super bind
+    -- let the typed text arrive while Super was still held, so every letter fired a Super shortcut)
     hl.exec_cmd("handy --start-hidden")
     hl.exec_cmd("xhost +SI:localuser:root")
     -- first kitty: workspace per machine (KITTY_WORKSPACE, set in variables.lua / host files); started directly
