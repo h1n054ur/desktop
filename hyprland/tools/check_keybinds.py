@@ -18,7 +18,7 @@ KEYS = {"Return": "Enter", "grave": "`", "period": ".", "slash": "/", "equal": "
         "code:82": "Minus", "code:86": "Plus", "Escape": "Escape", "Print": "Print"}
 # hardware keys, mouse-only and other binds the page describes in words instead of key names
 # Control_L/R: release-only helpers of the Ctrl+Space dictation row (handy-ptt up), not shortcuts of their own
-SKIP = re.compile(r"XF86|switch:|code:(82|86)$|Control_[LR]$")
+SKIP = re.compile(r"XF86|switch:|code:(82|86)$|Control_[LR]\b")
 
 
 def combo(expr: str) -> str:
