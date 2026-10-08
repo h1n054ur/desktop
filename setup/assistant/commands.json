@@ -1,6 +1,6 @@
 {
-  "_doc": "Fast voice commands for handy-out: Laya picks one of these (or 'other', which goes to the Haiku panel). criteria is what Laya matches the words against; run is the command, with {app}, {where} and {number} filled in by code from the words. Keep risky things (Bluetooth, Wi-Fi, power, sending, deleting) out of here: Haiku asks first.",
-  "floor": 0.85,
+  "_doc": "Fast voice commands for handy-out. Order: (1) code rule 'open/switch to/bring up/put <app> [where]'; (2) patterns (regexes over the lowercased words, filler like 'please' removed); (3) Laya, the local decision model, picks by criteria and runs only at >= floor (0.7, from tests: Laya alone gets ~60% of phrasings right) or >= floor_with_app when code found the app; (4) anything else goes to the Haiku panel. {app}, {where}, {number} are read from the words by code. Keep risky things (Bluetooth, Wi-Fi, power, sending, deleting) out of here: Haiku asks first.",
+  "floor": 0.7,
   "commands": [
     {
       "id": "media_toggle",
@@ -8,6 +8,12 @@
       "run": [
         "playerctl",
         "play-pause"
+      ],
+      "patterns": [
+        "^(pause|play|resume|unpause|stop)( (it|that|this|the (music|song|video|track|audio)|music|some music|playback))?$",
+        "^(hold on|wait)?,? ?(pause|stop) (it|that|this|the music|the video)$",
+        "^(start|continue) (the )?(music|song|video|playing)$",
+        "^(play|start|resume) (the |my )?(music|song|video) again$"
       ]
     },
     {
@@ -16,6 +22,11 @@
       "run": [
         "playerctl",
         "next"
+      ],
+      "patterns": [
+        "^(next|skip)( (song|track|one|this|it|this song|this track))?$",
+        "^(play|go to) the next (song|track|one)$",
+        "^skip (to the )?next( (song|track))?$"
       ]
     },
     {
@@ -24,6 +35,11 @@
       "run": [
         "playerctl",
         "previous"
+      ],
+      "patterns": [
+        "^(previous|last|prev)( (song|track|one))?$",
+        "^(go )?back( a| one)? (song|track)$",
+        "^(play|go to) the (previous|last) (song|track|one)$"
       ]
     },
     {
@@ -33,6 +49,9 @@
         "noctalia",
         "msg",
         "volume-up"
+      ],
+      "patterns": [
+        "^(louder|volume up|turn (it|that|the volume|the sound|the music) up( (a bit|a little|some|more))?|turn up (the )?(volume|sound|music)|crank it( up)?|(raise|increase) (the )?volume|make it louder|more volume)$"
       ]
     },
     {
@@ -42,6 +61,10 @@
         "noctalia",
         "msg",
         "volume-down"
+      ],
+      "patterns": [
+        "^(quieter|softer|volume down|turn (it|that|the volume|the sound|the music) down( (a bit|a little|some))?|turn down (the )?(volume|sound|music)|(lower|reduce|decrease) (the )?volume|make it quieter|too loud|less volume)$",
+        "^(it'?s |that'?s |this is |way )?(too|so) loud$"
       ]
     },
     {
@@ -51,6 +74,10 @@
         "noctalia",
         "msg",
         "volume-mute"
+      ],
+      "patterns": [
+        "^(mute|unmute)( (it|the sound|the audio|the volume|sound|audio))?$",
+        "^(turn|switch) (the )?sound (off|on)$"
       ]
     },
     {
@@ -64,6 +91,10 @@
         "msg",
         "volume-set",
         "{number}"
+      ],
+      "patterns": [
+        "^(set |turn )?(the )?volume (to |at )?(\\d{1,3}|[a-z]+)( percent| %)?$",
+        "^(set|turn) (it|the sound) to (\\d{1,3}|[a-z]+)( percent)?$"
       ]
     },
     {
@@ -88,6 +119,11 @@
       "run": [
         "place",
         "{where}"
+      ],
+      "patterns": [
+        "^(move|send|put|throw|shift) (this|that|it|the window|this window)( window)? (to|on|onto) (the )?(other|left|right|main|second)( (screen|monitor|side|display))?$",
+        "^(move|send|put|throw) (this|that|it|the window|this window)( window)? (to|on|onto) (workspace|desktop|space) (\\d+|[a-z]+)$",
+        "^(move|send) (it|this|that) (left|right|over)$"
       ]
     },
     {
@@ -108,6 +144,11 @@
       "run": [
         "place",
         "fullscreen"
+      ],
+      "patterns": [
+        "^(make (it|this|that)( window)? )?(full ?screen)( it)?$",
+        "^(exit|leave|toggle|go|get out of) (full ?screen)$",
+        "^(maximi[sz]e|max) (it|this|this window)$"
       ]
     },
     {
@@ -120,6 +161,9 @@
         "hyprctl",
         "dispatch",
         "hl.dsp.focus({ workspace = '{number}' })"
+      ],
+      "patterns": [
+        "^(go to|switch to|show|open|jump to)? ?(workspace|desktop|space) (\\d+|[a-z]+)$"
       ]
     },
     {
@@ -129,6 +173,10 @@
         "noctalia",
         "msg",
         "screenshot-region"
+      ],
+      "patterns": [
+        "^(take |grab |make )?(a )?(screenshot|screen ?shot|screen capture|screen grab)( (of this|of the screen|please))?$",
+        "^capture (the |this )?screen$"
       ]
     },
     {
@@ -138,6 +186,12 @@
         "noctalia",
         "msg",
         "notification-dnd-toggle"
+      ],
+      "patterns": [
+        "^(turn |switch )?(on |off )?do not disturb( (on|off|mode))?$",
+        "^(turn|switch) (off|on) (the )?notifications$",
+        "^(silence|mute|stop) (the )?notifications$",
+        "^dnd( (on|off))?$"
       ]
     },
     {
@@ -147,6 +201,9 @@
         "noctalia",
         "msg",
         "nightlight-toggle"
+      ],
+      "patterns": [
+        "^(turn |switch )?(on |off )?(the )?(night ?light|night mode|blue light filter)( (on|off))?$"
       ]
     },
     {
@@ -156,6 +213,9 @@
         "noctalia",
         "msg",
         "caffeine-toggle"
+      ],
+      "patterns": [
+        "^(keep (the )?(screen|computer|pc|it) (awake|on)|don'?t (let it )?(sleep|go to sleep)|caffeine( (on|off))?|stay awake|let (it|the screen) sleep( again)?)$"
       ]
     },
     {
@@ -165,6 +225,10 @@
         "noctalia",
         "msg",
         "wallpaper-next"
+      ],
+      "patterns": [
+        "^(next|new|change|another|different|switch) (the )?(wallpaper|background)$",
+        "^change (my )?(wallpaper|background)$"
       ]
     },
     {
@@ -173,6 +237,9 @@
       "run": [
         "assistant",
         "hide"
+      ],
+      "patterns": [
+        "^(never ?mind|close( this| it)?|hide( this| it)?|cancel|that'?s (all|it)|go away|nothing|forget it)$"
       ]
     }
   ],

@@ -111,6 +111,27 @@ def ask_laya(text, cfg):
     return a["command"]["choice"], a["command"]["confidence"], a["noise"]["noul"]
 
 
+FILLER = re.compile(r"^(?:(?:hey|ok|okay|um|uh|so|please|can you|could you|would you|will you|just|and|then)[,]?\s+)+")
+
+
+def normalise(text):
+    words = re.sub(r"[.!?]+$", "", text.lower().strip())
+    words = FILLER.sub("", words)
+    return re.sub(r"\s+(please|for me|now|thanks|thank you)$", "", words).strip()
+
+
+def notify(msg):
+    sh("notify-send", "-a", "Voice", "-u", "low", "-t", "2500", "⚡ " + msg)
+
+
+def by_pattern(words, cfg):
+    for c in cfg["commands"]:
+        for p in c.get("patterns", []):
+            if re.match(p, words):
+                return c["id"]
+    return None
+
+
 IMPERATIVE = re.compile(r"^(?:please\s+)?(open|launch|start|switch to|go to|bring up|show me|show|put|move)\b")
 
 
@@ -119,24 +140,32 @@ def run_place(app, where, going):
     r = sh(*argv)
     log(f"code: ran {' '.join(argv)} rc={r.returncode}")
     if r.returncode == 0:
+        notify(" ".join(argv[1:]))
         sh("assistant", "hide")
     return r.returncode == 0
 
 
 def fast_path(text, cfg):
     """Run a known command when Laya is sure and the words carry what it needs. True when handled."""
-    words = text.lower().strip(" .!?")
-    # plain code first: "open/switch to/bring up/put <app> [where]" needs no model at all
+    words = normalise(text)
+    log(f"heard: {words!r}")
+    # 1. plain code: "open/switch to/bring up/put <app> [where]" needs no model at all
     m = IMPERATIVE.match(words)
     if m:
         app = find_app(words, cfg.get("aliases", {}))
         if app:
             return run_place(app, find_where(words), m.group(1) in ("switch to", "go to", "show me", "show", "bring up"))
-    try:
-        choice, conf, noise = ask_laya(text, cfg)
-    except Exception as e:  # Laya down or slow: Haiku gets it, as before routing existed
-        log(f"laya unavailable ({e.__class__.__name__}), to the panel")
-        return False
+    # 2. patterns from commands.json; 3. Laya for the phrasings no pattern knows
+    choice = by_pattern(words, cfg)
+    if choice:
+        conf, noise, via = 1.0, 0.0, "pattern"
+    else:
+        try:
+            choice, conf, noise = ask_laya(words, cfg)
+            via = "laya"
+        except Exception as e:  # Laya down or slow: Haiku gets it, as before routing existed
+            log(f"laya unavailable ({e.__class__.__name__}), to the panel")
+            return False
     app = find_app(words, cfg.get("aliases", {}))
     where = find_where(words)
     floor = cfg.get("floor", 0.85)
@@ -146,11 +175,12 @@ def fast_path(text, cfg):
         going = re.search(r"\b(switch to|go to|show me|bring up)\b", words)
         choice = "focus_app" if going and not where else "place_app"
         floor = cfg.get("floor_with_app", 0.3)
-    log(f"laya: {choice} conf={conf:.2f} noise={noise:.2f} app={app} where={where}")
+    log(f"{via}: {choice} conf={conf:.2f} noise={noise:.2f} app={app} where={where}")
     if noise >= 0.9:
         log("dropped as noise")
         return True
     if choice == "other" or conf < floor:
+        log(f"to the panel ({choice} {conf:.2f} < {floor})")
         return False
     cmd = next(c for c in cfg["commands"] if c["id"] == choice)
     fill = {"app": app, "where": where or (["here"] if choice == "place_app" else None),
@@ -168,6 +198,7 @@ def fast_path(text, cfg):
     log(f"ran {' '.join(argv)} rc={r.returncode}")
     if r.returncode != 0:
         return False
+    notify(f"{choice.replace('_', ' ')}" + (f" ({via})" if via == "laya" else ""))
     if choice != "hide_panel":
         sh("assistant", "hide")
     return True
