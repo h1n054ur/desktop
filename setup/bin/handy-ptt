@@ -30,7 +30,7 @@ enter_after_paste() {  # waits for Handy to finish typing (or to give up), then 
         line=$(tail -c +"$((from + 1))" "$log" 2>/dev/null |
             grep -m1 -E 'Text pasted successfully|no audio samples|cancellation|Transcription result: *$')
         case "$line" in
-            *"Text pasted successfully"*) wants_enter && wtype -k Return; return ;;
+            *"Text pasted successfully"*) if wants_enter; then wtype -k Return; log_event "pasted, Enter"; else log_event "pasted, no Enter"; fi; return ;;
             ?*) return ;;
         esac
     done
@@ -43,6 +43,8 @@ run="${XDG_RUNTIME_DIR:-/tmp}"
 starting="$run/handy-ptt-starting"
 exec 9>"$run/handy-ptt.lock"
 flock 9
+
+log_event() { logger -t handy-ptt -- "$*"; }   # journalctl -t handy-ptt shows every key event and decision
 
 wait_for() {  # wait_for yes|no: until recording() matches, at most 2 s
     for _ in $(seq 40); do
@@ -58,27 +60,30 @@ case "${1:-}" in
     down)
         # its release already ran (the two processes can start out of order on a quick tap): nothing to do
         if [ -e "$released" ] && [ $(( $(date +%s%N) - $(cat "$released" 2>/dev/null || echo 0) )) -lt 1000000000 ]; then
-            rm -f "$released"; exit 0
+            rm -f "$released"; log_event "down: its release already ran, not starting"; exit 0
         fi
         rm -f "$released"
-        recording && exit 0
+        if recording; then log_event "down: already recording"; exit 0; fi
         : > "$starting"
+        log_event "down: start"
         handy --toggle-transcription
         ;;
     up|up-ctrl)  # up: Space released; up-ctrl: any Ctrl released (also fires for Ctrl+C etc.)
         if [ -e "$starting" ]; then
             rm -f "$starting"
-            wait_for yes || exit 0
+            wait_for yes || { log_event "$1: start never appeared"; exit 0; }
         elif ! recording; then
             # a Space release before its press was handled: tell that press not to start
             [ "$1" = up ] && date +%s%N > "$released"
+            log_event "$1: not recording (marker: $([ "$1" = up ] && echo yes || echo no))"
             exit 0
         fi
         recording || exit 0
         log=~/.local/share/com.pais.handy/logs/handy.log
         from=$(stat -c %s "$log" 2>/dev/null || echo 0)
+        log_event "$1: stop"
         handy --toggle-transcription
-        wait_for no
+        wait_for no || log_event "$1: still recording 2 s after stop"
         enter_after_paste "$log" "$from" 9>&- & disown
         ;;
     *) echo "usage: handy-ptt down|up|up-ctrl" >&2; exit 2 ;;
