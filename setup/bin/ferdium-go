@@ -7,8 +7,9 @@
   ferdium-go --map          print the live layout (workspace number, tab number, service)
 
 The layout is read live from the Ferdium account API with the login Ferdium keeps in its local storage, cached for
-an hour in ~/.cache/ferdium-map.json. Workspace N = the Nth in the sidebar (Ctrl+Alt+N); tabs follow Ferdium's own
-service order, so dragging tabs is picked up. Tabs past 9 are reached with Ctrl+1 then Ctrl+Tab.
+an hour in ~/.cache/ferdium-map.json. Workspace N = the Nth in the sidebar (Ctrl+Alt+N); tabs follow the
+workspace's own list (the order its tab bar shows),
+so dragging tabs is picked up. Tabs past 9 are reached with Ctrl+1 then Ctrl+Tab.
 """
 import glob, json, os, re, subprocess, sys, time, urllib.request
 
@@ -37,7 +38,7 @@ def build_map():
     out = []
     for w in sorted(get("/workspace", tok), key=lambda w: w.get("order", 0)):
         ids = [i for i in w.get("services", []) if i in services]
-        names = [services[i]["name"] for i in sorted(ids, key=lambda i: services[i].get("order", 0))]
+        names = [services[i]["name"] for i in ids]   # the workspace's own list is the tab order Ferdium shows
         out.append({"number": w.get("order", 0) + 1, "name": w["name"], "services": names})
     with open(CACHE, "w") as f:
         json.dump({"built": time.time(), "workspaces": out}, f, indent=1)
