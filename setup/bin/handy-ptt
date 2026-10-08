@@ -4,6 +4,7 @@
 # whenever a release is missed or runs before its press. This checks whether Handy is really recording,
 # by its live PipeWire capture stream (alsa_capture.handy, open only while recording), and only toggles when
 # the state needs to change.
+# handy-guard (a user service) cancels any recording that runs while the key is up or for more than 3 minutes.
 # Where the text goes (typed, sent, or run as a command) is handy-out's job: Handy calls it with the text.
 set -u
 
@@ -31,6 +32,7 @@ wait_for() {  # wait_for yes|no: until recording() matches, at most 2 s
 }
 
 released="$run/handy-ptt-released"
+held="$run/handy-ptt-held"   # exists while Right Alt is down; handy-guard cancels any recording without it
 
 case "${1:-}" in
     down)
@@ -39,15 +41,17 @@ case "${1:-}" in
             rm -f "$released"; log_event "down: its release already ran, not starting"; exit 0
         fi
         rm -f "$released"
+        : > "$held"
         if recording; then log_event "down: already recording"; exit 0; fi
         : > "$starting"
         log_event "down: start"
         handy --toggle-transcription
         ;;
     up)
+        rm -f "$held"
         if [ -e "$starting" ]; then
             rm -f "$starting"
-            wait_for yes || { log_event "$1: start never appeared"; exit 0; }
+            wait_for yes || { log_event "$1: start never appeared (handy-guard cancels it if it starts late)"; exit 0; }
         elif ! recording; then
             # a release before its press was handled: tell that press not to start
             date +%s%N > "$released"

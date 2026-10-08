@@ -1,0 +1,12 @@
+[Unit]
+Description=Handy dictation guard (cancels stuck or over-long recordings)
+After=graphical-session.target
+PartOf=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/handy-guard
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

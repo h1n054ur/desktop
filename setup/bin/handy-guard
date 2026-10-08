@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Safety net for Handy dictation, run as a user service (handy-guard.service).
+# On 2026-10-08 a quick Right Alt tap left Handy recording for 8 hours (a release gave up waiting for the
+# start), and the next press typed the whole 8-hour transcript into whatever window had focus.
+# This throws a recording away (handy --cancel, nothing is typed) when:
+#   - it runs while Right Alt is not held (handy-ptt keeps $run/handy-ptt-held while the key is down), or
+#   - it runs longer than HANDY_MAX_SECONDS (default 180), held or not.
+# Decisions go to the journal: journalctl -t handy-guard
+set -u
+
+run="${XDG_RUNTIME_DIR:-/tmp}"
+held="$run/handy-ptt-held"
+max="${HANDY_MAX_SECONDS:-180}"
+orphan_after=4   # seconds a recording may run with the key up (the release needs a moment to stop it)
+
+log_event() { logger -t handy-guard -- "$*"; }
+
+recording() {
+    pactl -f json list source-outputs 2>/dev/null |
+        jq -e 'any(.[]; .properties["node.name"] == "alsa_capture.handy")' >/dev/null
+}
+
+kill_recording() {  # kill_recording <reason>: discard, never paste
+    log_event "cancel: $1"
+    notify-send -u critical -a Handy "Dictation stopped" "$1. Nothing was typed." 2>/dev/null
+    handy --cancel
+    for _ in $(seq 30); do recording || { log_event "cancelled"; return; }; sleep 0.1; done
+    # --cancel did not stop it: restart Handy (its recording dies with it, nothing is pasted)
+    log_event "still recording after --cancel, restarting Handy"
+    pkill -x handy
+    sleep 1
+    setsid -f handy --start-hidden >/dev/null 2>&1
+}
+
+since=0        # when the current recording was first seen
+loose_since=0  # when it was first seen without the key held
+while :; do
+    now=$(date +%s)
+    if recording; then
+        [ "$since" -eq 0 ] && since=$now
+        if [ -e "$held" ]; then loose_since=0; else [ "$loose_since" -eq 0 ] && loose_since=$now; fi
+        if [ $((now - since)) -ge "$max" ]; then
+            kill_recording "recording passed $((max / 60)) min"; since=0; loose_since=0; rm -f "$held"
+        elif [ "$loose_since" -ne 0 ] && [ $((now - loose_since)) -ge "$orphan_after" ]; then
+            kill_recording "recording while Right Alt is not held"; since=0; loose_since=0
+        fi
+    else
+        since=0; loose_since=0
+    fi
+    sleep 1
+done

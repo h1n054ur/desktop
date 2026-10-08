@@ -21,6 +21,7 @@ COMMANDS = os.path.join(HERE, "..", "assistant", "commands.json")
 LAYA = os.environ.get("HANDY_LAYA_URL", "http://127.0.0.1:8765/v1/systemone")
 RUN = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
 CLAUDE_TITLE = re.compile(r"^[✳✶✻✽✢·◐◓◑◒] ")
+MAX_WORDS = int(os.environ.get("HANDY_MAX_WORDS", "600"))  # about 4 minutes of speech
 WINDOW_COMMANDS = {"place_app", "move_window", "focus_app"}
 NUMBERS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9,
            "ten": 10, "twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70,
@@ -266,6 +267,15 @@ def main():
     text = " ".join(sys.argv[1:]) if len(sys.argv) > 1 else sys.stdin.read()
     text = text.strip()
     if not text:
+        return
+    words = len(text.split())
+    if words > MAX_WORDS:
+        # far more than 3 minutes of talking: a recording that ran away (2026-10-08: 8 hours of a YouTube video
+        # were typed into every focused window). Never type it; leave it on the clipboard.
+        subprocess.run(["wl-copy"], input=text, text=True, check=False)
+        sh("notify-send", "-u", "critical", "-a", "Handy", "Dictation not typed",
+           f"{words} words is too long, so nothing was typed. The text is on the clipboard.")
+        log(f"dropped {words} words (limit {MAX_WORDS}), copied to clipboard")
         return
     if panel_open():
         with open(COMMANDS) as f:
