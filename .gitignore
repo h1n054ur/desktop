@@ -5,3 +5,6 @@ setup/winapps/oem/filemaker/*
 !setup/winapps/oem/filemaker/README.md
 __pycache__/
 *.pyc
+
+# Types Claude Code writes beside each mod it loads
+.claude-plugin/types/

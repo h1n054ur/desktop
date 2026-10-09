@@ -31,6 +31,7 @@ The installer shows a checklist of components, everything ticked: untick what yo
 | `login` | the login screen for greetd (sudo; `sudo quickshell/greeter/install.sh revert` undoes it) |
 | `terminal` | the welcome banner, fastfetch panel and starship prompt |
 | `kitty` | kitty, yazi, rmpc music and cava |
+| `claudecode` | the Claude Code look: theme, status line, task sidebar and agent tabs |
 
 It's built for **two screens**, and works on one: then all ten workspaces share it.
 
@@ -49,6 +50,7 @@ I use two 1080p screens side by side, and the whole setup is built around that s
 | [`noctalia-theme/`](noctalia-theme) | [noctalia-h1n054ur](https://github.com/h1n054ur/noctalia-h1n054ur) | the bar with floating pills, floating panels, the palette and the glow icons |
 | [`noctalia-glow-plugins/`](noctalia-glow-plugins) | [noctalia-glow-plugins](https://github.com/h1n054ur/noctalia-glow-plugins) | Noctalia plugins: stats that heat up, weather with a forecast panel, volume, network, a per-screen window title |
 | [`noctalia-claude-sessions/`](noctalia-claude-sessions) | [noctalia-claude-sessions](https://github.com/h1n054ur/noctalia-claude-sessions) | Claude Code sessions and plan limits in the bar (a fork of lfdominguez's plugin with a floating panel) |
+| [`claude-code/`](claude-code) | [claude-code-h1n054ur](https://github.com/h1n054ur/claude-code-h1n054ur) | Claude Code in the h1n054ur palette: a theme, a starship-style status line, a task sidebar and a tab bar for running agents |
 | [`quickshell/`](quickshell) | [quickshell-h1n054ur](https://github.com/h1n054ur/quickshell-h1n054ur) | login screen for greetd, lock screen and session menu, built with Quickshell |
 | [`hyprland/`](hyprland) | [hyprland-h1n054ur](https://github.com/h1n054ur/hyprland-h1n054ur) | the Hyprland Lua config: screens, workspaces, keybinds, window rules |
 | [`setup/`](setup) | [h1n054ur-setup](https://github.com/h1n054ur/h1n054ur-setup) | an interactive installer for the software by group, and Windows apps through WinApps |
@@ -68,6 +70,7 @@ flowchart TB
   subgraph term["Terminal"]
     KT["kitty-config<br/>kitty, yazi, rmpc"]
     TM["h1n054ur-terminal<br/>banner, fastfetch, starship"]
+    CC["claude-code-h1n054ur<br/>theme, status line, sidebar, agent tabs"]
   end
   ST["h1n054ur-setup<br/>packages, WinApps"]
   ST -.->|installs| session
@@ -78,6 +81,7 @@ flowchart TB
   HY -->|"Super+L, Super+Alt+C"| LK
   HY -->|"Super+T"| KT
   KT --> TM
+  KT --> CC
 ```
 
 ## A tour

@@ -1,0 +1,7 @@
+{
+  "name": "agent-tabs",
+  "version": "0.1.0",
+  "description": "A tab bar above the prompt with one tab per agent: its task, running time, tokens and state, and the agent on screen highlighted.",
+  "author": { "name": "Hani" },
+  "types": "./types/index.d.ts"
+}

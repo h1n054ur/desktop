@@ -25,7 +25,7 @@ UI_ROOT="$HERE/setup"
 . "$HERE/setup/lib/ui.sh"
 
 STAMP=$(date +%Y%m%d-%H%M%S)
-ORDER=(packages screens hyprland theme plugins claude lock login terminal kitty)
+ORDER=(packages screens hyprland theme plugins claude lock login terminal kitty claudecode)
 declare -A DESC PICK
 DESC[packages]="the software, by group (asks which groups)"
 DESC[screens]="detect your screens; pick the main (left) one"
@@ -37,6 +37,7 @@ DESC[lock]="lock screen + session menu (Super+L, Super+Alt+C)"
 DESC[login]="login screen for greetd (needs sudo; easy to revert)"
 DESC[terminal]="welcome banner, fastfetch, starship prompt"
 DESC[kitty]="kitty, yazi, rmpc music, cava"
+DESC[claudecode]="Claude Code look: theme, status line, task sidebar, agent tabs"
 
 DRY=0 YES=0
 for a in "$@"; do
@@ -211,6 +212,10 @@ fi
 if want kitty; then
   step "kitty"
   if [ "$DRY" = 1 ]; then act "kitty/install.sh" true; else run_step "kitty, yazi, rmpc, cava" 0 '' bash "$HERE/kitty/install.sh"; fi
+fi
+if want claudecode; then
+  step "claude code"
+  if [ "$DRY" = 1 ]; then act "claude-code/install.sh" true; else run_step "theme, status line, mods" 0 '' bash "$HERE/claude-code/install.sh"; fi
 fi
 
 echo

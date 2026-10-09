@@ -32,3 +32,7 @@ repo = "hyprland-h1n054ur"
 [[split]]
 folder = "setup"
 repo = "h1n054ur-setup"
+
+[[split]]
+folder = "claude-code"
+repo = "claude-code-h1n054ur"

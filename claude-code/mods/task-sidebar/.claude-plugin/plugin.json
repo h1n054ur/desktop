@@ -1,0 +1,7 @@
+{
+  "name": "task-sidebar",
+  "version": "0.1.0",
+  "description": "Claude Code's task list as a full-height sidebar docked to the right of the transcript, live as tasks change.",
+  "author": { "name": "Hani" },
+  "types": "./types/index.d.ts"
+}
