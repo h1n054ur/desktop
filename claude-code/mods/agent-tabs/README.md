@@ -2,7 +2,7 @@
 
 A Claude Code mod that draws a tab bar above the prompt with one tab per running agent, a bit like kitty's tabs.
 
-<!-- Screenshots go here. -->
+![Agent tabs while two agents run (top) and after they finish (bottom)](https://gist.githubusercontent.com/h1n054ur/62088b2015b822272d51d9dc269ea478/raw/agent-tabs.png)
 
 ```
  main   ● Fix the login form 2m14s · 45k   ◐ Review the schema 41s · 12k   ✓ Update docs 1m02s · 8.1k

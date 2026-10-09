@@ -3,7 +3,7 @@
 A Claude Code mod that shows the session's task list as a full-height pane docked on the right of the transcript,
 instead of the few lines Claude Code draws above the prompt.
 
-<!-- Screenshots go here. -->
+![The task sidebar in the h1n054ur theme](https://gist.githubusercontent.com/h1n054ur/62088b2015b822272d51d9dc269ea478/raw/sidebar.png)
 
 ## What it shows
 
