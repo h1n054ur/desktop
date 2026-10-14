@@ -3710,6 +3710,269 @@ html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
   }
 }
 
+/* ---- src/abyss/60-menus.css ---- */
+/* 60-menus.css: action sheets (the "More" menus), multi-select mode and the small header fixes
+   that go with them. Selectors checked against jellyfin-web v10.11 (components/actionSheet/
+   actionSheet.ts, components/multiSelect/multiSelect.js, scripts/libraryMenu.js). */
+
+/* ---- Action sheet items ----
+   Abyss fills the item under the pointer solid green. On touch screens the browser keeps :hover on
+   the last tapped spot, so the item under the finger looks selected as soon as the sheet opens.
+   The solid fill stays for real pointers only. Keyboard and remote focus (.show-focus) gets a
+   green tint and a green ring instead of the solid fill, still easy to see. TV layouts keep Abyss. */
+@media (hover: none) {
+  html:not(.layout-tv) .actionSheetMenuItem:hover:not(.show-focus:focus) {
+    background: transparent !important;
+    color: inherit !important;
+    font-weight: inherit;
+  }
+  /* 90-overrides.css darkens the text and icon inside a hovered list item for the green fill */
+  html:not(.layout-tv) .actionSheetMenuItem:hover:not(.show-focus:focus) :is(.listItemBodyText, .material-icons, .listItemIcon) {
+    color: var(--h1-text) !important;
+  }
+}
+html:not(.layout-tv) .actionSheetMenuItem.show-focus:focus {
+  background: rgba(var(--h1-green-rgb), 0.14) !important;
+  color: var(--h1-text) !important;
+  box-shadow: inset 0 0 0 2px rgba(var(--h1-green-rgb), 0.75);
+}
+@media (hover: hover) {
+  html:not(.layout-tv) .actionSheetMenuItem.show-focus:focus:hover {
+    background: var(--h1-green) !important;
+    color: var(--h1-bg) !important;
+  }
+}
+
+/* ---- Action sheets clear of the floating header ----
+   Jellyfin centres a sheet on the button that opened it and only keeps it 10px from the window
+   edge (getPosition in actionSheet.ts writes position: fixed and top in px on the element), so a
+   tall sheet opened from the middle of the page lands over the header buttons. CSS cannot read the
+   inline top, so the sheets whose inline top is under 88px (the header bar's bottom plus a gap on
+   wide screens, 24 + 56 + 8) are matched by that value and moved below the bar, and their height
+   is capped so the bottom still fits; the list scrolls inside if it has to. */
+:root {
+  --h1-sheet-top: calc(env(safe-area-inset-top) + var(--h1-bar-top, 10px) + var(--h1-bar-h, 56px) + 8px);
+}
+html:not(.layout-tv) .actionSheet.actionsheet-not-fullscreen:is(
+  [style*="top: 10px"],
+  [style*="top: 10."],
+  [style*="top: 11px"],
+  [style*="top: 11."],
+  [style*="top: 12px"],
+  [style*="top: 12."],
+  [style*="top: 13px"],
+  [style*="top: 13."],
+  [style*="top: 14px"],
+  [style*="top: 14."],
+  [style*="top: 15px"],
+  [style*="top: 15."],
+  [style*="top: 16px"],
+  [style*="top: 16."],
+  [style*="top: 17px"],
+  [style*="top: 17."],
+  [style*="top: 18px"],
+  [style*="top: 18."],
+  [style*="top: 19px"],
+  [style*="top: 19."],
+  [style*="top: 20px"],
+  [style*="top: 20."],
+  [style*="top: 21px"],
+  [style*="top: 21."],
+  [style*="top: 22px"],
+  [style*="top: 22."],
+  [style*="top: 23px"],
+  [style*="top: 23."],
+  [style*="top: 24px"],
+  [style*="top: 24."],
+  [style*="top: 25px"],
+  [style*="top: 25."],
+  [style*="top: 26px"],
+  [style*="top: 26."],
+  [style*="top: 27px"],
+  [style*="top: 27."],
+  [style*="top: 28px"],
+  [style*="top: 28."],
+  [style*="top: 29px"],
+  [style*="top: 29."],
+  [style*="top: 30px"],
+  [style*="top: 30."],
+  [style*="top: 31px"],
+  [style*="top: 31."],
+  [style*="top: 32px"],
+  [style*="top: 32."],
+  [style*="top: 33px"],
+  [style*="top: 33."],
+  [style*="top: 34px"],
+  [style*="top: 34."],
+  [style*="top: 35px"],
+  [style*="top: 35."],
+  [style*="top: 36px"],
+  [style*="top: 36."],
+  [style*="top: 37px"],
+  [style*="top: 37."],
+  [style*="top: 38px"],
+  [style*="top: 38."],
+  [style*="top: 39px"],
+  [style*="top: 39."],
+  [style*="top: 40px"],
+  [style*="top: 40."],
+  [style*="top: 41px"],
+  [style*="top: 41."],
+  [style*="top: 42px"],
+  [style*="top: 42."],
+  [style*="top: 43px"],
+  [style*="top: 43."],
+  [style*="top: 44px"],
+  [style*="top: 44."],
+  [style*="top: 45px"],
+  [style*="top: 45."],
+  [style*="top: 46px"],
+  [style*="top: 46."],
+  [style*="top: 47px"],
+  [style*="top: 47."],
+  [style*="top: 48px"],
+  [style*="top: 48."],
+  [style*="top: 49px"],
+  [style*="top: 49."],
+  [style*="top: 50px"],
+  [style*="top: 50."],
+  [style*="top: 51px"],
+  [style*="top: 51."],
+  [style*="top: 52px"],
+  [style*="top: 52."],
+  [style*="top: 53px"],
+  [style*="top: 53."],
+  [style*="top: 54px"],
+  [style*="top: 54."],
+  [style*="top: 55px"],
+  [style*="top: 55."],
+  [style*="top: 56px"],
+  [style*="top: 56."],
+  [style*="top: 57px"],
+  [style*="top: 57."],
+  [style*="top: 58px"],
+  [style*="top: 58."],
+  [style*="top: 59px"],
+  [style*="top: 59."],
+  [style*="top: 60px"],
+  [style*="top: 60."],
+  [style*="top: 61px"],
+  [style*="top: 61."],
+  [style*="top: 62px"],
+  [style*="top: 62."],
+  [style*="top: 63px"],
+  [style*="top: 63."],
+  [style*="top: 64px"],
+  [style*="top: 64."],
+  [style*="top: 65px"],
+  [style*="top: 65."],
+  [style*="top: 66px"],
+  [style*="top: 66."],
+  [style*="top: 67px"],
+  [style*="top: 67."],
+  [style*="top: 68px"],
+  [style*="top: 68."],
+  [style*="top: 69px"],
+  [style*="top: 69."],
+  [style*="top: 70px"],
+  [style*="top: 70."],
+  [style*="top: 71px"],
+  [style*="top: 71."],
+  [style*="top: 72px"],
+  [style*="top: 72."],
+  [style*="top: 73px"],
+  [style*="top: 73."],
+  [style*="top: 74px"],
+  [style*="top: 74."],
+  [style*="top: 75px"],
+  [style*="top: 75."],
+  [style*="top: 76px"],
+  [style*="top: 76."],
+  [style*="top: 77px"],
+  [style*="top: 77."],
+  [style*="top: 78px"],
+  [style*="top: 78."],
+  [style*="top: 79px"],
+  [style*="top: 79."],
+  [style*="top: 80px"],
+  [style*="top: 80."],
+  [style*="top: 81px"],
+  [style*="top: 81."],
+  [style*="top: 82px"],
+  [style*="top: 82."],
+  [style*="top: 83px"],
+  [style*="top: 83."],
+  [style*="top: 84px"],
+  [style*="top: 84."],
+  [style*="top: 85px"],
+  [style*="top: 85."],
+  [style*="top: 86px"],
+  [style*="top: 86."],
+  [style*="top: 87px"],
+  [style*="top: 87."]
+) {
+  top: var(--h1-sheet-top) !important;
+  max-height: calc(100dvh - var(--h1-sheet-top) - 12px) !important;
+}
+
+/* ---- Multi-select (long press on a card on touch, the checkbox on desktop) ----
+   The command bar is Abyss glass at 69%; behind it the green tab pill and the header blur into a
+   green glow. A near solid panel with a little blur is enough. */
+html:not(.layout-tv) .selectionCommandsPanel {
+  background-color: rgba(var(--h1-panel-rgb), 0.96) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  backdrop-filter: blur(6px) !important;
+  border-bottom: 1px solid var(--h1-border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* The selection outline (.itemSelectionPanel) covers the whole card, so its border ran along the
+   left edge of the title. The card text gets some room inside it while select mode is on. */
+html:not(.layout-tv) .cardBox.withMultiSelect > :is(.cardText, .cardFooter) {
+  padding-left: 0.6em !important;
+  padding-right: 0.6em !important;
+}
+html:not(.layout-tv) .itemSelectionPanel {
+  border-radius: var(--abyss-radius, 12px);
+}
+
+/* ---- Header title ----
+   Abyss pads a non-empty page title and puts glass behind it. Where the title is empty (detail
+   pages, the header while a menu is open) that left a small dark capsule after the Home button.
+   The logo title is empty text too and stays. */
+html:not(.layout-tv) .skinHeader .pageTitle:empty:not(.pageTitleWithLogo) {
+  display: none !important;
+}
+
+/* A text title (Search, library names) keeps a gap from the buttons on both sides and cuts off
+   with an ellipsis before it reaches the right-hand icons on narrow phones. */
+html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerLeft .pageTitle:not(:empty):not(.pageTitleWithLogo) {
+  min-width: 0;
+  margin-left: 0.35em;
+  margin-right: 0.5em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- Fade above the floating header (wide screens) ----
+   The bar floats 24px below the window top, and scrolled content showed through that gap. A fade
+   from the page colour behind the header area covers the gap and runs out halfway down the bar,
+   so the bar keeps its floating look and the header stays as wide as before. */
+@media all and (min-width: 62.5em) {
+  html:not(.layout-tv) .skinHeader:not(.osdHeader)::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-top) + var(--h1-bar-top) + var(--h1-bar-h) * 0.6);
+    background: linear-gradient(to bottom, rgba(var(--h1-bg-rgb), 0.96) 0%, rgba(var(--h1-bg-rgb), 0.85) 45%, rgba(var(--h1-bg-rgb), 0) 100%);
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
 /* ---- src/abyss/90-overrides.css ---- */
 /* 90-overrides.css: fixes on top of Abyss, loaded last so they win.
    Abyss maps most colours through its variables (05-abyss-vars.css). This file covers what the
