@@ -3157,6 +3157,8 @@ html:not(.layout-tv) .skinHeader:not(.osdHeader) {
 html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTop {
   flex: none;
   box-sizing: border-box;
+  align-self: stretch !important;
+  width: auto !important; /* Abyss sets 100% on pages with tabs, which ignores the side margins */
   height: var(--h1-bar-h);
   margin: var(--h1-bar-top) 10px 0;
   padding: 0 0.5em !important;
@@ -3168,17 +3170,23 @@ html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTop {
   backdrop-filter: blur(18px);
 }
 
+/* Wide screens: the bar floats with the same gap on every side as the side pill keeps from the
+   window (--h1-pill-inset), top edges level with the pill. With Abyss's width: 100% the margins
+   pushed the bar past the right edge (the avatar was cut off) and, centred, back under the pill. */
 @media all and (min-width: 62.5em) {
   html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTop {
     margin-left: var(--h1-pill-inset, 24px);
     margin-right: var(--h1-pill-inset, 24px);
   }
 
-  /* With the side pill docked, 40-side-pill.css moves the header to the pill's right edge. One more
-     gap lines the bar up with the page content (--h1-pill-space from the window edge). Same
-     condition as in 40-side-pill.css. */
-  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .skinHeader:not(.osdHeader) > .headerTop {
-    margin-left: var(--h1-pill-gap, 16px);
+  /* With the side pill docked, 40-side-pill.css moves the header to the pill's right edge
+     (--h1-pill-inset + --h1-pill-width from the window). The header then ends at the window's
+     right edge, and the bar's own margins give the gap on both sides. Same condition as in
+     40-side-pill.css. */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .skinHeader:not(.osdHeader) {
+    left: calc(var(--h1-pill-inset, 24px) + var(--h1-pill-width, 64px)) !important;
+    right: 0 !important;
+    width: auto !important;
   }
 }
 
@@ -3214,6 +3222,21 @@ html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerButton:not(.headerUserBu
 html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerButton:not(.headerUserButton):hover {
   background-color: rgba(57, 255, 20, 0.08) !important;
   color: var(--h1-green);
+}
+
+/* Search button: Material Icons Round draws the magnifier with a solid, heavy lens next to the
+   lighter cast and SyncPlay glyphs. An outlined magnifier (2px stroke on a 24px grid, the same
+   weight as the other header icons) replaces the glyph. Jellyfin 10.11 puts the glyph in ::before
+   (span.material-icons.search), so only that pseudo element changes and the button keeps its size,
+   colours and title. Everywhere else the search icon stays as Abyss has it. */
+.skinHeader .headerSearchButton .material-icons.search::before {
+  content: "";
+  display: block;
+  width: 1em;
+  height: 1em;
+  background-color: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m20 20-4.9-4.9'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23000' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='10.5' cy='10.5' r='6.5'/%3E%3Cpath d='m20 20-4.9-4.9'/%3E%3C/svg%3E") center / 100% 100% no-repeat;
 }
 
 /* Avatar: a cyan ring. Jellyfin still decides what is inside (the user's picture, else the person icon). */
@@ -3271,6 +3294,22 @@ html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTabs.sectionTabs {
 /* Under 75em the tab row sits below the bar, so pages with tabs start a little lower */
 @media all and (max-width: 74.99em) {
   html:not(.layout-tv) body:has(.skinHeader:not(.osdHeader) > .headerTabs:not(.hide)) .libraryPage:not(.noSecondaryNavPage, .itemDetailPage) {
+    padding-top: calc(var(--h1-bar-top) + var(--h1-bar-h) + 4.75em) !important;
+  }
+}
+
+/* From 75em to 90em (1200 to 1440 px) a library's tab row (Movies, Suggestions, Favorites,
+   Collections, Genres, and six on TV libraries) is wider than the room between the page title and
+   the header buttons, so with four or more tabs it stays in its own row under the bar. The home
+   page's two tabs still fit inside the bar. */
+@media all and (min-width: 75em) and (max-width: 89.99em) {
+  html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTabs.sectionTabs:has(.emby-tab-button:nth-child(4)) {
+    position: static;
+    height: auto;
+    max-width: 95vw;
+    margin: 8px auto 0 !important;
+  }
+  html:not(.layout-tv) body:has(.skinHeader:not(.osdHeader) > .headerTabs:not(.hide) .emby-tab-button:nth-child(4)) .libraryPage:not(.noSecondaryNavPage, .itemDetailPage) {
     padding-top: calc(var(--h1-bar-top) + var(--h1-bar-h) + 4.75em) !important;
   }
 }
@@ -3604,6 +3643,16 @@ html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
   }
 }
 
+
+/* Music libraries are off the home page for every user, so the pill leaves them out too. Jellyfin
+   gives each library link (a.lnkMediaFolder) the icon of its collection type, music_note for music
+   (utils/image.ts getLibraryIcon), which is the only handle CSS has. Only the docked pill, the
+   hamburger drawer on small screens keeps them. */
+@media all and (min-width: 62.5em) {
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer a.lnkMediaFolder:has(> .navMenuOptionIcon.music_note) {
+    display: none !important;
+  }
+}
 
 /* ---- src/abyss/90-overrides.css ---- */
 /* 90-overrides.css: fixes on top of Abyss, loaded last so they win.
@@ -3991,20 +4040,37 @@ input[type="checkbox"]:focus+.checkboxOutline {
   background: var(--h1-panel2) !important;
 }
 
-/* ---- Cards: green ring and glow on hover and focus, title turns green ---- */
+/* ---- Cards: a thin accent ring on hover and focus, title turns green ----
+   Abyss draws a 0.3em solid accent border on any focused card (also after a mouse click) and
+   rounds it to 24px. That reads heavy in green, so it goes. Keyboard and remote focus get a 2px
+   accent outline with a small gap, which follows the poster's radius and stays clearly visible
+   (WCAG 2.4.7). The mouse hover only gets a hairline. */
 
-.card-hoverable:hover .cardScalable,
-.card:focus-visible .cardScalable,
-.card.show-focus:focus .cardScalable {
-  border-radius: var(--abyss-radius);
-  box-shadow: var(--h1-glow);
-}
 .card:focus .cardBox.visualCardBox,
 .card:focus .cardBox:not(.visualCardBox) .cardScalable {
-  border-color: var(--h1-green) !important;
+  border-width: 0 !important;
+  border-radius: var(--abyss-radius) !important;
+  transition: none !important;
 }
-.card:focus .cardBox:not(.visualCardBox) .cardScalable {
-  box-shadow: 0 0 0.8em rgba(var(--h1-green-rgb), 0.4);
+.card-hoverable:hover .cardScalable {
+  border-radius: var(--abyss-radius);
+  box-shadow: 0 0 0 1px rgba(var(--h1-green-rgb), 0.45);
+}
+.card:focus-visible .cardScalable,
+.card.show-focus:focus .cardScalable,
+.card .cardScalable:has(> .cardImageContainer:focus-visible) {
+  border-radius: var(--abyss-radius);
+  outline: 2px solid rgba(var(--h1-green-rgb), 0.85);
+  outline-offset: 2px;
+  box-shadow: 0 0 0.6em rgba(var(--h1-green-rgb), 0.18);
+}
+/* On desktop the keyboard lands on the picture link inside the card (a.cardImageContainer), which
+   had no visible outline at all. The ring sits on the picture's frame, so the card and its link
+   keep no outline of their own. */
+.card:focus-visible,
+.card.show-focus:focus,
+.card .cardImageContainer:focus-visible {
+  outline: none;
 }
 .card-hoverable:hover .cardText-first,
 .card:focus-visible .cardText-first,

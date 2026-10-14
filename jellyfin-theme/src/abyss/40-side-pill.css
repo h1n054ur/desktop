@@ -170,3 +170,13 @@
   }
 }
 
+
+/* Music libraries are off the home page for every user, so the pill leaves them out too. Jellyfin
+   gives each library link (a.lnkMediaFolder) the icon of its collection type, music_note for music
+   (utils/image.ts getLibraryIcon), which is the only handle CSS has. Only the docked pill, the
+   hamburger drawer on small screens keeps them. */
+@media all and (min-width: 62.5em) {
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer a.lnkMediaFolder:has(> .navMenuOptionIcon.music_note) {
+    display: none !important;
+  }
+}

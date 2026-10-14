@@ -383,20 +383,37 @@ input[type="checkbox"]:focus+.checkboxOutline {
   background: var(--h1-panel2) !important;
 }
 
-/* ---- Cards: green ring and glow on hover and focus, title turns green ---- */
+/* ---- Cards: a thin accent ring on hover and focus, title turns green ----
+   Abyss draws a 0.3em solid accent border on any focused card (also after a mouse click) and
+   rounds it to 24px. That reads heavy in green, so it goes. Keyboard and remote focus get a 2px
+   accent outline with a small gap, which follows the poster's radius and stays clearly visible
+   (WCAG 2.4.7). The mouse hover only gets a hairline. */
 
-.card-hoverable:hover .cardScalable,
-.card:focus-visible .cardScalable,
-.card.show-focus:focus .cardScalable {
-  border-radius: var(--abyss-radius);
-  box-shadow: var(--h1-glow);
-}
 .card:focus .cardBox.visualCardBox,
 .card:focus .cardBox:not(.visualCardBox) .cardScalable {
-  border-color: var(--h1-green) !important;
+  border-width: 0 !important;
+  border-radius: var(--abyss-radius) !important;
+  transition: none !important;
 }
-.card:focus .cardBox:not(.visualCardBox) .cardScalable {
-  box-shadow: 0 0 0.8em rgba(var(--h1-green-rgb), 0.4);
+.card-hoverable:hover .cardScalable {
+  border-radius: var(--abyss-radius);
+  box-shadow: 0 0 0 1px rgba(var(--h1-green-rgb), 0.45);
+}
+.card:focus-visible .cardScalable,
+.card.show-focus:focus .cardScalable,
+.card .cardScalable:has(> .cardImageContainer:focus-visible) {
+  border-radius: var(--abyss-radius);
+  outline: 2px solid rgba(var(--h1-green-rgb), 0.85);
+  outline-offset: 2px;
+  box-shadow: 0 0 0.6em rgba(var(--h1-green-rgb), 0.18);
+}
+/* On desktop the keyboard lands on the picture link inside the card (a.cardImageContainer), which
+   had no visible outline at all. The ring sits on the picture's frame, so the card and its link
+   keep no outline of their own. */
+.card:focus-visible,
+.card.show-focus:focus,
+.card .cardImageContainer:focus-visible {
+  outline: none;
 }
 .card-hoverable:hover .cardText-first,
 .card:focus-visible .cardText-first,
