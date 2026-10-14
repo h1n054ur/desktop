@@ -1,2 +1,40 @@
 /* 05-abyss-vars.css: the h1n054ur palette (--h1-* from common/00-palette.css) written onto Abyss's
-   CSS custom properties. Placeholder, filled in by a later task of #299. */
+   CSS custom properties. Abyss wants its colours as bare "R, G, B" triples (it wraps them in
+   rgb() and rgba() itself), so the tokens are repeated here as numbers. Keep them in step with
+   00-palette.css.
+
+   Abyss only styles Jellyfin's Dark base theme (most of its rules hang on html[data-theme="dark"]
+   or sit on top of the dark theme's colours). Every user needs Settings > Display > Theme set
+   to Dark. The light selector is listed below so the palette still holds if someone picks
+   Light, but the Abyss parts will look wrong there.
+
+   What each variable drives in Abyss v1.2.3:
+   --abyss-accent        buttons, active tabs and nav items, progress, sliders, switches,
+                         checkboxes, spinners, links, and (Abyss default) some text colours.
+                         Green #39ff14. Text on it is dark (90-overrides.css), about 15:1.
+   --abyss-indicator     count pills on cards (episode counts). Raised panel #1d2a26.
+   --abyss-glass-tint    drawers, dialogs, the tab bar, settings panels, the app bar and the
+                         glass behind submit buttons and the player controls. Panel #101816. */
+
+:root,
+:root[data-theme=light] {
+  --abyss-accent: 57, 255, 20;          /* --h1-green #39ff14 */
+  --abyss-accent-channel: 57 255 20;    /* same, space separated for the MUI channel variables */
+  --abyss-indicator: 29, 42, 38;        /* --h1-raise #1d2a26 */
+  --abyss-glass-tint: 16, 24, 22;       /* --h1-panel #101816 */
+
+  /* Our own triples for the overrides, so translucent fills stay on the palette */
+  --h1-green-rgb: 57, 255, 20;
+  --h1-cyan-rgb: 0, 229, 255;
+  --h1-bg-rgb: 6, 9, 10;
+  --h1-panel-rgb: 16, 24, 22;
+  --h1-border-rgb: 61, 79, 74;
+  --h1-muted-rgb: 159, 178, 172;
+}
+
+/* Jellyfin's MUI palette (dashboard and the experimental layout). Abyss sets primary and
+   secondary to the accent with #121212 on top, our page colour reads a touch better. */
+html[data-theme="dark"] {
+  --jf-palette-primary-contrastText: var(--h1-bg);
+  --jf-palette-secondary-contrastText: var(--h1-bg);
+}
