@@ -1,2 +1,98 @@
-/* 00-palette.css: Palette tokens (CSS custom properties) in the h1n054ur colours.
-   Placeholder, filled in by a later task. */
+/* 00-palette.css: the h1n054ur palette written onto ElegantFin's CSS custom properties.
+   Colours come from the h1n054ur terminal theme (claude-code/themes/h1n054ur.json).
+   The light selector is listed too, so a user who picks Jellyfin's Light theme still gets
+   this dark palette instead of a half green, half white mix. */
+
+:root,
+:root[data-theme=light] {
+  /* Our own tokens, used by the other src/ files */
+  --h1-bg: #06090a;
+  --h1-panel: #101816;
+  --h1-panel2: #13221d;
+  --h1-raise: #1d2a26;
+  --h1-border: #3d4f4a;
+  --h1-green: #39ff14;
+  --h1-green-hi: #7dff63;
+  --h1-green-dim: #1d5c16;
+  --h1-cyan: #00e5ff;
+  --h1-purple: #c77dff;
+  --h1-mint: #2bf5a0;
+  --h1-error: #ff5c7a;
+  --h1-error-dim: #6e2132;
+  --h1-text: #d8e6e1;
+  --h1-muted: #9fb2ac;
+  --h1-mono: "Cascadia Code", ui-monospace, monospace;
+  --h1-glow: 0 0 0 0.06em rgba(57, 255, 20, 0.9), 0 0 0.7em rgba(57, 255, 20, 0.35);
+  --h1-glow-cyan: 0 0 0 0.06em rgba(0, 229, 255, 0.9), 0 0 0.6em rgba(0, 229, 255, 0.3);
+
+  color-scheme: dark;
+  --fill: 1; /* filled icons, the light block switches them to outlines */
+  accent-color: var(--h1-green); /* native checkboxes, radios and range inputs */
+
+  /* Backgrounds and surfaces: near black page, dark green panels */
+  --darkerGradientPoint: var(--h1-bg);
+  --darkerGradientPointAlpha: rgba(6, 9, 10, 0.85);
+  --lighterGradientPoint: #0d1513;
+  --lighterGradientPointAlpha: rgba(13, 21, 19, 0.85);
+  --gradientPointAlpha: rgba(13, 21, 19, 0.3);
+  --headerColor: rgba(16, 24, 22, 0.85);
+  --drawerColor: rgba(16, 24, 22, 0.92);
+  --selectorBackgroundColor: var(--h1-panel2);
+  --selectorBackgroundColorAlpha: rgba(19, 34, 29, 0.6);
+  --textareaBackgroundColor: var(--h1-bg);
+  --tableBodyColor: var(--h1-panel);
+  --multiSelectOverlayColor: rgba(6, 9, 10, 0.8);
+  --backgroundGradient: linear-gradient(0deg, var(--darkerGradientPoint) 35%, var(--lighterGradientPoint));
+  --headerColorGradient: linear-gradient(180deg, rgba(16, 24, 22, 0.95) 30%, 55%, transparent 90%);
+  --headerColorGradientAlt: linear-gradient(180deg, var(--h1-panel), 70%, transparent);
+  --cardFooterGradient: linear-gradient(0deg, rgba(6, 9, 10, 0.95), 40%, transparent);
+
+  /* Borders and dividers */
+  --borderColor: var(--h1-border);
+  --darkerBorderColor: #26322f;
+  --lighterBorderColor: rgba(159, 178, 172, 0.22);
+  --dividerColor: rgba(159, 178, 172, 0.08);
+
+  /* Text: 14:1 on panels, muted 8:1 (both well above WCAG AA 4.5:1) */
+  --textColor: var(--h1-text);
+  --dimTextColor: var(--h1-muted);
+  --fullContrastColor: #fff;
+  --zeroContrastColor: var(--h1-bg);
+  --svgIconFilter: none;
+  --clearLogoFilter: none;
+
+  /* Accent: green, hover a lighter green, cyan for keyboard focus */
+  --accentColor: var(--h1-green);
+  --accentHoverColor: var(--h1-green-hi);
+  --semiTransparentAccentColor: rgba(57, 255, 20, 0.14);
+  --highlightOutlineColor: var(--h1-cyan);
+
+  /* Buttons: play and submit are green pills with dark text (fixed in 90-overrides) */
+  --btnPlayColor: var(--h1-green);
+  --btnPlayBorderColor: var(--h1-green-hi);
+  --btnMiniPlayColor: var(--h1-green-dim);
+  --btnMiniPlayBorderColor: var(--h1-green);
+  --btnDeleteColor: var(--h1-error-dim);
+  --btnDeleteBorderColor: var(--h1-error);
+  --btnSubmitColor: var(--h1-green);
+  --btnSubmitBorderColor: var(--h1-green-hi);
+  --checkboxCheckedBgColor: var(--h1-green);
+
+  /* Hover and active states. Hover text stays light: it sits on a translucent green wash */
+  --hoverBackgroundColor: var(--h1-green);
+  --hoverTabBackgroundColor: var(--h1-green-hi);
+  --hoverTextColor: #fff;
+  --activeBackgroundColor: var(--semiTransparentAccentColor);
+  --activeTextColor: var(--h1-green);
+  --cardHoverBorderColor: var(--h1-green);
+
+  /* Progress and seek bars */
+  --cardResumeProgressColor: var(--h1-green);
+  --osdSeekBarPlayedColor: var(--h1-green);
+  --osdSeekBarBufferedColorAlpha: rgba(159, 178, 172, 0.35);
+  --osdSeekBarThumbColor: var(--h1-green);
+
+  /* Shadows tinted to the page colour */
+  --shadow: 0.1em 0.1em 0.15em rgba(0, 0, 0, 0.4);
+  --cardShadow: 0 1px 6px 0px rgba(0, 0, 0, 0.45);
+}
