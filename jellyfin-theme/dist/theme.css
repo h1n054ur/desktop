@@ -78,8 +78,142 @@
    Placeholder, filled in by a later task. */
 
 /* ---- src/20-login.css ---- */
-/* 20-login.css: The login page, keeping the Sign in with Authentik button.
-   Placeholder, filled in by a later task. */
+/* 20-login.css: the login page (Jellyfin 10.11 web, src/controllers/session/login/index.html).
+   Dark green glass panel, cyan focus on inputs, a solid green "Sign In" and quiet outline buttons
+   for Quick Connect and the rest. The login disclaimer holds the "Sign in with Authentik" form
+   (src/login-disclaimer.html), shown as a green outline button under an "or" divider.
+   ElegantFin marks its buttons with !important, so the overrides below need it too.
+   Each var() carries the plain hex as a fallback, in case 00-palette.css is not there. */
+
+/* Panel: ElegantFin paints it navy (rgba(30,40,54,.7)) */
+#loginPage .padded-left.padded-right.padded-bottom-page {
+  background: rgba(16, 24, 22, 0.75);
+  border: 0.06em solid rgba(57, 255, 20, 0.22);
+  box-shadow: 0 0 0 0.06em rgba(6, 9, 10, 0.6), 0 0 2.5em rgba(57, 255, 20, 0.08), 0 1.5em 3em rgba(0, 0, 0, 0.55);
+  max-width: 100%;
+}
+
+/* Phone width: the fixed 28em / 40em panel must not run off the screen */
+@media (max-width: 34em) {
+  #loginPage {
+    padding: 1em 0.75em;
+  }
+  #loginPage .padded-left.padded-right.padded-bottom-page {
+    padding: 1.5em 1.25em 1em !important;
+    width: 100% !important;
+  }
+}
+
+#loginPage .sectionTitle {
+  color: var(--h1-text, #d8e6e1);
+}
+
+/* Inputs */
+#loginPage .emby-input {
+  background-color: var(--h1-bg, #06090a);
+  border: 0.06em solid var(--h1-border, #3d4f4a);
+  border-radius: 0.5em;
+  color: var(--h1-text, #d8e6e1);
+  font-family: var(--h1-mono, "Cascadia Code", ui-monospace, monospace);
+  caret-color: var(--h1-cyan, #00e5ff);
+}
+#loginPage .emby-input:hover:not(:focus) {
+  border-color: var(--h1-muted, #9fb2ac) !important;
+}
+#loginPage .emby-input:focus {
+  background-color: var(--h1-bg, #06090a);
+  border-color: var(--h1-cyan, #00e5ff) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 0.06em rgba(0, 229, 255, 0.9), 0 0 0.6em rgba(0, 229, 255, 0.3);
+}
+#loginPage .inputLabel {
+  color: var(--h1-muted, #9fb2ac);
+}
+
+/* Remember me */
+#loginPage .emby-checkbox:checked + span + .checkboxOutline:not(.multiSelectCheckboxOutline) {
+  background: var(--h1-green, #39ff14);
+  border-color: var(--h1-green, #39ff14);
+}
+#loginPage .emby-checkbox:checked + span + .checkboxOutline .checkboxIcon {
+  color: var(--h1-bg, #06090a);
+}
+
+/* Primary "Sign In": solid green, dark text */
+#loginPage .manualLoginForm .button-submit {
+  background: var(--h1-green, #39ff14) !important;
+  border: 0.06em solid var(--h1-green, #39ff14) !important;
+  color: var(--h1-bg, #06090a) !important;
+  font-weight: 700;
+  box-shadow: 0 0 0 0.06em rgba(57, 255, 20, 0.9), 0 0 0.7em rgba(57, 255, 20, 0.35);
+}
+#loginPage .manualLoginForm .button-submit:hover,
+#loginPage .manualLoginForm .button-submit:focus-visible {
+  background: var(--h1-green-hi, #7dff63) !important;
+  border-color: var(--h1-green-hi, #7dff63) !important;
+}
+
+/* Secondary buttons: Cancel, Manual Login, Quick Connect, Forgot Password, Change Server */
+#loginPage .emby-button.cancel,
+#loginPage .readOnlyContent .btnSelectServer {
+  background: transparent !important;
+  border: 0.06em solid var(--h1-border, #3d4f4a) !important;
+  color: var(--h1-text, #d8e6e1) !important;
+}
+#loginPage .emby-button.cancel:hover,
+#loginPage .emby-button.cancel:focus-visible,
+#loginPage .readOnlyContent .btnSelectServer:hover,
+#loginPage .readOnlyContent .btnSelectServer:focus-visible {
+  background: rgba(19, 34, 29, 0.6) !important;
+  border-color: var(--h1-cyan, #00e5ff) !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+}
+
+/* Login disclaimer: an "or" divider, then the SSO button */
+#loginPage .loginDisclaimerContainer {
+  margin-top: 1em;
+}
+#loginPage .loginDisclaimer {
+  color: var(--h1-muted, #9fb2ac);
+  text-align: center;
+}
+#loginPage .loginDisclaimer:empty {
+  display: none;
+}
+#loginPage .loginDisclaimer:has(form)::before {
+  content: "or";
+  display: flex;
+  align-items: center;
+  gap: 0.75em;
+  margin: 0 0 1em;
+  color: var(--h1-muted, #9fb2ac);
+  font-family: var(--h1-mono, "Cascadia Code", ui-monospace, monospace);
+  font-size: 0.85em;
+  background:
+    linear-gradient(var(--h1-border, #3d4f4a), var(--h1-border, #3d4f4a)) left center / calc(50% - 1.5em) 0.06em no-repeat,
+    linear-gradient(var(--h1-border, #3d4f4a), var(--h1-border, #3d4f4a)) right center / calc(50% - 1.5em) 0.06em no-repeat;
+  justify-content: center;
+}
+#loginPage .loginDisclaimer form,
+#loginPage .loginDisclaimer p {
+  margin: 0;
+}
+
+/* "Sign in with Authentik": green outline, the secondary action */
+#loginPage .loginDisclaimer .button-submit {
+  width: 100%;
+  margin: 0;
+  background: rgba(16, 24, 22, 0.6) !important;
+  border: 0.06em solid var(--h1-green, #39ff14) !important;
+  color: var(--h1-green, #39ff14) !important;
+  font-weight: 600;
+  box-shadow: none;
+}
+#loginPage .loginDisclaimer .button-submit:hover,
+#loginPage .loginDisclaimer .button-submit:focus-visible {
+  background: rgba(57, 255, 20, 0.08) !important;
+  box-shadow: 0 0 0 0.06em rgba(57, 255, 20, 0.9), 0 0 0.7em rgba(57, 255, 20, 0.35);
+}
 
 /* ---- src/90-overrides.css ---- */
 /* 90-overrides.css: Small fixes on top of ElegantFin, loaded last so they win.
