@@ -74,8 +74,88 @@
    Placeholder, filled in by a later task. */
 
 /* ---- src/10-logo.css ---- */
-/* 10-logo.css: The glowing h1n054ur wordmark in the header and on the splash.
-   Placeholder, filled in by a later task. */
+/* 10-logo.css: the glowing h1n054ur wordmark wherever Jellyfin web 10.11 shows its own logo.
+   The images are assets/h1n054ur-wordmark.svg and assets/h1n054ur-mark.svg as data URIs, so nothing
+   loads from outside. If an asset changes, paste it again (quotes to ', then % # < > percent-encoded).
+   Selectors checked against jellyfin-web v10.11.11.
+
+   Images in <img> tags are swapped with the padding trick: border-box, padding as wide as the box,
+   so the original picture has no room to draw and only our background shows. No broken image icon. */
+
+:root {
+  --h1-wordmark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='468' height='92' viewBox='10 8 468 92'%3E%3Cdefs%3E%3Cfilter id='wmglow' x='-15%25' y='-60%25' width='130%25' height='220%25'%3E%3CfeGaussianBlur in='SourceGraphic' stdDeviation='3.2' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg transform='translate(24 24)' fill='none' stroke-width='7' stroke-linecap='round' stroke-linejoin='round' filter='url(%23wmglow)'%3E%3Cpath d='M2 18L22 36L2 54' stroke='%2300e5ff'/%3E%3Cpath transform='translate(40 0)' d='M4 0V60M4 38Q4 24 18 24Q32 24 32 38V60' stroke='%2339ff14'/%3E%3Cpath transform='translate(86 0)' d='M7 11L19 1V60M7 60H31' stroke='%2339ff14'/%3E%3Cpath transform='translate(132 0)' d='M4 24V60M4 38Q4 24 18 24Q32 24 32 38V60' stroke='%2339ff14'/%3E%3Cpath transform='translate(178 0)' d='M18 1Q32 1 32 18V43Q32 59 18 59Q4 59 4 43V18Q4 1 18 1ZM11 47L25 13' stroke='%2339ff14'/%3E%3Cpath transform='translate(224 0)' d='M31 1H7L5 27Q11 22 18 22Q32 22 32 40Q32 59 18 59Q9 59 3 52' stroke='%2339ff14'/%3E%3Cpath transform='translate(270 0)' d='M25 60V1L3 42H34' stroke='%2339ff14'/%3E%3Cpath transform='translate(316 0)' d='M4 24V46Q4 60 18 60Q32 60 32 46M32 24V60' stroke='%2339ff14'/%3E%3Cpath transform='translate(362 0)' d='M4 24V60M4 39Q4 24 20 24H31' stroke='%2339ff14'/%3E%3Crect x='414' y='50' width='26' height='10' rx='1.5' fill='%232bf5a0' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+  /* The prompt chevron and cursor from the wordmark, for the square icon spots next to the server name. */
+  --h1-mark: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cdefs%3E%3Cfilter id='wmglow' x='-30%25' y='-30%25' width='160%25' height='160%25'%3E%3CfeGaussianBlur in='SourceGraphic' stdDeviation='2.4' result='b'/%3E%3CfeMerge%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='b'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3C/defs%3E%3Cg transform='translate(1 0)' fill='none' stroke-width='7' stroke-linecap='round' stroke-linejoin='round' filter='url(%23wmglow)'%3E%3Cpath d='M10 14L30 32L10 50' stroke='%2300e5ff'/%3E%3Crect x='32' y='40' width='22' height='10' rx='1.5' fill='%232bf5a0' stroke='none'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Header logo on the default layout (scripts/libraryMenu.js setDefaultTitle). The stock themes set
+   banner-light.png, or icon-transparent.png on TV, as background-image here. */
+.pageTitleWithDefaultLogo,
+.layout-tv .pageTitleWithDefaultLogo {
+  background-image: var(--h1-wordmark) !important;
+  background-position: left center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  height: min(1.75em, 32px);
+  width: calc(min(1.75em, 32px) * 468 / 92);
+  max-width: 50vw;
+}
+
+[dir="rtl"] .pageTitleWithDefaultLogo {
+  background-position: right center;
+}
+
+/* Server button in the dashboard and experimental app bars (components/toolbar/ServerButton.tsx) and the
+   drawer header of the dashboard and experimental layouts (apps/experimental/components/drawers/DrawerHeaderLink.tsx).
+   Both show icon-transparent.png (hashed file name) next to the server name, so they get the square mark. */
+img[src*="icon-transparent"] {
+  box-sizing: border-box;
+  background: var(--h1-mark) center / contain no-repeat;
+  overflow: hidden;
+}
+
+.MuiButton-startIcon > img[src*="icon-transparent"] {
+  width: 1.25em;
+  height: 1.25em;
+  padding-left: 1.25em;
+}
+
+.MuiListItemIcon-root > img[src*="icon-transparent"] {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding-left: 2.5rem;
+}
+
+/* Logo screensaver (plugins/logoScreensaver): the full wordmark instead of the Jellyfin icon. */
+.logoScreenSaverImage {
+  box-sizing: border-box;
+  width: 394px;
+  height: 78px;
+  padding-left: 394px;
+  margin-top: -39px;
+  background: var(--h1-wordmark) center / contain no-repeat;
+  overflow: hidden;
+}
+
+/* Login page: Jellyfin has no logo here, so the wordmark sits above the card. The card is translated
+   by ElegantFin, which makes it the containing block. ElegantFin's "Sign in to continue" heading
+   floats about 4.6em above the card, so the wordmark goes above that. */
+#loginPage > .padded-left.padded-right.padded-bottom-page {
+  position: relative;
+}
+
+#loginPage > .padded-left.padded-right.padded-bottom-page::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 5.25em);
+  height: 2.75em;
+  max-width: 80vw;
+  margin: 0 auto;
+  background: var(--h1-wordmark) center / contain no-repeat;
+  pointer-events: none;
+}
 
 /* ---- src/20-login.css ---- */
 /* 20-login.css: The login page, keeping the Sign in with Authentik button.
