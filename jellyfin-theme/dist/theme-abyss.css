@@ -3441,19 +3441,10 @@ html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
 
 /* ---- Poster rows (home Latest rows) and poster grids (library pages) ---- */
 
-/* Title under the poster in the mockup's accent style: small uppercase Cascadia, left-aligned.
-   Abyss sets the first line to font-size: larger !important, so the size needs !important too. */
+/* Title under the poster left-aligned. Its font and size are the same on every card (70-browse.css). */
 .homeSectionsContainer .overflowPortraitCard .cardText,
 .portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText {
   text-align: left !important;
-}
-.homeSectionsContainer .overflowPortraitCard .cardText-first,
-.portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-first {
-  font-family: var(--h1-mono);
-  font-size: 0.78em !important;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 .homeSectionsContainer .overflowPortraitCard .cardText-secondary,
 .portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-secondary {
@@ -3708,6 +3699,196 @@ html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
   html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer a.lnkMediaFolder:has(> .navMenuOptionIcon.music_note) {
     display: none !important;
   }
+}
+
+/* ---- src/abyss/70-browse.css ---- */
+/* 70-browse.css: browsing pages on top of 30-home.css and 40-side-pill.css: card titles, home row
+   edges, the active link in the side pill and the phone drawer, the sort and filter dialogs, the
+   card overlay on focus, empty states, the phone tab row, the Collections grid and the A to Z
+   picker. Selectors checked against jellyfin-web v10.11.11 (components/cardbuilder,
+   components/homesections, components/filterdialog, elements/emby-radio, scripts/libraryMenu.js,
+   controllers/list.js, controllers/favorites.js, components/alphaPicker). */
+
+/* ---- Card titles: one style on every card ----
+   Continue Watching and Next Up used the sans title, the Latest rows and library grids small
+   uppercase Cascadia, which cut long titles after a few letters on a phone. Every card now uses the
+   page font (Google Sans), sentence case, one size. Cascadia stays for the line under it (year,
+   episode) and for the library tile labels in My Media (30-home.css). */
+.card:not(.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView])) .cardText-first {
+  font-family: "Google Sans", sans-serif;
+  font-size: 0.95em !important;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* ---- Home rows ----
+   Abyss pads the home sections by 7px on both sides, so a row of posters ran to the window's right
+   edge while the header bar stops 24px short of it (10px on a phone). The right side now keeps the
+   header's gap. */
+.homeSectionsContainer,
+#favoritesTab > .sections {
+  padding-right: var(--h1-bar-top, 10px) !important;
+}
+@media all and (min-width: 62.5em) {
+  .homeSectionsContainer,
+  #favoritesTab > .sections {
+    padding-right: var(--h1-pill-inset, 24px) !important;
+  }
+}
+
+/* Rows that scroll by script (desktop) move their cards with a transform and never clipped them, so
+   the off screen posters made the whole page wider than the window (2345px at 1876). They are
+   clipped at the row's edge now, sideways only, so the focus zoom still shows above and below. */
+.emby-scroller[data-scroll-mode-x=custom] {
+  overflow-x: clip;
+  overflow-clip-margin: 0;
+}
+
+/* Row titles: rows with scroll arrows put the title in a grid cell (30-home.css). Jellyfin's
+   .padded-left is 3.3% of the parent's width, and that cell is narrower than the row by the arrows,
+   so those titles sat a few pixels left of the others. The padding is taken from the row's width. */
+html:not(.layout-tv) .emby-scroller-container:has(> .emby-scrollbuttons) {
+  container-type: inline-size;
+}
+html:not(.layout-tv) .emby-scroller-container:has(> .emby-scrollbuttons) > :is(.sectionTitleContainer, .sectionTitle).padded-left {
+  padding-left: 3.3cqw;
+}
+
+/* ---- Side pill and phone drawer: the current page ----
+   Jellyfin marks a library link as current (.navMenuOption-selected) on Movies and Shows, but not
+   Home and not the Collections library, which opens the generic list page (#/list?parentId=...).
+   Home is current while the home page (#indexPage) shows, Collections while a list page shows
+   collection cards (BoxSet). The Collections link is the list link with the boxsets icon. */
+body:has(#indexPage:not(.hide)) .mainDrawer a.navMenuOption[href="#/home"],
+body:has(.page.noSecondaryNavPage:not(.hide, [id]) .itemsContainer > .card[data-type=BoxSet]) .mainDrawer a.navMenuOption[href^="#/list?parentId="]:has(> .navMenuOptionIcon.video_library) {
+  background: var(--h1-green) !important;
+  color: var(--h1-bg) !important;
+}
+body:has(#indexPage:not(.hide)) .mainDrawer a.navMenuOption[href="#/home"] :is(.navMenuOptionIcon, .navMenuOptionText),
+body:has(.page.noSecondaryNavPage:not(.hide, [id]) .itemsContainer > .card[data-type=BoxSet]) .mainDrawer a.navMenuOption[href^="#/list?parentId="]:has(> .navMenuOptionIcon.video_library) :is(.navMenuOptionIcon, .navMenuOptionText) {
+  color: var(--h1-bg) !important;
+}
+body:has(#indexPage:not(.hide)) .mainDrawer a.navMenuOption[href="#/home"] .navMenuOptionIcon,
+body:has(.page.noSecondaryNavPage:not(.hide, [id]) .itemsContainer > .card[data-type=BoxSet]) .mainDrawer a.navMenuOption[href^="#/list?parentId="]:has(> .navMenuOptionIcon.video_library) .navMenuOptionIcon {
+  background: rgba(var(--h1-bg-rgb), 0.16) !important;
+}
+
+/* The docked pill: the same green disc and glow as the Movies and Shows links get there. Same
+   condition as in 40-side-pill.css. */
+@media all and (min-width: 62.5em) {
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))):has(#indexPage:not(.hide)) .mainDrawer a.navMenuOption[href="#/home"],
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))):has(.page.noSecondaryNavPage:not(.hide, [id]) .itemsContainer > .card[data-type=BoxSet]) .mainDrawer a.navMenuOption[href^="#/list?parentId="]:has(> .navMenuOptionIcon.video_library) {
+    background: var(--h1-green) !important;
+    color: var(--h1-bg) !important;
+    box-shadow: 0 0 0 1px rgba(57, 255, 20, 0.9), 0 0 10px rgba(57, 255, 20, 0.55);
+  }
+}
+
+/* The hamburger drawer (phones and narrow windows): Abyss floats it 24px from the window, the
+   header bar floats 10px from it, so the bar's edge and the avatar showed around the drawer's top
+   corner. The drawer now opens under the bar, on the bar's left edge and with its radius. */
+html:not(.layout-tv) .mainDrawer.drawer-open {
+  margin: calc(env(safe-area-inset-top) + var(--h1-bar-top, 10px) + var(--h1-bar-h, 56px) + 8px) var(--h1-bar-top, 10px) var(--h1-bar-top, 10px);
+  border-radius: 28px;
+}
+
+/* ---- Sort dialog: radio buttons ----
+   The focused option drew Jellyfin's blue ring, dot and halo. Checked and focused options use the
+   green of the rest of the theme, the halo a faint green. */
+.mdl-radio__button:checked + .mdl-radio__circles svg :is(.mdl-radio__outer-circle, .mdl-radio__inner-circle),
+.mdl-radio__button:focus + .mdl-radio__circles svg :is(.mdl-radio__outer-circle, .mdl-radio__inner-circle) {
+  color: var(--h1-green) !important;
+}
+.mdl-radio__button + .mdl-radio__circles .mdl-radio__focus-circle {
+  background-color: rgba(var(--h1-green-rgb), 0.18) !important;
+}
+
+/* ---- Filter dialog: as tall as its content ----
+   Jellyfin gives the centred dialog a fixed height, which left about 200px of empty glass under the
+   last filter group. It now fits the groups and still scrolls when they are opened. */
+.filterDialog.centeredDialog {
+  height: fit-content !important;
+  max-height: 85vh;
+  max-height: 85dvh;
+}
+
+/* ---- Card overlay on keyboard or remote focus ----
+   Focus showed Jellyfin's dark square behind a white play button, hover a green play on the
+   picture. Both now look like hover. The played check in the top corner repeats the green check of
+   the button row while the overlay shows, so it hides then. */
+.cardOverlayContainer > .cardOverlayButton.cardOverlayButton-hover {
+  background-color: transparent !important;
+  color: var(--h1-green);
+}
+.card:is(.card-hoverable:hover, :focus-within) .cardIndicators > .playedIndicator {
+  display: none;
+}
+
+/* ---- Empty states ----
+   Favorites with nothing marked showed an empty page, a collection with no items a bare heading.
+   Jellyfin hides the empty favourite rows and leaves the collection's items container empty, so a
+   short muted note goes in their place. */
+#favoritesTab > .sections:has(> .verticalSection):not(:has(> .verticalSection:not(.hide)))::after {
+  content: "No favorites yet. Mark a title with the heart and it shows up here.";
+  display: block;
+  padding: 3em 1em;
+  color: var(--h1-muted);
+  font-family: var(--h1-mono);
+  font-size: 0.9em;
+  text-align: center;
+}
+.collectionItems .collectionItemsContainer:empty::after {
+  content: "This collection is empty.";
+  display: block;
+  padding: 0.5em 0;
+  color: var(--h1-muted);
+  font-family: var(--h1-mono);
+  font-size: 0.9em;
+}
+
+/* The collection's items start on the same edge as the overview and genres above them */
+.itemDetailPage .collectionItems .sectionTitleContainer,
+.itemDetailPage .collectionItems .collectionItemsContainer {
+  padding-left: 0;
+}
+
+/* ---- Phone tab row (Shows: Suggestions, Upcoming, Genres, ...) ----
+   The row (.emby-tabs-slider scrolls) was cut at the edge with no hint. A fade shows on whichever
+   side still has tabs, driven by the row's own scroll position, so a row that fits gets none. */
+@supports (animation-timeline: scroll(self inline)) {
+  @keyframes h1-tab-fade {
+    from {
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5em), transparent);
+      mask-image: linear-gradient(to right, #000 calc(100% - 2.5em), transparent);
+    }
+    50% {
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5em, #000 calc(100% - 2.5em), transparent);
+      mask-image: linear-gradient(to right, transparent, #000 2.5em, #000 calc(100% - 2.5em), transparent);
+    }
+    to {
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5em);
+      mask-image: linear-gradient(to right, transparent, #000 2.5em);
+    }
+  }
+  html:not(.layout-tv) .skinHeader .headerTabs .emby-tabs-slider {
+    animation: h1-tab-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
+/* ---- Collections library: grid starts on the left like Movies and Shows ---- */
+.libraryPage .itemsContainer.vertical-wrap.centered {
+  justify-content: flex-start;
+}
+
+/* ---- A to Z picker: one place on every window ----
+   Jellyfin pins it to the bottom, so its top moved with the window height (168px on 1366x768,
+   362px on 1876x1000). It is centred in the space under the header bar now. */
+.alphaPicker-fixed.alphaPicker-vertical {
+  top: calc(50% + (var(--h1-bar-top, 10px) + var(--h1-bar-h, 56px)) / 2) !important;
+  bottom: auto !important;
+  transform: translateY(-50%);
 }
 
 /* ---- src/abyss/90-overrides.css ---- */

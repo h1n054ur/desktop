@@ -328,19 +328,10 @@ html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
 
 /* ---- Poster rows (home Latest rows) and poster grids (library pages) ---- */
 
-/* Title under the poster in the mockup's accent style: small uppercase Cascadia, left-aligned.
-   Abyss sets the first line to font-size: larger !important, so the size needs !important too. */
+/* Title under the poster left-aligned. Its font and size are the same on every card (70-browse.css). */
 .homeSectionsContainer .overflowPortraitCard .cardText,
 .portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText {
   text-align: left !important;
-}
-.homeSectionsContainer .overflowPortraitCard .cardText-first,
-.portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-first {
-  font-family: var(--h1-mono);
-  font-size: 0.78em !important;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 .homeSectionsContainer .overflowPortraitCard .cardText-secondary,
 .portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-secondary {
