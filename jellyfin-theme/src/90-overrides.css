@@ -148,9 +148,8 @@ html {
   color: var(--h1-muted);
 }
 
-/* Cascadia Code for accents only: section headings, metadata chips, secondary card lines,
-   timestamps and the player clock. Body text keeps ElegantFin's Inter. */
-.sectionTitle,
+/* Cascadia Code for accents only: metadata chips, secondary card lines, timestamps and the
+   player clock. Section headings stay in ElegantFin's Inter, bold, as in the mockup. */
 .cardText-secondary,
 .mediaInfoItem,
 .itemMiscInfo,
@@ -161,7 +160,7 @@ html {
   font-family: var(--h1-mono);
 }
 .sectionTitle {
-  letter-spacing: -0.01em;
+  font-weight: 700;
 }
 .mediaInfoItem {
   font-size: 0.9em;
