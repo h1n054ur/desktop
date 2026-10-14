@@ -1,0 +1,57 @@
+Vendored third-party files for the Jellyfin theme. Nothing here loads from the internet at runtime.
+Fetched 2026-10-14. All sha256 values are of the upstream file as downloaded.
+
+ElegantFin (vendor/elegantfin/)
+  repo:     https://github.com/lscambo13/ElegantFin
+  release:  v26.09.05 (latest release, tested upstream on Jellyfin Server 10.11.11)
+  commit:   5efc1105e9a56424d2252d73c04cafe484fb9e92 (2026-09-04, "RELEASE: ElegantFin v26.09.05")
+  license:  GPL-2.0 (LICENSE)
+  source files:
+    Theme/ElegantFin-jellyfin-theme-build-latest-minified.css  78810 bytes
+      779aa801b912d21089d488ddf5a426fc8c02970ec953566ceee416e0d8bce643
+    LICENSE  18092 bytes
+      8177f97513213526df2cf6184d8ff986c675afb514d4e68a404010521b880643
+  output: elegantfin.css (338716 bytes)
+      f1e0484d82ebd7805c14943cbca26dc062969ad6b43f2acc64d71acf627784a0
+  patches applied to the minified build (the only changes):
+    1. @import of Google Fonts Inter replaced by one inline @font-face: Inter latin subset,
+       normal style, variable weight 100 to 900, as a woff2 data URI.
+       https://fonts.gstatic.com/s/inter/v20/UcCo3FwrK3iLTcviYwY.woff2  72920 bytes
+         2c295d99e26dcf357d4d01bcf270fd6924b600c9a13dd8c363ef114f4c6976fa
+       Dropped: Inter italic (latin 79716 bytes) and the non-latin subsets. Browsers synthesise
+       italic from the normal face.
+       License: OFL-1.1 (LICENSE-inter.txt, rsms/inter v4.1 LICENSE.txt,
+         262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a)
+    2. "Material Symbols Rounded Minimal" @font-face: Google Fonts kit URL replaced by the same
+       file as a woff2 data URI (the icon subset listed in upstream's source CSS).
+       https://fonts.gstatic.com/l/font?kit=sykg-zNym6YjUruM-QrEh7-nyTnjDwKNJ_190Fjzar... (full URL
+       in upstream Theme/ElegantFin-theme-v26.09.05.css)  122052 bytes
+         5ee65054682c591b0ee093f3078f1556341f1d3dd8cd499af79a142431d169a9
+    3. "Material Symbols Rounded" (full) @font-face removed. Its file is 5345176 bytes
+       (fonts.gstatic.com/s/materialsymbolsrounded/v362/sykg-zNym6YjUruM-QrEh7-nyTnjDwKNJ_190Fjzag.woff2,
+       9be8126553e8f7df80f4676af806f7b2e64d4a8850da5025422f55daba3cb71a), too large to inline.
+    4. --iconPack changed from "Material Symbols Rounded" to "Material Symbols Rounded Minimal",
+       the option upstream documents to save bandwidth. Upstream warns it may miss icons that
+       plugins add. Fallback in every icon rule is Jellyfin's bundled "Material Icons".
+       License: Apache-2.0 (LICENSE-material-symbols.txt, google/material-design-icons
+         49d4db35df873165d6bd6ba09b063c7dafbac2f4 LICENSE,
+         58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd)
+  not vendored: upstream add-ons (media bar, custom media covers), commented out upstream.
+
+Cascadia Code (vendor/fonts/)
+  package:  @fontsource/cascadia-code 5.3.0 (npm), font version v5, lastModified 2025-09-16
+            https://registry.npmjs.org/@fontsource/cascadia-code/-/cascadia-code-5.3.0.tgz
+            integrity sha512-XEGnkay3kCOAJXcrZqokezGlw1sATtpqOMOrBOuvYt6Bj6EaejU2BvO1q8AdWdNfDQ4AoYP/Zs30QRY5m9UEZw== (verified)
+            tarball sha256 94fe929e394306b7a9d08e37d0b136986952bc559e31dd6c631fd4fc8777a028
+  upstream: https://github.com/microsoft/cascadia-code (latest release v2407.24)
+  license:  OFL-1.1 (LICENSE-cascadia-code.txt, microsoft/cascadia-code v2407.24 LICENSE,
+            51882cd3cdba4e16f220f44ddb08a635c38c44ea6e0975db2574f4be6f958238)
+  source files (latin subset, normal style):
+    files/cascadia-code-latin-400-normal.woff2  29452 bytes
+      923fd5a61f1618f4597422b66172d0d8615577f81eb9382724390ec8cb8bfd5d
+    files/cascadia-code-latin-700-normal.woff2  30244 bytes
+      db2452f9551ba42a0b2b5ef27a3e9438737922fbdaabd71a2446eaf96fe81ad9
+  output: cascadia-code.css (80398 bytes), two @font-face rules with woff2 data URIs
+      04f07a79dbb84db6a08c8349818130a843cc2dae823df798b762ab3a7d182b52
+
+Total vendored CSS: 419114 bytes (about 410 KiB).
