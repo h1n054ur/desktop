@@ -60,23 +60,3 @@ img[src*="icon-transparent"] {
   background: var(--h1-wordmark) center / contain no-repeat;
   overflow: hidden;
 }
-
-/* Login page: Jellyfin has no logo here, so the wordmark sits above the card. The card is translated
-   by ElegantFin, which makes it the containing block. ElegantFin's "Sign in to continue" heading
-   floats about 4.6em above the card, so the wordmark goes above that. */
-#loginPage > .padded-left.padded-right.padded-bottom-page {
-  position: relative;
-}
-
-#loginPage > .padded-left.padded-right.padded-bottom-page::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: calc(100% + 1.25em);
-  height: 2.75em;
-  max-width: 80vw;
-  margin: 0 auto;
-  background: var(--h1-wordmark) center / contain no-repeat;
-  pointer-events: none;
-}

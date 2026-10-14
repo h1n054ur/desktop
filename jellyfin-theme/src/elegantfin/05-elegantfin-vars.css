@@ -1,33 +1,11 @@
-/* 00-palette.css: the h1n054ur palette written onto ElegantFin's CSS custom properties.
-   Colours come from the h1n054ur terminal theme (claude-code/themes/h1n054ur.json).
+/* 05-elegantfin-vars.css: the h1n054ur palette written onto ElegantFin's CSS custom properties.
+   The tokens (--h1-*) come from common/00-palette.css, which loads just before this file.
    The light selector is listed too, so a user who picks Jellyfin's Light theme still gets
    this dark palette instead of a half green, half white mix. */
 
 :root,
 :root[data-theme=light] {
-  /* Our own tokens, used by the other src/ files */
-  --h1-bg: #06090a;
-  --h1-panel: #101816;
-  --h1-panel2: #13221d;
-  --h1-raise: #1d2a26;
-  --h1-border: #3d4f4a;
-  --h1-green: #39ff14;
-  --h1-green-hi: #7dff63;
-  --h1-green-dim: #1d5c16;
-  --h1-cyan: #00e5ff;
-  --h1-purple: #c77dff;
-  --h1-mint: #2bf5a0;
-  --h1-error: #ff5c7a;
-  --h1-error-dim: #6e2132;
-  --h1-text: #d8e6e1;
-  --h1-muted: #9fb2ac;
-  --h1-mono: "Cascadia Code", ui-monospace, monospace;
-  --h1-glow: 0 0 0 0.06em rgba(57, 255, 20, 0.9), 0 0 0.7em rgba(57, 255, 20, 0.35);
-  --h1-glow-cyan: 0 0 0 0.06em rgba(0, 229, 255, 0.9), 0 0 0.6em rgba(0, 229, 255, 0.3);
-
-  color-scheme: dark;
   --fill: 1; /* filled icons, the light block switches them to outlines */
-  accent-color: var(--h1-green); /* native checkboxes, radios and range inputs */
 
   /* Backgrounds and surfaces: near black page, dark green panels */
   --darkerGradientPoint: var(--h1-bg);

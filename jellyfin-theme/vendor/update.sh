@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Re-vendor ElegantFin and Cascadia Code, then rebuild dist/theme.css.
+# Re-vendor ElegantFin and Cascadia Code, then rebuild dist/theme-<base>.css for every base.
 #   vendor/update.sh <elegantfin-commit> [cascadia-version]
 # <elegantfin-commit> is a full 40 character commit sha of github.com/lscambo13/ElegantFin.
 # [cascadia-version] is the @fontsource/cascadia-code npm version (default 5.3.0).
@@ -24,4 +24,7 @@ done
 
 # -I: isolated mode, so nothing next to the downloads can shadow a stdlib module.
 python3 -I "$here/update.py" "$here" "$commit" "$cascadia"
-"$here/../build.sh"
+# VERSIONS goes into the header of every dist file, so every base is rebuilt.
+for base in elegantfin abyss; do
+  "$here/../build.sh" --base "$base"
+done

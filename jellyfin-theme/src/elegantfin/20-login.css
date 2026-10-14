@@ -2,7 +2,7 @@
    Layout follows the mockup in the theme note: wordmark above a neutral dark card, "Sign in to continue"
    and a small mono subtitle inside the card at the top, muted labels with cyan on focus, a solid green
    "Sign In" with a soft glow, Forgot Password and Quick Connect as small text links side by side,
-   then an "or" divider and the "Sign in with Authentik" button (src/login-disclaimer.html) in cyan.
+   then an "or" divider and the "Sign in with Authentik" button (src/common/login-disclaimer.html) in cyan.
    The page background is a faint grid instead of the splash backdrop.
    ElegantFin marks its buttons with !important, so the overrides below need it too.
    Each var() carries the plain hex as a fallback, in case 00-palette.css is not there. */
