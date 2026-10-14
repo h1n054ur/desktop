@@ -1,2 +1,168 @@
-/* 90-overrides.css: Small fixes on top of ElegantFin, loaded last so they win.
-   Placeholder, filled in by a later task. */
+/* 90-overrides.css: fixes on top of ElegantFin, loaded last so they win.
+   Colours come from the tokens in 00-palette.css. Glows are static box-shadows on the one
+   element under the pointer or focus, never animated blurs on every card. */
+
+/* Text on green or cyan fills: ElegantFin hard-codes white or uses --fullContrastColor here,
+   which is unreadable on our bright accents. Dark text gives about 13:1 to 15:1. */
+.MuiButton-colorPrimary,
+.button-submit,
+.upNextContainer .btnStartNow {
+  color: var(--h1-bg) !important;
+  font-weight: 700;
+}
+.navMenuOption-selected,
+.navMenuOption-selected .navMenuOptionIcon,
+.navMenuOption-selected .navMenuOptionText {
+  color: var(--h1-bg) !important;
+}
+.emby-button.show-focus:focus,
+.emby-tabs .emby-button.show-focus:focus,
+.paper-icon-button-light.show-focus:focus,
+.listItem:focus,
+.listItem:focus .listItemBodyText,
+.listItem:focus .secondary,
+.alphaPickerButton-tv:focus {
+  color: var(--h1-bg) !important;
+}
+
+/* Text selection */
+::selection {
+  background: var(--h1-green);
+  color: var(--h1-bg);
+}
+
+/* Glow on cards: green ring on hover and keyboard focus */
+.card-hoverable:hover .cardScalable,
+.card:focus-visible .cardScalable,
+.card.show-focus:focus .cardScalable {
+  box-shadow: var(--h1-glow);
+}
+.card:focus .cardBox.visualCardBox,
+.card:focus .cardBox:not(.visualCardBox) .cardScalable {
+  border-color: var(--h1-green) !important;
+}
+.card-hoverable:hover .cardText-first,
+.card:focus-visible .cardText-first {
+  color: var(--h1-green);
+}
+
+/* Glow on buttons: primary buttons always carry a soft glow, others glow on hover or focus */
+.button-submit,
+.btnPlay.detailButton,
+.upNextContainer .btnStartNow {
+  box-shadow: 0 0 0.6em rgba(57, 255, 20, 0.35);
+}
+.button-submit:hover,
+.button-submit:focus-visible,
+.btnPlay.detailButton:hover {
+  box-shadow: var(--h1-glow);
+}
+.raised:hover,
+.button-alt:hover,
+.emby-button.block:hover,
+.detailButton:not(.btnPlay):focus-visible,
+.emby-button.show-focus:focus,
+.paper-icon-button-light.show-focus:focus {
+  box-shadow: var(--h1-glow-cyan);
+}
+.raised:hover,
+.button-alt:hover,
+.emby-button.block:hover {
+  border-color: var(--h1-green) !important;
+}
+
+/* Glow on inputs: cyan border comes from --highlightOutlineColor, this adds the halo */
+.emby-input:focus,
+.emby-select-withcolor:focus,
+.emby-textarea:focus {
+  box-shadow: 0 0 0.5em rgba(0, 229, 255, 0.35);
+  caret-color: var(--h1-cyan);
+}
+.inputLabelFocused,
+.selectLabelFocused,
+.textareaLabelFocused {
+  color: var(--h1-cyan) !important;
+}
+
+/* Progress bars: green with a slight glow (resume bars on cards, download and sync bars) */
+.itemProgressBarForeground {
+  box-shadow: 0 0 0.4em rgba(57, 255, 20, 0.55);
+}
+.itemProgressBar {
+  background: rgba(159, 178, 172, 0.2);
+}
+
+/* Sliders: green track and thumb in the player, volume and settings sliders */
+.mdl-slider::-moz-range-thumb {
+  background: var(--osdSeekBarThumbColor);
+}
+.mdl-slider.show-focus:focus::-webkit-slider-thumb,
+.mdl-slider:hover::-webkit-slider-thumb {
+  box-shadow: 0 0 0.5em rgba(57, 255, 20, 0.6);
+}
+
+/* Scrollbars: slim, dark track, border coloured thumb that turns green on hover */
+html {
+  scrollbar-color: var(--h1-border) transparent;
+}
+::-webkit-scrollbar {
+  width: 0.6em;
+  height: 0.6em;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--h1-border);
+  border-radius: 1em;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--h1-green-dim);
+}
+
+/* Hard-coded ElegantFin colours that no variable reaches */
+.backgroundContainer.withBackdrop {
+  background: linear-gradient(0deg, var(--darkerGradientPoint), 45%, rgba(6, 9, 10, 0.25));
+}
+.layout-tv .backgroundContainer.withBackdrop {
+  background: linear-gradient(0deg, var(--darkerGradientPoint), 45%, rgba(6, 9, 10, 0.95));
+}
+.iconOsd,
+.playerStats {
+  background-color: rgba(16, 24, 22, 0.8);
+}
+.playedIndicator {
+  background: var(--h1-green);
+  color: var(--h1-bg);
+}
+.playstatebutton-icon-played {
+  color: var(--h1-green);
+}
+.countIndicator,
+.fullSyncIndicator,
+.mediaSourceIndicator {
+  background: var(--h1-cyan);
+  color: var(--h1-bg);
+}
+.metadataSidebarIcon {
+  color: var(--h1-muted);
+}
+
+/* Cascadia Code for accents only: section headings, metadata chips, secondary card lines,
+   timestamps and the player clock. Body text keeps ElegantFin's Inter. */
+.sectionTitle,
+.cardText-secondary,
+.mediaInfoItem,
+.itemMiscInfo,
+.listItemBodyText.secondary,
+.osdPositionText,
+.osdDurationText,
+.endsAt {
+  font-family: var(--h1-mono);
+}
+.sectionTitle {
+  letter-spacing: -0.01em;
+}
+.mediaInfoItem {
+  font-size: 0.9em;
+}
