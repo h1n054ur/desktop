@@ -1,1 +1,524 @@
-/* 90-overrides.css: fixes on top of Abyss, loaded last so they win. Placeholder for #299. */
+/* 90-overrides.css: fixes on top of Abyss, loaded last so they win.
+   Abyss maps most colours through its variables (05-abyss-vars.css). This file covers what the
+   variables don't reach: colours Abyss hard-codes (#121212 text on the accent, white glass, the
+   rgba(245, 245, 247, .2) borders, grey fills), the places where Abyss uses the accent as a text
+   colour (fine for its near white default, too loud in green), and the Jellyfin dark theme blues
+   (#00a4dc) and greys that Abyss leaves alone. Selectors match Abyss v1.2.3 and jellyfin-web
+   10.11.11, with the same or higher specificity and !important where the original has it.
+
+   Contrast (WCAG AA wants 4.5:1 for body text): --h1-text on --h1-bg about 15:1, on panels about
+   14:1, --h1-muted 8:1 to 9:1 (6.7:1 on raised panels), --h1-bg on green about 15:1, on cyan 13:1.
+   Glows are static box-shadows on the one element under the pointer or focus, never animated. */
+
+/* ---- Page, text and surfaces (Jellyfin dark theme greys) ---- */
+
+html,
+.backgroundContainer,
+.nowPlayingPlaylist,
+.nowPlayingContextMenu,
+.wizardStartForm,
+.noBackdropTransparency .detailPagePrimaryContainer,
+.noBackdropTransparency .detailPageSecondaryContainer,
+#comicsPlayer,
+#bookPlayer,
+#pdfPlayer {
+  background-color: var(--h1-bg);
+}
+.backgroundContainer.withBackdrop {
+  background-color: rgba(var(--h1-bg-rgb), 0.86);
+}
+html,
+.skinHeader {
+  color: var(--h1-text);
+}
+
+.cardText-secondary,
+.fieldDescription,
+.listItem .secondary,
+.nowPlayingBarSecondaryText,
+.programSecondaryTitle,
+.secondaryText,
+.checkboxListLabel,
+.inputLabel,
+.inputLabelUnfocused,
+.paperListLabel,
+.textareaLabelUnfocused,
+.alphaPickerButton,
+.guide-date-tab-button,
+.emby-tab-button,
+.emby-tab-button.show-focus,
+.metadataSidebarIcon {
+  color: var(--h1-muted);
+}
+.alphaPickerButton-selected {
+  color: var(--h1-text);
+}
+
+.collapseContent,
+.formDialogFooter:not(.formDialogFooter-clear),
+.formDialogHeader:not(.formDialogHeader-clear),
+.paperList,
+.visualCardBox,
+.infoBanner,
+.playlistSectionButton {
+  background-color: var(--h1-panel);
+}
+.infoBanner {
+  background: var(--h1-panel);
+  color: var(--h1-text);
+  border: 1px solid var(--h1-border);
+}
+.toast {
+  background: var(--h1-raise);
+  color: var(--h1-text);
+}
+.appfooter {
+  background: rgba(var(--h1-bg-rgb), 0.92);
+  color: var(--h1-text);
+}
+/* Mobile and tablet detail ribbon (Abyss restyles it only on desktop and TV) */
+.detailRibbon {
+  background: rgba(var(--h1-panel-rgb), 0.8);
+}
+.listItem:focus {
+  background: var(--h1-raise);
+}
+.mediaInfoText {
+  color: var(--h1-text);
+  background: rgba(var(--h1-border-rgb), 0.4);
+}
+.actionsheetDivider {
+  background: rgba(var(--h1-border-rgb), 0.6);
+}
+.detailTableBodyRow-shaded:nth-child(even) {
+  background: rgba(var(--h1-panel-rgb), 0.9) !important;
+}
+.emby-collapsible-button {
+  border-color: var(--h1-border);
+}
+
+/* Default card backgrounds (cards with no image): green blacks instead of greys */
+.defaultCardBackground1 { background-color: #0b1210; }
+.defaultCardBackground2 { background-color: var(--h1-panel); }
+.defaultCardBackground3 { background-color: var(--h1-panel2); }
+.defaultCardBackground4 { background-color: var(--h1-raise); }
+.defaultCardBackground5 { background-color: #26322f; }
+
+/* ---- Borders Abyss hard-codes (rgba(245, 245, 247, .2), greys) ---- */
+
+.editPageSidebar,
+.mainDrawer,
+.dialog,
+.toast,
+.upNextContainer,
+.playerStats-stats,
+.manualLoginForm,
+.raised.homeLibraryButton:hover,
+#userProfilePage .readOnlyContent,
+.readOnlyContent .verticalSection,
+#languagePreferencesPage .settingsContainer .verticalSection,
+.subtitleAppearanceSection,
+.homeScreenSettingsContainer .perLibrarySettings,
+.homeScreenSettingsContainer .verticalSection-extrabottompadding {
+  border: solid 1px var(--h1-border) !important;
+}
+.homeScreenSettingsContainer .verticalSection-extrabottompadding .verticalSection {
+  border: none !important;
+}
+.cardOverlayContainer:hover {
+  border: solid 1px rgba(var(--h1-green-rgb), 0.55) !important;
+}
+.emby-tabs-slider {
+  border: 1px solid var(--h1-border);
+}
+fieldset,
+.itemSelectionPanel {
+  border: 1px solid var(--h1-border);
+}
+.cardContent.cardImageContainer {
+  box-shadow: 0 0 0 1px rgba(var(--h1-border-rgb), 0.55) inset;
+}
+
+/* Modern app shell (MUI app bar, drawer, menus, dialogs): Abyss colours the text with the
+   accent, which would make every label neon. Body text stays light, borders use the palette. */
+html[data-theme="dark"] .MuiAppBar-root {
+  color: var(--h1-text);
+  border-bottom: 1px solid var(--h1-border);
+}
+html[data-theme="dark"] .MuiDrawer-paper,
+html[data-theme="dark"] .MuiMenu-paper,
+html[data-theme="dark"] .MuiDialog-paper {
+  color: var(--h1-text);
+  border: 1px solid var(--h1-border);
+}
+html[data-theme="dark"] .MuiToolbar-root .MuiButton-root,
+html[data-theme="dark"] .MuiToolbar-root .MuiIconButton-root {
+  color: var(--h1-muted);
+}
+html[data-theme="dark"] .MuiFilledInput-root,
+html[data-theme="dark"] .MuiOutlinedInput-root {
+  background-color: rgba(var(--h1-panel-rgb), 0.9);
+}
+
+/* Other spots where Abyss uses the accent as text on dark: muted or default text instead */
+#divRunningTasks span,
+#scheduledTasksPage span {
+  color: var(--h1-muted) !important;
+}
+.searchSuggestionsList .emby-button {
+  color: var(--h1-muted);
+}
+.starIcon {
+  color: var(--h1-green);
+}
+
+/* ---- Text on green or cyan fills: dark, about 15:1 ---- */
+
+html[data-theme="dark"] .MuiToolbar-root .MuiButton-root.MuiButton-colorPrimary,
+html[data-theme="dark"] .MuiToolbar-root .MuiButton-root.MuiButton-colorPrimary:hover,
+html[data-theme="dark"] .MuiListItemButton-root:hover,
+html[data-theme="dark"] .MuiListItemButton-root.Mui-selected,
+html[data-theme="dark"] .MuiListItemButton-root.Mui-selected:hover,
+html[data-theme="dark"] #displayPreferencesPage form button[type="submit"].MuiButton-root,
+html[data-theme="dark"] #displayPreferencesPage form button[type="submit"].MuiButton-root:hover {
+  color: var(--h1-bg);
+}
+.raised:hover,
+.fab:hover,
+.navMenuOption:hover,
+.listItem:hover,
+.actionSheetMenuItem:hover,
+.listItem-content:hover {
+  color: var(--h1-bg);
+}
+.emby-tab-button-active,
+.emby-tab-button-active:hover,
+.navMenuOption-selected,
+.checkboxIcon,
+.listItem:hover,
+.listItem:hover .listItemBodyText,
+.listItem:hover .material-icons,
+.listItem:hover .listItemImageButton,
+.listItem:hover .countIndicator,
+.listItem:hover .playedIndicator,
+.emby-button.show-focus:focus,
+.headerButton.show-focus:focus,
+.actionSheetMenuItem.show-focus:focus,
+#itemDetailPage .emby-button.show-focus:focus,
+.emby-tab-button.show-focus:focus.emby-tab-button-active,
+.libraryPage .paper-icon-button-light.show-focus:focus,
+#videoOsdPage .paper-icon-button-light.show-focus:focus {
+  color: var(--h1-bg) !important;
+}
+.listItem:hover .secondary,
+.listItem:hover .listItem-secondaryText,
+.listItem:hover p,
+.listItem:hover span,
+.listItem:hover div,
+.listItem:hover .runtime,
+.listItem:hover .starIcon::before,
+.listItem:hover .starRatingContainer,
+.listItem:hover .listItem-overview {
+  color: rgba(var(--h1-bg-rgb), 0.78) !important;
+}
+.listItem:hover .itemProgressBarForeground {
+  background-color: rgba(var(--h1-bg-rgb), 0.7) !important;
+  box-shadow: none;
+}
+.listItem:hover .itemProgressBar {
+  background: rgba(var(--h1-bg-rgb), 0.2) !important;
+}
+.navMenuOption-selected .navMenuOptionIcon,
+.navMenuOption-selected .navMenuOptionText {
+  color: var(--h1-bg) !important;
+}
+.playstatebutton-icon-played::before {
+  color: var(--h1-bg);
+}
+
+/* Navigation icons: Abyss puts them on a light grey disc (#cccccf69) */
+.navMenuOptionIcon,
+[dir=ltr] .listItemIcon {
+  background: rgba(var(--h1-border-rgb), 0.45) !important;
+}
+.navMenuOption-selected .navMenuOptionIcon {
+  background: rgba(var(--h1-bg-rgb), 0.16) !important;
+}
+
+/* ---- Buttons ---- */
+
+/* Neutral buttons: raised panel instead of Abyss's grey glass */
+.raised,
+.fab,
+a[data-role="button"] {
+  background: rgba(29, 42, 38, 0.85) !important; /* --h1-raise */
+  color: var(--h1-text);
+}
+.raised:hover,
+.fab:hover,
+a[data-role="button"]:hover {
+  background: var(--h1-green) !important;
+  color: var(--h1-bg);
+}
+
+/* Primary buttons: solid green with dark text and a soft glow. Abyss gives .button-submit a grey
+   glass fill (inside @supports, !important) and Jellyfin's dark theme a blue one. */
+.emby-button.button-submit,
+.emby-button.detailFloatingButton,
+.upNextContainer .btnStartNow {
+  background: var(--h1-green) !important;
+  color: var(--h1-bg) !important;
+  border: 1px solid var(--h1-green-hi) !important;
+  font-weight: 700;
+  box-shadow: 0 0 0.6em rgba(var(--h1-green-rgb), 0.35);
+}
+.emby-button.button-submit:hover,
+.emby-button.button-submit:focus-visible,
+.emby-button.detailFloatingButton:hover {
+  background: var(--h1-green-hi) !important;
+  box-shadow: var(--h1-glow);
+}
+.emby-button.button-delete {
+  background: var(--h1-error-dim) !important;
+  color: var(--h1-text) !important;
+  border: 1px solid var(--h1-error) !important;
+}
+
+/* Item detail page: Abyss's white Play pill becomes the green one from the mockup, the replay and
+   trailer buttons dark glass with a palette border */
+#itemDetailPage .btnPlay {
+  background: var(--h1-green);
+  color: var(--h1-bg);
+  box-shadow: 0 0 0.6em rgba(var(--h1-green-rgb), 0.35);
+}
+#itemDetailPage .btnPlay:hover {
+  background: var(--h1-green-hi);
+  color: var(--h1-bg) !important;
+  box-shadow: var(--h1-glow);
+}
+#itemDetailPage .btnReplay,
+#itemDetailPage:has(.btnReplay.hide) .btnPlayTrailer {
+  background: rgba(var(--h1-panel-rgb), 0.72);
+  border: 1px solid var(--h1-border) !important;
+  color: var(--h1-text);
+}
+#itemDetailPage .btnReplay:hover,
+#itemDetailPage:has(.btnReplay.hide) .btnPlayTrailer:hover {
+  background: var(--h1-green);
+  color: var(--h1-bg) !important;
+}
+
+/* Favourite heart: palette red instead of Abyss pink and Jellyfin's #c33 */
+.ratingbutton-icon-withrating,
+.listItem:hover .ratingbutton-icon-withrating {
+  color: var(--h1-error) !important;
+}
+@keyframes abyss-heart-glow {
+  0% { filter: drop-shadow(0 0 0 rgba(255, 92, 122, 0)); }
+  40% { filter: drop-shadow(0 0 10px rgba(255, 92, 122, 0.9)); }
+  100% { filter: drop-shadow(0 0 0 rgba(255, 92, 122, 0)); }
+}
+
+/* Download state and sync icons: cyan instead of Google blue */
+.downloadbutton-icon-complete,
+.downloadbutton-icon-on {
+  color: var(--h1-cyan);
+}
+
+/* ---- Focus: cyan rings for keyboard focus, green for the selected thing ---- */
+
+:focus-visible {
+  outline-color: var(--h1-cyan) !important;
+}
+input:focus,
+textarea:focus,
+select:focus,
+.emby-input:focus,
+.emby-textarea:focus,
+.emby-select:focus,
+.emby-select-withcolor:focus,
+.checkboxOutline:focus {
+  border-color: var(--h1-cyan) !important;
+}
+.emby-input:focus,
+.emby-textarea:focus,
+.emby-select-withcolor:focus {
+  box-shadow: 0 0 0.5em rgba(var(--h1-cyan-rgb), 0.35);
+  caret-color: var(--h1-cyan);
+}
+input[type="checkbox"]:focus~.checkboxOutline,
+input[type="checkbox"]:focus+.checkboxOutline {
+  outline: 2px solid var(--h1-cyan) !important;
+}
+.selectLabelFocused,
+.inputLabelFocused,
+.textareaLabelFocused {
+  color: var(--h1-cyan);
+}
+.paper-icon-button-light.show-focus:focus {
+  color: var(--h1-cyan);
+}
+.paper-icon-button-light:active:not(:disabled) {
+  color: var(--h1-green);
+  background-color: rgba(var(--h1-green-rgb), 0.16);
+}
+.emby-button.emby-tab-button.show-focus:focus {
+  border-color: var(--h1-cyan);
+  color: var(--h1-cyan) !important;
+}
+/* TV and remote focus on guide cells, alphabet picker and select boxes: green fill, dark text */
+.alphaPickerButton-tv:focus,
+.guide-channelHeaderCell:focus,
+.programCell:focus,
+.guide-date-tab-button.show-focus:focus,
+.emby-select-tv-withcolor:focus {
+  background-color: var(--h1-green) !important;
+  color: var(--h1-bg) !important;
+}
+.guide-date-tab-button.emby-tab-button-active,
+.guide-date-tab-button:focus {
+  color: var(--h1-green);
+}
+.programCell-active {
+  background: var(--h1-panel2) !important;
+}
+
+/* ---- Cards: green ring and glow on hover and focus, title turns green ---- */
+
+.card-hoverable:hover .cardScalable,
+.card:focus-visible .cardScalable,
+.card.show-focus:focus .cardScalable {
+  border-radius: var(--abyss-radius);
+  box-shadow: var(--h1-glow);
+}
+.card:focus .cardBox.visualCardBox,
+.card:focus .cardBox:not(.visualCardBox) .cardScalable {
+  border-color: var(--h1-green) !important;
+}
+.card:focus .cardBox:not(.visualCardBox) .cardScalable {
+  box-shadow: 0 0 0.8em rgba(var(--h1-green-rgb), 0.4);
+}
+.card-hoverable:hover .cardText-first,
+.card:focus-visible .cardText-first,
+.card.show-focus:focus .cardText-first {
+  color: var(--h1-green);
+}
+
+/* ---- Indicators, progress, spinners ---- */
+
+.countIndicator {
+  color: var(--h1-text);
+}
+.fullSyncIndicator {
+  background: var(--h1-cyan);
+  color: var(--h1-bg);
+}
+.missingIndicator,
+.unairedIndicator {
+  background: var(--h1-error-dim);
+  color: var(--h1-text);
+  border: 1px solid var(--h1-error);
+}
+.selectionCommandsPanel {
+  background: var(--h1-green);
+  color: var(--h1-bg);
+}
+
+/* Resume bars: solid green like the mockup (Abyss uses the accent at 30%) with a slight glow */
+.itemProgressBarForeground {
+  background-color: var(--h1-green);
+  box-shadow: 0 0 0.4em rgba(var(--h1-green-rgb), 0.55);
+}
+.itemProgressBar {
+  background: rgba(var(--h1-muted-rgb), 0.2);
+}
+.itemProgressBarForeground-recording {
+  background-color: var(--h1-error);
+  box-shadow: none;
+}
+.transcodingProgress > div {
+  background-color: rgba(var(--h1-cyan-rgb), 0.45);
+}
+
+.mdl-spinner__layer-2 { border-color: var(--h1-cyan); }
+.mdl-spinner__layer-3 { border-color: var(--h1-mint); }
+.mdl-spinner__layer-4 { border-color: var(--h1-border); }
+
+/* ---- Inputs and selects: panel fill, palette border ---- */
+
+.emby-input,
+.emby-textarea,
+.emby-select-withcolor {
+  color: inherit;
+  background: rgba(var(--h1-bg-rgb), 0.6);
+  border: 1px solid var(--h1-border) !important;
+}
+.emby-select-withcolor > option {
+  background: var(--h1-panel);
+}
+.checkboxOutline {
+  border-color: rgba(var(--h1-muted-rgb), 0.6) !important;
+}
+
+/* Subtitle preview: dark green gradient so the sample white text stays readable */
+.subtitleappearance-preview {
+  background: linear-gradient(140deg, var(--h1-green-dim), var(--h1-bg)) !important;
+}
+
+/* ---- Text selection and scrollbars ---- */
+
+::selection {
+  background: var(--h1-green);
+  color: var(--h1-bg);
+}
+::-moz-selection {
+  background: var(--h1-green);
+  color: var(--h1-bg);
+}
+
+/* Slim scrollbars in the border colour, green only on hover (Abyss paints them in the accent) */
+:root,
+* {
+  scrollbar-color: var(--h1-border) transparent !important;
+}
+::-webkit-scrollbar-track,
+::-webkit-scrollbar-track-piece {
+  background: transparent;
+  box-shadow: none;
+}
+::-webkit-scrollbar-thumb,
+.searchSuggestionsList::-webkit-scrollbar-thumb {
+  background: var(--h1-border) !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--h1-green-dim) !important;
+}
+
+/* ---- Type: Cascadia Code for small metadata only (year, runtime, ratings, chips, secondary
+   card lines, timestamps). Headings and body stay in Abyss's Google Sans, bold, as in the mockup. */
+
+.cardText-secondary,
+.mediaInfoItem,
+.mediaInfoText,
+.itemMiscInfo,
+.listItemBodyText.secondary,
+.countIndicator,
+.osdPositionText,
+.osdDurationText,
+.nowPlayingBarCurrentTime,
+.endsAt {
+  font-family: var(--h1-mono);
+}
+.mediaInfoItem,
+.cardText-secondary,
+.endsAt {
+  font-size: 0.88em;
+}
+.mediaInfoOfficialRating {
+  border-color: var(--h1-border);
+  color: var(--h1-text);
+}
+.sectionTitle {
+  font-family: "Google Sans", sans-serif;
+  font-weight: 700;
+}
