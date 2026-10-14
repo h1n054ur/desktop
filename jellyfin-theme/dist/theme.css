@@ -391,6 +391,197 @@ img[src*="icon-transparent"] {
   box-shadow: 0 0 0 0.06em rgba(57, 255, 20, 0.9), 0 0 0.7em rgba(57, 255, 20, 0.35);
 }
 
+/* ---- src/30-home.css ---- */
+/* 30-home.css: home page and library page details from the mockup (home-elegantfin.png).
+   Header tabs as text with one green pill, outlined header icons, a cyan avatar ring, library
+   tiles with a cyan line icon and a Cascadia label, left-aligned card text, and the A to Z picker
+   in the sans font. Card hover and focus glow live in 90-overrides.css, not here.
+   Selectors checked against jellyfin-web v10.11.11 (scripts/libraryMenu.js,
+   components/homesections, components/cardbuilder/cardBuilder.js). */
+
+/* Line icons for the library tiles, one per Jellyfin collection type (utils/image.ts getLibraryIcon).
+   Cyan strokes baked in, so a drop-shadow can glow them. Anything unknown gets the folder. */
+:root {
+  --h1-lib-folder: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z'/%3E%3C/svg%3E");
+  --h1-lib-movies: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M7 3v18M17 3v18M3 7.5h4M3 12h18M3 16.5h4M17 7.5h4M17 16.5h4'/%3E%3C/svg%3E");
+  --h1-lib-tvshows: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='15' rx='2'/%3E%3Cpath d='m17 2-5 5-5-5'/%3E%3C/svg%3E");
+  --h1-lib-music: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18V5l12-2v13'/%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Ccircle cx='18' cy='16' r='3'/%3E%3C/svg%3E");
+  --h1-lib-homevideos: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m16 13 5.2 3.5a.5.5 0 0 0 .8-.4V7.9a.5.5 0 0 0-.8-.4L16 11'/%3E%3Crect x='2' y='6' width='14' height='12' rx='2'/%3E%3C/svg%3E");
+  --h1-lib-photos: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21'/%3E%3C/svg%3E");
+  --h1-lib-books: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20'/%3E%3C/svg%3E");
+  --h1-lib-livetv: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='15' rx='2'/%3E%3Cpath d='m17 2-5 5-5-5'/%3E%3Ccircle cx='12' cy='14.5' r='2.5'/%3E%3C/svg%3E");
+  --h1-lib-playlists: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h13M3 12h13M3 18h8M18 14v7M21 17.5l-3 3.5'/%3E%3C/svg%3E");
+}
+
+/* ---- Header tabs (Home, Favorites, and library tabs like Movies, Suggestions, Genres) ---- */
+
+/* ElegantFin draws home and heart icons before the home page tabs. The mockup has plain words. */
+.noHomeButtonHeader .emby-tab-button[data-index]::before {
+  content: none;
+  display: none;
+}
+
+/* Inactive tabs: plain text, no dark pill. Hover turns the word green instead of filling a pill. */
+.sectionTabs .emby-tab-button:not(.emby-tab-button-active) {
+  background-color: transparent;
+  color: var(--h1-text);
+}
+.sectionTabs .emby-tab-button:not(.emby-tab-button-active):hover {
+  background-color: transparent;
+  color: var(--h1-green);
+}
+
+/* Active tab: the green pill stays, with bold dark text */
+.sectionTabs .emby-tab-button-active {
+  font-weight: 700;
+}
+
+/* ---- Header buttons on the right ---- */
+
+/* Outlined icons in the text colour, like the mockup. SyncPlay, cast, search and the menu all stay.
+   Hover keeps ElegantFin's green fill with dark icon. */
+.skinHeader .headerButton .material-icons {
+  --fill: 0;
+}
+.skinHeader .headerButton:not(.headerUserButton, :hover) {
+  color: var(--h1-text);
+}
+
+/* Avatar: a cyan ring. Jellyfin still decides what is inside (the user's picture, else the person icon). */
+.skinHeader .headerUserButton {
+  border: 2px solid var(--h1-cyan);
+  border-radius: 50%;
+  color: var(--h1-cyan);
+  overflow: hidden;
+  box-shadow: 0 0 0.5em rgba(0, 229, 255, 0.3);
+}
+.skinHeader .headerUserButton:hover:not(:disabled),
+.skinHeader .headerUserButton:focus-visible {
+  background-color: rgba(0, 229, 255, 0.15);
+  color: var(--h1-cyan);
+  box-shadow: var(--h1-glow-cyan);
+}
+
+/* ---- My Media library tiles ---- */
+
+/* The tile picture is dimmed (Jellyfin's generated library images carry their own big title), and
+   the label sits on top: cyan icon, uppercase Cascadia name. The label ignores the pointer, so the
+   whole tile still opens the library and the hover buttons still work. */
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) {
+  --libraryLabelVisibility: block;
+  --h1-lib-icon: var(--h1-lib-folder);
+}
+.overflowBackdropCard:is([data-collectiontype=movies], [data-collectiontype=trailers]) {
+  --h1-lib-icon: var(--h1-lib-movies);
+}
+.overflowBackdropCard[data-collectiontype=tvshows] {
+  --h1-lib-icon: var(--h1-lib-tvshows);
+}
+.overflowBackdropCard:is([data-collectiontype=music], [data-collectiontype=musicvideos]) {
+  --h1-lib-icon: var(--h1-lib-music);
+}
+.overflowBackdropCard[data-collectiontype=homevideos] {
+  --h1-lib-icon: var(--h1-lib-homevideos);
+}
+.overflowBackdropCard[data-collectiontype=photos] {
+  --h1-lib-icon: var(--h1-lib-photos);
+}
+.overflowBackdropCard[data-collectiontype=books] {
+  --h1-lib-icon: var(--h1-lib-books);
+}
+.overflowBackdropCard[data-collectiontype=livetv] {
+  --h1-lib-icon: var(--h1-lib-livetv);
+}
+.overflowBackdropCard[data-collectiontype=playlists] {
+  --h1-lib-icon: var(--h1-lib-playlists);
+}
+
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardBox {
+  position: relative;
+}
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardImageContainer {
+  box-shadow: inset 0 0 0 100vmax rgba(6, 9, 10, 0.62);
+}
+/* Libraries without a picture show Jellyfin's grey icon, our label replaces it */
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardImageIcon {
+  display: none;
+}
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardFooter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  padding: 0 0.75em;
+  pointer-events: none;
+}
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardFooter::before {
+  content: "";
+  flex: none;
+  width: 2em;
+  height: 2em;
+  background: var(--h1-lib-icon) center / contain no-repeat;
+  filter: drop-shadow(0 0 0.35em rgba(0, 229, 255, 0.55));
+}
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardText-first {
+  max-width: 100%;
+  padding: 0;
+  font-family: var(--h1-mono);
+  font-size: 1.05em;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+  text-shadow: 0 1px 0.4em rgba(0, 0, 0, 0.85);
+}
+
+/* ---- Continue Watching and Next Up (wide cards on the home page) ---- */
+
+/* Title left-aligned, the line under it (year, or episode for shows) small and muted. Cascadia on
+   that line already comes from 90-overrides.css. */
+.homeSectionsContainer .overflowBackdropCard:not([data-type=CollectionFolder], [data-type=UserView]) .cardText {
+  text-align: left;
+}
+.homeSectionsContainer .overflowBackdropCard:not([data-type=CollectionFolder], [data-type=UserView]) .cardText-first {
+  font-weight: 500;
+}
+.homeSectionsContainer .overflowBackdropCard:not([data-type=CollectionFolder], [data-type=UserView]) .cardText-secondary {
+  font-size: 0.8em;
+  color: var(--h1-muted);
+}
+
+/* ---- Poster rows (home Latest rows) and poster grids (library pages) ---- */
+
+/* The mockup puts the title over the poster. Here it stays under the poster: posters already carry
+   their own title art, the resume bar and the hover buttons sit at the poster's foot, and the title
+   below never covers either. It takes the mockup's look: small uppercase Cascadia, left-aligned. */
+.homeSectionsContainer .overflowPortraitCard .cardText,
+.portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText {
+  text-align: left;
+}
+.homeSectionsContainer .overflowPortraitCard .cardText-first,
+.portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-first {
+  font-family: var(--h1-mono);
+  font-size: 0.78em;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.homeSectionsContainer .overflowPortraitCard .cardText-secondary,
+.portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-secondary {
+  font-size: 0.75em;
+  color: var(--h1-muted);
+}
+
+/* ---- A to Z picker on library pages ---- */
+
+/* ElegantFin sets it in plain monospace. Ours follows the page font, Cascadia stays for accents. */
+.alphaPickerButton {
+  font-family: inherit;
+}
+
 /* ---- src/90-overrides.css ---- */
 /* 90-overrides.css: fixes on top of ElegantFin, loaded last so they win.
    Colours come from the tokens in 00-palette.css. Glows are static box-shadows on the one
