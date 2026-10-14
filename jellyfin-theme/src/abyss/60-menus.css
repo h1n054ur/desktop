@@ -242,19 +242,25 @@ html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerLeft .pageTitle:not(:emp
   text-overflow: ellipsis;
 }
 
-/* ---- Fade above the floating header (wide screens) ----
-   The bar floats 24px below the window top, and scrolled content showed through that gap. A fade
-   from the page colour behind the header area covers the gap and runs out halfway down the bar,
-   so the bar keeps its floating look and the header stays as wide as before. */
+/* ---- Page colour behind the floating header (wide screens) ----
+   The bar floats 24px below the window top, and scrolled content showed through that gap and
+   through the glass bar itself (row titles sat half under its lower edge). A band of solid page
+   colour behind the header covers the gap and the bar, then fades out over 16px below the bar,
+   so scrolled rows slide under a clean edge and the bar keeps its floating outline. Jellyfin
+   gives the header paint containment, which clipped the band at the bar's bottom edge, so the
+   fade below the bar never showed: layout and style containment stay, paint is dropped. */
 @media all and (min-width: 62.5em) {
+  html:not(.layout-tv) .skinHeader:not(.osdHeader) {
+    contain: layout style !important;
+  }
   html:not(.layout-tv) .skinHeader:not(.osdHeader)::before {
     content: "";
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: calc(env(safe-area-inset-top) + var(--h1-bar-top) + var(--h1-bar-h) * 0.6);
-    background: linear-gradient(to bottom, rgba(var(--h1-bg-rgb), 0.96) 0%, rgba(var(--h1-bg-rgb), 0.85) 45%, rgba(var(--h1-bg-rgb), 0) 100%);
+    height: calc(env(safe-area-inset-top) + var(--h1-bar-top) + var(--h1-bar-h) + 16px);
+    background: linear-gradient(to bottom, var(--h1-bg) 0, var(--h1-bg) calc(100% - 16px), rgba(var(--h1-bg-rgb), 0) 100%);
     pointer-events: none;
     z-index: -1;
   }

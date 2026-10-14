@@ -73,3 +73,67 @@ body:has(.page:not(.hide) .searchFields) .skinHeader .pageTitle {
 .layout-mobile #itemDetailPage .cardOverlayButton-br .cardOverlayButtonIcon {
   background-color: rgba(var(--h1-bg-rgb), 0.18) !important;
 }
+
+/* The backdrop is shown sharp and undimmed on phones, so a bright backdrop (a white studio
+   background) lit up the top of the page behind the header. A dim layer of page colour over it,
+   a little stronger towards the bottom where it meets the title. The backdrop's own mask (Abyss)
+   still fades it out at the edges. */
+.layout-mobile #itemDetailPage .itemBackdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(var(--h1-bg-rgb), 0.35), rgba(var(--h1-bg-rgb), 0.6)) !important;
+  pointer-events: none;
+}
+
+/* Track lines (Video, Audio, Subtitles): a long single track name was cut mid word at the right
+   edge on phones. It ends with an ellipsis instead. */
+#itemDetailPage .detailTrackSelect {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- Backdrop edge (wide screens) ----
+   Once the backdrop has loaded, Jellyfin makes the lower half of the page solid
+   (.noBackdropTransparency, see 90-overrides.css) while the top shows the dimmed backdrop, and
+   the two met in a hard horizontal line. A fade from clear to page colour above the solid part
+   blends them. It sits behind the logo and the title (z-index -1 inside the page, which is
+   isolated so the fade stays above the backdrop layer), and reaches left over the side pill
+   strip like the box-shadow in the block above. */
+#itemDetailPage.noBackdropTransparency,
+.noBackdropTransparency #itemDetailPage {
+  isolation: isolate;
+}
+.layout-desktop .itemDetailPage.noBackdropTransparency .detailPagePrimaryContainer::before,
+.layout-desktop .noBackdropTransparency .itemDetailPage .detailPagePrimaryContainer::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--h1-pill-space, 0px));
+  right: 0;
+  bottom: 100%;
+  height: 120px;
+  background: linear-gradient(to bottom, rgba(var(--h1-bg-rgb), 0), var(--h1-bg));
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Series and episode logos: Abyss puts a drop shadow on the logo, and on logos whose image has a
+   faint, almost clear background that shadow drew a darker box around the whole image. No
+   shadow, so only the logo itself shows. */
+#itemDetailPage .detailLogo {
+  filter: none !important;
+}
+
+/* Search results on phones: the cards are narrow and the title was cut after a few letters. Two
+   lines for the title, then an ellipsis. */
+.layout-mobile .searchResults .cardText-first {
+  height: auto !important;
+  max-height: none !important;
+  white-space: normal !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
