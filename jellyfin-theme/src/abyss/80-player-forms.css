@@ -61,23 +61,28 @@ body:has(> .videoPlayerContainer) .actionSheet .actionsheetMenuItemIcon.check {
 
 /* ---- User settings forms (Profile, Display, Home, Playback, Subtitles) ---- */
 
-/* Abyss makes the Save button sticky at the bottom of the window, but with nothing behind it the
-   fields scrolled under the bare button. A bar of page colour now surrounds it, painted as outer
-   box-shadows (they never cover the button itself) down to the window's bottom edge. The forms
-   get room below the button so, scrolled to the end, the bar stays inside the card. */
+/* Abyss makes the Save button sticky 24px above the bottom of the window, but with nothing behind
+   it the fields scrolled under the bare button. A bar of solid page colour now surrounds it,
+   painted as outer box-shadows (they never cover the button itself): 12px around the button and
+   on down past the window's bottom edge, with the button 12px above that edge. z-index keeps the
+   bar above the fields that come later in the form (they are positioned too and painted over the
+   shadow before, so content showed through below the button). The forms get room below the
+   button so, scrolled to the end, the last field sits clear above the bar inside the card. */
 .userPreferencesPage form > .button-submit,
 #displayPreferencesPage form button[type="submit"] {
+  bottom: 12px !important;
+  z-index: 2;
   box-shadow:
     0 0 0.6em rgba(var(--h1-green-rgb), 0.35),
-    0 0 0 14px rgba(var(--h1-bg-rgb), 0.94),
-    0 24px 0 14px rgba(var(--h1-bg-rgb), 0.94) !important;
+    0 0 0 12px var(--h1-bg),
+    0 24px 0 12px var(--h1-bg) !important;
 }
 .userPreferencesPage form > .button-submit:is(:hover, :focus-visible),
 #displayPreferencesPage form button[type="submit"]:is(:hover, :focus-visible) {
   box-shadow:
     var(--h1-glow),
-    0 0 0 14px rgba(var(--h1-bg-rgb), 0.94),
-    0 24px 0 14px rgba(var(--h1-bg-rgb), 0.94) !important;
+    0 0 0 12px var(--h1-bg),
+    0 24px 0 12px var(--h1-bg) !important;
 }
 .userPreferencesPage form,
 #displayPreferencesPage form {

@@ -3778,6 +3778,70 @@ body:has(.page:not(.hide) .searchFields) .skinHeader .pageTitle {
   background-color: rgba(var(--h1-bg-rgb), 0.18) !important;
 }
 
+/* The backdrop is shown sharp and undimmed on phones, so a bright backdrop (a white studio
+   background) lit up the top of the page behind the header. A dim layer of page colour over it,
+   a little stronger towards the bottom where it meets the title. The backdrop's own mask (Abyss)
+   still fades it out at the edges. */
+.layout-mobile #itemDetailPage .itemBackdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(var(--h1-bg-rgb), 0.35), rgba(var(--h1-bg-rgb), 0.6)) !important;
+  pointer-events: none;
+}
+
+/* Track lines (Video, Audio, Subtitles): a long single track name was cut mid word at the right
+   edge on phones. It ends with an ellipsis instead. */
+#itemDetailPage .detailTrackSelect {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- Backdrop edge (wide screens) ----
+   Once the backdrop has loaded, Jellyfin makes the lower half of the page solid
+   (.noBackdropTransparency, see 90-overrides.css) while the top shows the dimmed backdrop, and
+   the two met in a hard horizontal line. A fade from clear to page colour above the solid part
+   blends them. It sits behind the logo and the title (z-index -1 inside the page, which is
+   isolated so the fade stays above the backdrop layer), and reaches left over the side pill
+   strip like the box-shadow in the block above. */
+#itemDetailPage.noBackdropTransparency,
+.noBackdropTransparency #itemDetailPage {
+  isolation: isolate;
+}
+.layout-desktop .itemDetailPage.noBackdropTransparency .detailPagePrimaryContainer::before,
+.layout-desktop .noBackdropTransparency .itemDetailPage .detailPagePrimaryContainer::before {
+  content: "";
+  position: absolute;
+  left: calc(-1 * var(--h1-pill-space, 0px));
+  right: 0;
+  bottom: 100%;
+  height: 120px;
+  background: linear-gradient(to bottom, rgba(var(--h1-bg-rgb), 0), var(--h1-bg));
+  pointer-events: none;
+  z-index: -1;
+}
+
+/* Series and episode logos: Abyss puts a drop shadow on the logo, and on logos whose image has a
+   faint, almost clear background that shadow drew a darker box around the whole image. No
+   shadow, so only the logo itself shows. */
+#itemDetailPage .detailLogo {
+  filter: none !important;
+}
+
+/* Search results on phones: the cards are narrow and the title was cut after a few letters. Two
+   lines for the title, then an ellipsis. */
+.layout-mobile .searchResults .cardText-first {
+  height: auto !important;
+  max-height: none !important;
+  white-space: normal !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+}
+
 /* ---- src/abyss/60-menus.css ---- */
 /* 60-menus.css: action sheets (the "More" menus), multi-select mode and the small header fixes
    that go with them. Selectors checked against jellyfin-web v10.11 (components/actionSheet/
@@ -4023,19 +4087,25 @@ html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerLeft .pageTitle:not(:emp
   text-overflow: ellipsis;
 }
 
-/* ---- Fade above the floating header (wide screens) ----
-   The bar floats 24px below the window top, and scrolled content showed through that gap. A fade
-   from the page colour behind the header area covers the gap and runs out halfway down the bar,
-   so the bar keeps its floating look and the header stays as wide as before. */
+/* ---- Page colour behind the floating header (wide screens) ----
+   The bar floats 24px below the window top, and scrolled content showed through that gap and
+   through the glass bar itself (row titles sat half under its lower edge). A band of solid page
+   colour behind the header covers the gap and the bar, then fades out over 16px below the bar,
+   so scrolled rows slide under a clean edge and the bar keeps its floating outline. Jellyfin
+   gives the header paint containment, which clipped the band at the bar's bottom edge, so the
+   fade below the bar never showed: layout and style containment stay, paint is dropped. */
 @media all and (min-width: 62.5em) {
+  html:not(.layout-tv) .skinHeader:not(.osdHeader) {
+    contain: layout style !important;
+  }
   html:not(.layout-tv) .skinHeader:not(.osdHeader)::before {
     content: "";
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: calc(env(safe-area-inset-top) + var(--h1-bar-top) + var(--h1-bar-h) * 0.6);
-    background: linear-gradient(to bottom, rgba(var(--h1-bg-rgb), 0.96) 0%, rgba(var(--h1-bg-rgb), 0.85) 45%, rgba(var(--h1-bg-rgb), 0) 100%);
+    height: calc(env(safe-area-inset-top) + var(--h1-bar-top) + var(--h1-bar-h) + 16px);
+    background: linear-gradient(to bottom, var(--h1-bg) 0, var(--h1-bg) calc(100% - 16px), rgba(var(--h1-bg-rgb), 0) 100%);
     pointer-events: none;
     z-index: -1;
   }
@@ -4295,23 +4365,28 @@ body:has(> .videoPlayerContainer) .actionSheet .actionsheetMenuItemIcon.check {
 
 /* ---- User settings forms (Profile, Display, Home, Playback, Subtitles) ---- */
 
-/* Abyss makes the Save button sticky at the bottom of the window, but with nothing behind it the
-   fields scrolled under the bare button. A bar of page colour now surrounds it, painted as outer
-   box-shadows (they never cover the button itself) down to the window's bottom edge. The forms
-   get room below the button so, scrolled to the end, the bar stays inside the card. */
+/* Abyss makes the Save button sticky 24px above the bottom of the window, but with nothing behind
+   it the fields scrolled under the bare button. A bar of solid page colour now surrounds it,
+   painted as outer box-shadows (they never cover the button itself): 12px around the button and
+   on down past the window's bottom edge, with the button 12px above that edge. z-index keeps the
+   bar above the fields that come later in the form (they are positioned too and painted over the
+   shadow before, so content showed through below the button). The forms get room below the
+   button so, scrolled to the end, the last field sits clear above the bar inside the card. */
 .userPreferencesPage form > .button-submit,
 #displayPreferencesPage form button[type="submit"] {
+  bottom: 12px !important;
+  z-index: 2;
   box-shadow:
     0 0 0.6em rgba(var(--h1-green-rgb), 0.35),
-    0 0 0 14px rgba(var(--h1-bg-rgb), 0.94),
-    0 24px 0 14px rgba(var(--h1-bg-rgb), 0.94) !important;
+    0 0 0 12px var(--h1-bg),
+    0 24px 0 12px var(--h1-bg) !important;
 }
 .userPreferencesPage form > .button-submit:is(:hover, :focus-visible),
 #displayPreferencesPage form button[type="submit"]:is(:hover, :focus-visible) {
   box-shadow:
     var(--h1-glow),
-    0 0 0 14px rgba(var(--h1-bg-rgb), 0.94),
-    0 24px 0 14px rgba(var(--h1-bg-rgb), 0.94) !important;
+    0 0 0 12px var(--h1-bg),
+    0 24px 0 12px var(--h1-bg) !important;
 }
 .userPreferencesPage form,
 #displayPreferencesPage form {
@@ -4469,9 +4544,10 @@ html,
   background: rgba(var(--h1-bg-rgb), 0.92);
   color: var(--h1-text);
 }
-/* Mobile and tablet detail ribbon (Abyss restyles it only on desktop and TV) */
-.detailRibbon {
-  background: rgba(var(--h1-panel-rgb), 0.8);
+/* Mobile and tablet detail ribbon (Abyss restyles it only on desktop and TV): page colour, so the
+   backdrop above fades straight into it with no lighter band and no hard line at its top. */
+.layout-mobile .detailRibbon {
+  background: transparent;
 }
 .listItem:focus {
   background: var(--h1-raise);
@@ -4701,15 +4777,25 @@ a[data-role="button"]:hover {
   color: var(--h1-bg) !important;
 }
 
-/* Favourite heart: palette red instead of Abyss pink and Jellyfin's #c33 */
+/* Favourite heart: the icon font only has the filled heart, so an item that is not a favourite
+   looked marked. Not a favourite: an outline (the glyph drawn as a stroke, no fill). A favourite:
+   filled green, the palette's "on" colour, instead of Abyss pink and Jellyfin's #c33. */
+button[is="emby-ratingbutton"] .material-icons:not(.ratingbutton-icon-withrating) {
+  color: transparent !important;
+  -webkit-text-stroke: 2px var(--h1-text);
+}
+.cardOverlayButton[is="emby-ratingbutton"] .material-icons:not(.ratingbutton-icon-withrating) {
+  -webkit-text-stroke-width: 1.6px;
+}
 .ratingbutton-icon-withrating,
 .listItem:hover .ratingbutton-icon-withrating {
-  color: var(--h1-error) !important;
+  color: var(--h1-green) !important;
+  -webkit-text-stroke: 0;
 }
 @keyframes abyss-heart-glow {
-  0% { filter: drop-shadow(0 0 0 rgba(255, 92, 122, 0)); }
-  40% { filter: drop-shadow(0 0 10px rgba(255, 92, 122, 0.9)); }
-  100% { filter: drop-shadow(0 0 0 rgba(255, 92, 122, 0)); }
+  0% { filter: drop-shadow(0 0 0 rgba(var(--h1-green-rgb), 0)); }
+  40% { filter: drop-shadow(0 0 10px rgba(var(--h1-green-rgb), 0.9)); }
+  100% { filter: drop-shadow(0 0 0 rgba(var(--h1-green-rgb), 0)); }
 }
 
 /* Download state and sync icons: cyan instead of Google blue */
