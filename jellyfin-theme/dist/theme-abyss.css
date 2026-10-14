@@ -3701,6 +3701,83 @@ html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
   }
 }
 
+/* ---- src/abyss/50-detail.css ---- */
+/* 50-detail.css: item detail pages (movie, series, season, episode, person) and the search page.
+
+   Desktop detail pages: Jellyfin pins the poster (.detailImageContainer .card, position: fixed
+   from Abyss) at left: 3.3% of the window, which puts it under the floating side pill
+   (40-side-pill.css). Here it moves to the same line as the header bar and the home rows: the
+   pill's right edge plus the 24px gap (x = 112 with the default pill sizes). The gate is the
+   same one 40-side-pill.css uses, so without the pill (narrow window, hamburger drawer, no
+   :has() support) Jellyfin's own position stays. */
+
+@media all and (min-width: 62.5em) {
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .detailImageContainer .card {
+    left: calc(var(--h1-pill-inset) * 2 + var(--h1-pill-width)) !important;
+  }
+
+  /* The page column starts at the pill space (x = 104), the strip left of it shows the
+     translucent backdrop layer, which reads as a lighter grey band next to the solid lower half
+     of the detail page (both containers are solid --h1-bg under .noBackdropTransparency, see
+     90-overrides.css). A flat shadow of the same colour fills that strip, so there is no seam. */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .itemDetailPage.noBackdropTransparency :is(.detailPagePrimaryContainer, .detailPageSecondaryContainer),
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .noBackdropTransparency .itemDetailPage :is(.detailPagePrimaryContainer, .detailPageSecondaryContainer) {
+    box-shadow: calc(-1 * var(--h1-pill-space)) 0 0 0 var(--h1-bg);
+  }
+}
+
+/* Cast, Guest Stars and the search result rows: Jellyfin's animated scroller moves the row with
+   a transform and does not clip it, so the cards past the right edge widened the whole page and
+   it scrolled sideways. Clip the horizontal overflow at the block that holds the rows (it starts
+   at the page's left edge, so a focused or hovered first card still has room). overflow-x: clip
+   keeps vertical overflow and creates no scroll container, so the window still scrolls the page
+   and native touch scrolling inside each row still works. */
+.itemDetailPage .detailPageSecondaryContainer,
+.searchResults {
+  overflow-x: clip;
+}
+
+/* Trailer button: Abyss and 90-overrides.css give it a glass box when there is no resume
+   button, while watched, favourite and more are plain icons. Plain like the others. */
+#itemDetailPage:has(.btnReplay.hide) .mainDetailButtons .btnPlayTrailer,
+#itemDetailPage:has(.btnReplay.hide) .mainDetailButtons .btnPlayTrailer:hover {
+  background: transparent !important;
+  border: 0 !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: inherit !important;
+}
+
+/* ---- Search page ---- */
+
+/* "Search" title in the header bar: Abyss blurs behind every page title (backdrop-filter on a
+   transparent box), which shows as a lighter box on the glass header. */
+body:has(.page:not(.hide) .searchFields) .skinHeader .pageTitle {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: transparent !important;
+}
+
+/* The search box sat centred while the results start on the left: line it up with the result
+   rows (both use the page's padded-left), keeping Jellyfin's maximum width. */
+.searchFields .searchFieldsInner {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+/* ---- Phones (layout-mobile) ---- */
+
+/* The details list (Genres, Studio) ran straight into the "Next Up" heading below it. */
+.layout-mobile #itemDetailPage .itemDetailsGroup {
+  margin-bottom: 1.5em;
+}
+
+/* Touch screens have no hover, so the round play button on every card stays on all the time,
+   on a black disc that darkens the corner of each image. A lighter disc keeps it readable. */
+.layout-mobile #itemDetailPage .cardOverlayButton-br .cardOverlayButtonIcon {
+  background-color: rgba(var(--h1-bg-rgb), 0.18) !important;
+}
+
 /* ---- src/abyss/70-browse.css ---- */
 /* 70-browse.css: browsing pages on top of 30-home.css and 40-side-pill.css: card titles, home row
    edges, the active link in the side pill and the phone drawer, the sort and filter dialogs, the
