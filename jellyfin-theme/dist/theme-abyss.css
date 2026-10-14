@@ -2783,8 +2783,178 @@ img[src*="icon-transparent"] {
    the theme note. Placeholder, filled in by a later task of #299. */
 
 /* ---- src/abyss/40-side-pill.css ---- */
-/* 40-side-pill.css: the floating side pill (Abyss's navigation drawer) in the h1n054ur palette, and a
-   sensible layout on phones. Placeholder, filled in by a later task of #299. */
+/* 40-side-pill.css: Jellyfin's navigation drawer as an always visible floating side pill on wide
+   screens, icons only, in the h1n054ur palette (the Abyss mockup in the theme note).
+
+   How Jellyfin 10.11 builds the drawer (src/components/AppHeader.tsx, src/scripts/libraryMenu.js,
+   src/lib/navdrawer/navdrawer.js):
+   - .mainDrawer > .mainDrawer-scrollContainer.scrollContainer sits in the DOM on every page of the
+     regular app. libraryMenu.js fills it on the first page show (no need to open it first) and then
+     removes .hide from it, except on TV layouts.
+   - navdrawer.js parks it off screen with inline styles (width, left: -width, transform) and adds
+     .drawer-open while open. Docking is CSS only: Jellyfin itself used to dock it on the old
+     dashboard the same way (left 0, transform none, !important). No user setting is involved.
+   - The admin dashboard is a separate React app with its own MUI drawer. There the legacy drawer
+     wrapper is display: none and body has .dashboardDocument, so this file leaves it alone.
+   - Links: a.navMenuOption > span.navMenuOptionIcon.material-icons + span.navMenuOptionText, the
+     current one gets .navMenuOption-selected. Groups: .customMenuOptions, .libraryMenuOptions,
+     .adminMenuOptions, .userMenuOptions, each with an h3.sidebarHeader. The links carry no title
+     attribute, so the pill has no hover tooltips (the label stays readable for screen readers).
+
+   The pill only shows when all of these hold, else Jellyfin's normal hamburger drawer (Abyss style)
+   stays: desktop layout, left to right text, at least 62.5em (1000px) wide, a library page
+   (body.libraryDocument, which covers home, libraries, details, search and user settings), the
+   drawer loaded and not inside a hidden wrapper (experimental layout, dashboard), and no video
+   playing full screen (#videoOsdPage). Engines without :has() drop these rules and keep the
+   hamburger drawer. */
+
+:root {
+  --h1-pill-inset: 24px;  /* gap between the pill and the window edges */
+  --h1-pill-width: 64px;
+  --h1-pill-gap: 16px;    /* gap between the pill and the page */
+  --h1-pill-space: calc(var(--h1-pill-inset) + var(--h1-pill-width) + var(--h1-pill-gap));
+  --h1-pill-item: 44px;   /* one round icon button */
+}
+
+@media all and (min-width: 62.5em) {
+  /* The pill itself */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer {
+    top: var(--h1-pill-inset) !important;
+    bottom: auto !important;
+    left: var(--h1-pill-inset) !important;
+    width: var(--h1-pill-width) !important;
+    height: auto !important;
+    max-height: calc(100vh - 2 * var(--h1-pill-inset));
+    max-height: calc(100dvh - 2 * var(--h1-pill-inset));
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+    contain: layout style; /* navdrawer.scss sets contain: strict, which would collapse an auto height */
+    z-index: 1000;
+    border-radius: 32px !important;
+    border: 1px solid var(--h1-border) !important;
+    background-color: rgba(16, 24, 22, 0.8) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45) !important;
+    -webkit-backdrop-filter: blur(18px) !important;
+    backdrop-filter: blur(18px) !important;
+  }
+
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer-scrollContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    margin: 0 !important;
+    padding: 10px 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    scrollbar-width: none;
+  }
+
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer-scrollContainer::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Icons only: no spacer, no section headers */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer-scrollContainer > div:not([class]),
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer .sidebarHeader {
+    display: none !important;
+  }
+
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer :is(.customMenuOptions, .libraryMenuOptions, .adminMenuOptions, .userMenuOptions) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+  }
+
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer :is(.customMenuOptions, .libraryMenuOptions):empty {
+    display: none;
+  }
+
+  /* A short rule between the admin and user groups and the rest, like the gap in the mockup */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer :is(.adminMenuOptions, .userMenuOptions)::before {
+    content: "";
+    display: block;
+    width: 24px;
+    height: 1px;
+    margin: 8px 0 4px;
+    background: var(--h1-border);
+  }
+
+  /* One link: a round icon button, muted until hover */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer .navMenuOption {
+    position: relative;
+    flex: 0 0 auto !important;
+    justify-content: center;
+    width: var(--h1-pill-item);
+    height: var(--h1-pill-item);
+    margin: 0 !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    background: transparent !important;
+    color: var(--h1-muted) !important;
+    font-weight: 400 !important;
+    box-shadow: none;
+  }
+
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer .navMenuOptionIcon {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: none !important;
+    border-radius: 0;
+    font-size: 22px;
+    color: inherit;
+  }
+
+  /* The label stays in the accessibility tree, only hidden from view */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer .navMenuOptionText {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip-path: inset(50%) !important;
+    white-space: nowrap !important;
+  }
+
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer .navMenuOption:is(:hover, :focus-visible) {
+    background: rgba(57, 255, 20, 0.08) !important;
+    color: var(--h1-green) !important;
+  }
+
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer .navMenuOption:focus-visible {
+    outline: 2px solid var(--h1-green);
+    outline-offset: 2px;
+  }
+
+  /* The current page: a green disc with a dark icon and a glow */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer .navMenuOption.navMenuOption-selected {
+    background: var(--h1-green) !important;
+    color: var(--h1-bg) !important;
+    box-shadow: 0 0 0 1px rgba(57, 255, 20, 0.9), 0 0 10px rgba(57, 255, 20, 0.55);
+  }
+
+  /* Make room for the pill: pages, the header bar and the now playing footer move right */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainAnimatedPage {
+    left: var(--h1-pill-space) !important;
+  }
+
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .skinHeader {
+    left: calc(var(--h1-pill-space) - var(--h1-pill-gap)) !important;
+  }
+
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .appfooter {
+    margin-left: var(--h1-pill-space) !important;
+  }
+
+  /* The pill replaces the hamburger, so the button and the edge swipe handle go */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) :is(.mainDrawerButton, .mainDrawerHandle) {
+    display: none !important;
+  }
+}
+
 
 /* ---- src/abyss/90-overrides.css ---- */
 /* 90-overrides.css: fixes on top of Abyss, loaded last so they win. Placeholder for #299. */
