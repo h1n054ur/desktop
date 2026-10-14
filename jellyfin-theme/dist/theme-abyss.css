@@ -4231,6 +4231,165 @@ html:not(.layout-tv) .mainDrawer.drawer-open {
   transform: translateY(-50%);
 }
 
+/* ---- src/abyss/80-player-forms.css ---- */
+/* 80-player-forms.css: the video player, the user settings forms and the login header.
+   Selectors checked against jellyfin-web v10.11.11 on the live server.
+
+   The admin dashboard is not styled here: Jellyfin 10.11 renders the server's custom CSS only in
+   the user app (the CustomCss component sits in the user app layout), so on /dashboard the
+   branding CSS is never in the page, whether loaded fresh or reached from inside the app. */
+
+/* ---- Player ---- */
+
+/* While a video loads, Jellyfin has already put its player (div.videoPlayerContainer, a child of
+   body) on screen, but the page underneath is still the details page, so #videoOsdPage does not
+   exist yet and the side pill (40-side-pill.css) and the floating header bar stay on top of the
+   black player. Hide both as long as a video player is open. The player's own header
+   (.skinHeader.osdHeader) is left alone. */
+body:has(> .videoPlayerContainer:not(.hide)) .mainDrawer {
+  visibility: hidden !important;
+}
+body:has(> .videoPlayerContainer:not(.hide)) .skinHeader:not(.osdHeader) {
+  visibility: hidden !important;
+}
+
+/* Player header: the title is one line with an ellipsis. On phones a long episode title
+   ("Series S1:E1 - Episode (year)") wrapped to three lines inside the fixed height header and
+   was cut off top and bottom. */
+.skinHeader.osdHeader .headerLeft {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.skinHeader.osdHeader .pageTitle {
+  display: block !important;
+  align-self: center;
+  height: auto !important;
+  line-height: 1.4 !important;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Player controls: the elapsed and remaining times keep their width and the slider gives way, so
+   the remaining time (wider in Cascadia Code) no longer runs past the rounded bar's right edge.
+   A little more room at both ends of the bar for the times. */
+.videoOsdBottom .osdControls {
+  padding-left: 16px;
+  padding-right: 16px;
+}
+.videoOsdBottom :is(.osdPositionText, .osdDurationText) {
+  flex: none;
+  white-space: nowrap;
+}
+.videoOsdBottom .sliderContainer {
+  min-width: 0;
+}
+
+/* The tick next to the chosen audio track, subtitle or setting in the player menus: green */
+body:has(> .videoPlayerContainer) .actionSheet .actionsheetMenuItemIcon.check {
+  color: var(--h1-green) !important;
+}
+
+/* ---- User settings forms (Profile, Display, Home, Playback, Subtitles) ---- */
+
+/* Abyss makes the Save button sticky at the bottom of the window, but with nothing behind it the
+   fields scrolled under the bare button. A bar of page colour now surrounds it, painted as outer
+   box-shadows (they never cover the button itself) down to the window's bottom edge. The forms
+   get room below the button so, scrolled to the end, the bar stays inside the card. */
+.userPreferencesPage form > .button-submit,
+#displayPreferencesPage form button[type="submit"] {
+  box-shadow:
+    0 0 0.6em rgba(var(--h1-green-rgb), 0.35),
+    0 0 0 14px rgba(var(--h1-bg-rgb), 0.94),
+    0 24px 0 14px rgba(var(--h1-bg-rgb), 0.94) !important;
+}
+.userPreferencesPage form > .button-submit:is(:hover, :focus-visible),
+#displayPreferencesPage form button[type="submit"]:is(:hover, :focus-visible) {
+  box-shadow:
+    var(--h1-glow),
+    0 0 0 14px rgba(var(--h1-bg-rgb), 0.94),
+    0 24px 0 14px rgba(var(--h1-bg-rgb), 0.94) !important;
+}
+.userPreferencesPage form,
+#displayPreferencesPage form {
+  padding-bottom: 44px !important;
+}
+
+/* Settings menu: Jellyfin groups the Administration and User cards (12px apart, inner corners
+   6px). Same gap and corners as the first card. */
+.readOnlyContent > .verticalSection:is(.adminSection, .userSection) {
+  margin-bottom: 2.7em !important;
+  border-radius: 32px !important;
+}
+
+/* Music is off this server's home and side pill, so its settings go too: the "Continue
+   Listening" choice in the Home sections lists and the Music Quality card on Playback. Hidden
+   options still keep any value a user saved before. Android's own select picker ignores
+   display: none on options, there the choice still shows. */
+.userPreferencesPage select[class*="selectHomeSection"] option[value="resumeaudio"] {
+  display: none;
+}
+.userPreferencesPage .musicQualitySection {
+  display: none !important;
+}
+
+/* Every settings page in cards: Display (a React form with no sections) and Subtitles (only the
+   appearance part was a card) get the same panel as Home and Playback, the appearance card turns
+   flat inside it. */
+#displayPreferencesPage form,
+.userPreferencesPage form:has(> .subtitleAppearanceSection) {
+  box-sizing: border-box;
+  padding: 16px 16px 44px;
+  background-color: rgba(var(--h1-panel-rgb), 0.69);
+  border: 1px solid var(--h1-border);
+  border-radius: 32px;
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+}
+.userPreferencesPage form:has(> .subtitleAppearanceSection) > .subtitleAppearanceSection {
+  padding: 0;
+  background: none !important;
+  border: none !important;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+/* Section headings at one weight (the Music Quality heading has no .sectionTitle class) */
+.userPreferencesPage .verticalSection > h2:first-child {
+  font-family: "Google Sans", sans-serif;
+  font-weight: 700;
+}
+
+/* Theme and Server Dashboard theme: Abyss locks both on Dark (no pointer events, opacity 0.4,
+   about 2:1 on the panel). They stay locked, but read: muted text at full opacity. */
+#displayPreferencesPage .selectContainer:has(#selectTheme option[value="dark"]:checked) #selectTheme,
+#displayPreferencesPage .selectContainer:has(#selectDashboardTheme option[value="dark"]:checked) #selectDashboardTheme {
+  opacity: 1 !important;
+  color: var(--h1-muted) !important;
+  border-style: dashed !important;
+}
+#displayPreferencesPage .selectContainer:has(#selectTheme option[value="dark"]:checked) #selectTheme + .selectArrow,
+#displayPreferencesPage .selectContainer:has(#selectDashboardTheme option[value="dark"]:checked) #selectDashboardTheme + .selectArrow {
+  opacity: 0.6 !important;
+}
+
+/* ---- Login ---- */
+
+/* The login page has its wordmark above the card (15-login-wordmark.css), so the header bar drops
+   its copy and its empty glass. Any header buttons Jellyfin shows there stay. */
+body:has(#loginPage:not(.hide)) .skinHeader:not(.osdHeader) .pageTitleWithDefaultLogo {
+  display: none !important;
+}
+body:has(#loginPage:not(.hide)) .skinHeader:not(.osdHeader) > .headerTop {
+  background: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
 /* ---- src/abyss/90-overrides.css ---- */
 /* 90-overrides.css: fixes on top of Abyss, loaded last so they win.
    Abyss maps most colours through its variables (05-abyss-vars.css). This file covers what the

@@ -63,8 +63,8 @@ body:has(> .videoPlayerContainer) .actionSheet .actionsheetMenuItemIcon.check {
 
 /* Abyss makes the Save button sticky at the bottom of the window, but with nothing behind it the
    fields scrolled under the bare button. A bar of page colour now surrounds it, painted as outer
-   box-shadows (they never cover the button itself) down to the window's bottom edge. The page
-   gets room below the form so the last field ends above the bar. */
+   box-shadows (they never cover the button itself) down to the window's bottom edge. The forms
+   get room below the button so, scrolled to the end, the bar stays inside the card. */
 .userPreferencesPage form > .button-submit,
 #displayPreferencesPage form button[type="submit"] {
   box-shadow:
@@ -81,7 +81,7 @@ body:has(> .videoPlayerContainer) .actionSheet .actionsheetMenuItemIcon.check {
 }
 .userPreferencesPage form,
 #displayPreferencesPage form {
-  padding-bottom: 24px;
+  padding-bottom: 44px !important;
 }
 
 /* Settings menu: Jellyfin groups the Administration and User cards (12px apart, inner corners
@@ -108,7 +108,7 @@ body:has(> .videoPlayerContainer) .actionSheet .actionsheetMenuItemIcon.check {
 #displayPreferencesPage form,
 .userPreferencesPage form:has(> .subtitleAppearanceSection) {
   box-sizing: border-box;
-  padding: 16px 16px 24px;
+  padding: 16px 16px 44px;
   background-color: rgba(var(--h1-panel-rgb), 0.69);
   border: 1px solid var(--h1-border);
   border-radius: 32px;
@@ -128,13 +128,17 @@ body:has(> .videoPlayerContainer) .actionSheet .actionsheetMenuItemIcon.check {
   font-weight: 700;
 }
 
-/* Disabled fields readable: the stock dim is about 2:1 on the panel */
-.userPreferencesPage :is(select, input, .emby-select, .emby-input):disabled,
-#displayPreferencesPage :is(select, input):disabled,
-#displayPreferencesPage .Mui-disabled {
+/* Theme and Server Dashboard theme: Abyss locks both on Dark (no pointer events, opacity 0.4,
+   about 2:1 on the panel). They stay locked, but read: muted text at full opacity. */
+#displayPreferencesPage .selectContainer:has(#selectTheme option[value="dark"]:checked) #selectTheme,
+#displayPreferencesPage .selectContainer:has(#selectDashboardTheme option[value="dark"]:checked) #selectDashboardTheme {
   opacity: 1 !important;
   color: var(--h1-muted) !important;
-  -webkit-text-fill-color: var(--h1-muted) !important;
+  border-style: dashed !important;
+}
+#displayPreferencesPage .selectContainer:has(#selectTheme option[value="dark"]:checked) #selectTheme + .selectArrow,
+#displayPreferencesPage .selectContainer:has(#selectDashboardTheme option[value="dark"]:checked) #selectDashboardTheme + .selectArrow {
+  opacity: 0.6 !important;
 }
 
 /* ---- Login ---- */

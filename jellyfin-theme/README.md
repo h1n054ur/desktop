@@ -8,7 +8,7 @@ The h1n054ur look for [Jellyfin](https://jellyfin.org) 10.11: a dark green-to-cy
 |---|---|
 | `src/common/` | shared by both bases: `00-palette.css` (the `--h1-*` colour tokens), `10-logo.css` (wordmark and mark), `login-disclaimer.html` (the "Sign in with Authentik" button) |
 | `src/elegantfin/` | ElegantFin only: `05-elegantfin-vars.css` (tokens written onto ElegantFin's variables), `15-login-wordmark.css`, `20-login.css`, `30-home.css`, `90-overrides.css` (small fixes, last so they win) |
-| `src/abyss/` | Abyss only, same roles plus `40-side-pill.css`, `50-detail.css` (detail pages and the search page), `60-menus.css` (action sheets, multi-select bar, header title and the fade above the header) and `70-browse.css` (card titles, home rows, pill and drawer active state, sort and filter dialogs, empty states, A to Z picker). Placeholders for now (#299) |
+| `src/abyss/` | Abyss only, same roles plus `40-side-pill.css`, `50-detail.css` (detail pages and the search page), `60-menus.css` (action sheets, multi-select bar, header title and the fade above the header), `70-browse.css` (card titles, home rows, pill and drawer active state, sort and filter dialogs, empty states, A to Z picker) and `80-player-forms.css` (pill and header hidden while a video loads, player title and time fixes, user settings forms, login header). The admin dashboard is out of reach: Jellyfin 10.11 does not load the server's custom CSS there. Placeholders for now (#299) |
 | `vendor/elegantfin/` | ElegantFin's CSS at a pinned commit |
 | `vendor/abyss/` | Abyss's CSS at a pinned commit |
 | `vendor/fonts/` | font CSS (Cascadia Code, used for accents only) and its font files |
