@@ -4,13 +4,16 @@
 #   apply.sh --dry-run     print the plan and the sizes, change nothing, contact nothing
 #   apply.sh --no-backup   apply without saving the current branding first
 # Environment: JELLYFIN_URL (the server itself, not a proxy with a body size limit),
-# JELLYFIN_API_KEY (an admin API key), SERVER_NAME (default h1n054ur),
+# JELLYFIN_API_KEY (an admin API key), BASE (elegantfin or abyss, default elegantfin: sends
+# dist/theme-$BASE.css), SERVER_NAME (default h1n054ur),
 # JELLYFIN_THEME_BACKUP_DIR (where the pre-apply backup goes, see backup/README.md).
 set -euo pipefail
 
 here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-css="$here/dist/theme.css"
-disclaimer="$here/src/login-disclaimer.html"
+base="${BASE:-elegantfin}"
+css_rel="dist/theme-$base.css"
+css="$here/$css_rel"
+disclaimer="$here/src/common/login-disclaimer.html"
 splash="$here/assets/splash.png"
 server_name="${SERVER_NAME:-h1n054ur}"
 
@@ -25,7 +28,7 @@ for arg in "$@"; do
   case "$arg" in
     --dry-run) dry=1 ;;
     --no-backup) backup=0 ;;
-    -h|--help) sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) die "unknown option '$arg'" ;;
   esac
 done
@@ -34,7 +37,8 @@ command -v jq >/dev/null || die "jq is needed"
 command -v curl >/dev/null || die "curl is needed"
 
 # Local checks first: a stale or broken build never reaches the server.
-"$here/build.sh" --check || die "refusing to apply a stale or broken dist/theme.css"
+case "$base" in elegantfin|abyss) ;; *) die "BASE must be elegantfin or abyss, not '$base'" ;; esac
+"$here/build.sh" --base "$base" --check || die "refusing to apply a stale or broken $css_rel"
 [ -s "$disclaimer" ] || die "missing $disclaimer"
 [ -s "$splash" ] || die "missing assets/splash.png"
 [ "$(head -c8 "$splash" | od -An -tx1 | tr -d ' \n')" = 89504e470d0a1a0a ] || die "assets/splash.png is not a PNG"
@@ -60,8 +64,8 @@ fi
 say "Plan:"
 say "  1. backup: $backup_note"
 say "  2. POST /System/Configuration/Branding"
-say "       CustomCss        dist/theme.css            $(size "$css") bytes  sha256 $css_sha"
-say "       LoginDisclaimer  src/login-disclaimer.html  ${#disclaimer_text} bytes  sha256 $disclaimer_sha"
+say "       CustomCss        $(printf '%-27s' "$css_rel") $(size "$css") bytes  sha256 $css_sha"
+say "       LoginDisclaimer  src/common/login-disclaimer.html  ${#disclaimer_text} bytes  sha256 $disclaimer_sha"
 say "       SplashscreenEnabled true"
 say "  3. POST /Branding/Splashscreen  assets/splash.png  $(size "$splash") bytes (sent base64)  sha256 $splash_sha"
 say "  4. POST /System/Configuration   ServerName '$server_name', every other field as read"
