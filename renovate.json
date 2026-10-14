@@ -16,6 +16,30 @@
       "matchUpdateTypes": ["minor", "patch", "digest", "pin", "pinDigest"],
       "groupName": "minor and patch updates",
       "groupSlug": "minor-patch"
+    },
+    {
+      "description": "ElegantFin gets its own PR, never automerged. The vendored CSS has to be regenerated with jellyfin-theme/vendor/update.sh and re-applied by hand.",
+      "matchManagers": ["custom.regex"],
+      "matchPackageNames": ["lscambo13/ElegantFin"],
+      "groupName": "ElegantFin theme",
+      "groupSlug": "elegantfin",
+      "automerge": false,
+      "prBodyNotes": [
+        "Renovate cannot run the vendor script, so this PR only bumps the release and commit recorded in `jellyfin-theme/vendor/VERSIONS`. The vendored CSS is still the old release. Before merging, check out this branch, run `jellyfin-theme/vendor/update.sh <commit>` with the new full commit sha (it rewrites the vendored files, VERSIONS and dist/theme.css), commit the result, then re-apply the theme on Jellyfin."
+      ]
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Watch the vendored ElegantFin release in jellyfin-theme/vendor/VERSIONS. Renovate cannot run jellyfin-theme/vendor/update.sh, so its PR only bumps the recorded release and commit. The CSS must be regenerated with that script and re-applied by hand.",
+      "managerFilePatterns": ["/^jellyfin-theme/vendor/VERSIONS$/"],
+      "matchStrings": [
+        "release:\\s+(?<currentValue>v\\d+\\.\\d+\\.\\d+)[^\\n]*\\n\\s+commit:\\s+(?<currentDigest>[0-9a-f]{40})"
+      ],
+      "depNameTemplate": "lscambo13/ElegantFin",
+      "datasourceTemplate": "github-releases",
+      "versioningTemplate": "regex:^v(?<major>\\d+)\\.(?<minor>\\d+)\\.(?<patch>\\d+)$"
     }
   ]
 }
