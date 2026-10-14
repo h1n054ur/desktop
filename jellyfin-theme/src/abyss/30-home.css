@@ -350,6 +350,62 @@ html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
   opacity: 1;
 }
 
+/* ---- Row headers with scroll arrows (home rows, Favorites, library and detail page rows) ----
+   jellyfin-web puts the previous and next buttons (.emby-scrollbuttons) after the row title and
+   places them absolutely at the top right of the row, centred in a wide box. A long title with its
+   chevron (Recently Added in Movies) then runs under the arrows on a phone. Here the row becomes a
+   two-column grid: the title takes the room that is left and ends in an ellipsis, the arrows sit
+   together at the right edge, level with the title text, and everything else in the row spans both
+   columns. A row too short to scroll hides both buttons, then the arrow column takes no room. */
+.emby-scroller-container:has(> .emby-scrollbuttons) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+.emby-scroller-container:has(> .emby-scrollbuttons) > * {
+  grid-column: 1 / -1;
+}
+.emby-scroller-container:has(> .emby-scrollbuttons) > :is(.sectionTitleContainer, .sectionTitle):has(+ .emby-scrollbuttons) {
+  grid-column: 1;
+  grid-row: 1;
+  min-width: 0;
+}
+.emby-scroller-container > .emby-scrollbuttons {
+  position: static;
+  grid-column: 2;
+  grid-row: 1;
+  align-self: end;
+  justify-content: flex-end;
+  gap: 0.25em;
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+}
+.emby-scroller-container > .emby-scrollbuttons > .emby-scrollbuttons-button {
+  margin: 0;
+}
+.emby-scroller-container:has(> .emby-scrollbuttons) > .sectionTitleContainer .sectionTitleTextButton {
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+}
+.emby-scroller-container:has(> .emby-scrollbuttons) > .sectionTitleContainer .sectionTitleTextButton > .material-icons {
+  flex: none;
+}
+/* Abyss leaves 16px after the title and 12px inside the button, the chevron needs less on a phone */
+.emby-scroller-container:has(> .emby-scrollbuttons) > .sectionTitleContainer .sectionTitleTextButton > .sectionTitle {
+  margin-right: 0.25em;
+}
+.emby-scroller-container:has(> .emby-scrollbuttons) > .sectionTitleContainer .sectionTitle,
+.emby-scroller-container:has(> .emby-scrollbuttons) > .sectionTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* ---- A to Z picker on library pages ---- */
 
 /* The page font (Abyss's sans), Cascadia stays for accents */
