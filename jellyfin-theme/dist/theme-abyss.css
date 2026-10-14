@@ -3441,19 +3441,10 @@ html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
 
 /* ---- Poster rows (home Latest rows) and poster grids (library pages) ---- */
 
-/* Title under the poster in the mockup's accent style: small uppercase Cascadia, left-aligned.
-   Abyss sets the first line to font-size: larger !important, so the size needs !important too. */
+/* Title under the poster left-aligned. Its font and size are the same on every card (70-browse.css). */
 .homeSectionsContainer .overflowPortraitCard .cardText,
 .portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText {
   text-align: left !important;
-}
-.homeSectionsContainer .overflowPortraitCard .cardText-first,
-.portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-first {
-  font-family: var(--h1-mono);
-  font-size: 0.78em !important;
-  font-weight: 600;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
 }
 .homeSectionsContainer .overflowPortraitCard .cardText-secondary,
 .portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-secondary {
@@ -3708,6 +3699,536 @@ html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
   html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .mainDrawer a.lnkMediaFolder:has(> .navMenuOptionIcon.music_note) {
     display: none !important;
   }
+}
+
+/* ---- src/abyss/50-detail.css ---- */
+/* 50-detail.css: item detail pages (movie, series, season, episode, person) and the search page.
+
+   Desktop detail pages: Jellyfin pins the poster (.detailImageContainer .card, position: fixed
+   from Abyss) at left: 3.3% of the window, which puts it under the floating side pill
+   (40-side-pill.css). Here it moves to the same line as the header bar and the home rows: the
+   pill's right edge plus the 24px gap (x = 112 with the default pill sizes). The gate is the
+   same one 40-side-pill.css uses, so without the pill (narrow window, hamburger drawer, no
+   :has() support) Jellyfin's own position stays. */
+
+@media all and (min-width: 62.5em) {
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .detailImageContainer .card {
+    left: calc(var(--h1-pill-inset) * 2 + var(--h1-pill-width)) !important;
+  }
+
+  /* The page column starts at the pill space (x = 104), the strip left of it shows the
+     translucent backdrop layer, which reads as a lighter grey band next to the solid lower half
+     of the detail page (both containers are solid --h1-bg under .noBackdropTransparency, see
+     90-overrides.css). A flat shadow of the same colour fills that strip, so there is no seam. */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .itemDetailPage.noBackdropTransparency :is(.detailPagePrimaryContainer, .detailPageSecondaryContainer),
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .noBackdropTransparency .itemDetailPage :is(.detailPagePrimaryContainer, .detailPageSecondaryContainer) {
+    box-shadow: calc(-1 * var(--h1-pill-space)) 0 0 0 var(--h1-bg);
+  }
+}
+
+/* Cast, Guest Stars and the search result rows: Jellyfin's animated scroller moves the row with
+   a transform and does not clip it, so the cards past the right edge widened the whole page and
+   it scrolled sideways. Clip the horizontal overflow at the block that holds the rows (it starts
+   at the page's left edge, so a focused or hovered first card still has room). overflow-x: clip
+   keeps vertical overflow and creates no scroll container, so the window still scrolls the page
+   and native touch scrolling inside each row still works. */
+.itemDetailPage .detailPageSecondaryContainer,
+.searchResults {
+  overflow-x: clip;
+}
+
+/* Trailer button: Abyss and 90-overrides.css give it a glass box when there is no resume
+   button, while watched, favourite and more are plain icons. Plain like the others. */
+#itemDetailPage:has(.btnReplay.hide) .mainDetailButtons .btnPlayTrailer,
+#itemDetailPage:has(.btnReplay.hide) .mainDetailButtons .btnPlayTrailer:hover {
+  background: transparent !important;
+  border: 0 !important;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: inherit !important;
+}
+
+/* ---- Search page ---- */
+
+/* "Search" title in the header bar: Abyss blurs behind every page title (backdrop-filter on a
+   transparent box), which shows as a lighter box on the glass header. */
+body:has(.page:not(.hide) .searchFields) .skinHeader .pageTitle {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  background: transparent !important;
+}
+
+/* The search box sat centred while the results start on the left: line it up with the result
+   rows (both use the page's padded-left), keeping Jellyfin's maximum width. */
+.searchFields .searchFieldsInner {
+  margin-left: 0 !important;
+  margin-right: auto !important;
+}
+
+/* ---- Phones (layout-mobile) ---- */
+
+/* The details list (Genres, Studio) ran straight into the "Next Up" heading below it. */
+.layout-mobile #itemDetailPage .itemDetailsGroup {
+  margin-bottom: 1.5em;
+}
+
+/* Touch screens have no hover, so the round play button on every card stays on all the time,
+   on a black disc that darkens the corner of each image. A lighter disc keeps it readable. */
+.layout-mobile #itemDetailPage .cardOverlayButton-br .cardOverlayButtonIcon {
+  background-color: rgba(var(--h1-bg-rgb), 0.18) !important;
+}
+
+/* ---- src/abyss/60-menus.css ---- */
+/* 60-menus.css: action sheets (the "More" menus), multi-select mode and the small header fixes
+   that go with them. Selectors checked against jellyfin-web v10.11 (components/actionSheet/
+   actionSheet.ts, components/multiSelect/multiSelect.js, scripts/libraryMenu.js). */
+
+/* ---- Action sheet items ----
+   Abyss fills the item under the pointer solid green. On touch screens the browser keeps :hover on
+   the last tapped spot, so the item under the finger looks selected as soon as the sheet opens.
+   The solid fill stays for real pointers only. Keyboard and remote focus (.show-focus) gets a
+   green tint and a green ring instead of the solid fill, still easy to see. TV layouts keep Abyss. */
+@media (hover: none) {
+  html:not(.layout-tv) .actionSheetMenuItem:hover:not(.show-focus:focus) {
+    background: transparent !important;
+    color: inherit !important;
+    font-weight: inherit;
+  }
+  /* 90-overrides.css darkens the text and icon inside a hovered list item for the green fill */
+  html:not(.layout-tv) .actionSheetMenuItem:hover:not(.show-focus:focus) :is(.listItemBodyText, .material-icons, .listItemIcon) {
+    color: var(--h1-text) !important;
+  }
+}
+html:not(.layout-tv) .actionSheetMenuItem.show-focus:focus {
+  background: rgba(var(--h1-green-rgb), 0.14) !important;
+  color: var(--h1-text) !important;
+  box-shadow: inset 0 0 0 2px rgba(var(--h1-green-rgb), 0.75);
+}
+@media (hover: hover) {
+  html:not(.layout-tv) .actionSheetMenuItem.show-focus:focus:hover {
+    background: var(--h1-green) !important;
+    color: var(--h1-bg) !important;
+  }
+}
+
+/* ---- Action sheets clear of the floating header ----
+   Jellyfin centres a sheet on the button that opened it and only keeps it 10px from the window
+   edge (getPosition in actionSheet.ts writes position: fixed and top in px on the element), so a
+   tall sheet opened from the middle of the page lands over the header buttons. CSS cannot read the
+   inline top, so the sheets whose inline top is under 88px (the header bar's bottom plus a gap on
+   wide screens, 24 + 56 + 8) are matched by that value and moved below the bar, and their height
+   is capped so the bottom still fits; the list scrolls inside if it has to. */
+:root {
+  --h1-sheet-top: calc(env(safe-area-inset-top) + var(--h1-bar-top, 10px) + var(--h1-bar-h, 56px) + 8px);
+}
+html:not(.layout-tv) .actionSheet.actionsheet-not-fullscreen:is(
+  [style*="top: 10px"],
+  [style*="top: 10."],
+  [style*="top: 11px"],
+  [style*="top: 11."],
+  [style*="top: 12px"],
+  [style*="top: 12."],
+  [style*="top: 13px"],
+  [style*="top: 13."],
+  [style*="top: 14px"],
+  [style*="top: 14."],
+  [style*="top: 15px"],
+  [style*="top: 15."],
+  [style*="top: 16px"],
+  [style*="top: 16."],
+  [style*="top: 17px"],
+  [style*="top: 17."],
+  [style*="top: 18px"],
+  [style*="top: 18."],
+  [style*="top: 19px"],
+  [style*="top: 19."],
+  [style*="top: 20px"],
+  [style*="top: 20."],
+  [style*="top: 21px"],
+  [style*="top: 21."],
+  [style*="top: 22px"],
+  [style*="top: 22."],
+  [style*="top: 23px"],
+  [style*="top: 23."],
+  [style*="top: 24px"],
+  [style*="top: 24."],
+  [style*="top: 25px"],
+  [style*="top: 25."],
+  [style*="top: 26px"],
+  [style*="top: 26."],
+  [style*="top: 27px"],
+  [style*="top: 27."],
+  [style*="top: 28px"],
+  [style*="top: 28."],
+  [style*="top: 29px"],
+  [style*="top: 29."],
+  [style*="top: 30px"],
+  [style*="top: 30."],
+  [style*="top: 31px"],
+  [style*="top: 31."],
+  [style*="top: 32px"],
+  [style*="top: 32."],
+  [style*="top: 33px"],
+  [style*="top: 33."],
+  [style*="top: 34px"],
+  [style*="top: 34."],
+  [style*="top: 35px"],
+  [style*="top: 35."],
+  [style*="top: 36px"],
+  [style*="top: 36."],
+  [style*="top: 37px"],
+  [style*="top: 37."],
+  [style*="top: 38px"],
+  [style*="top: 38."],
+  [style*="top: 39px"],
+  [style*="top: 39."],
+  [style*="top: 40px"],
+  [style*="top: 40."],
+  [style*="top: 41px"],
+  [style*="top: 41."],
+  [style*="top: 42px"],
+  [style*="top: 42."],
+  [style*="top: 43px"],
+  [style*="top: 43."],
+  [style*="top: 44px"],
+  [style*="top: 44."],
+  [style*="top: 45px"],
+  [style*="top: 45."],
+  [style*="top: 46px"],
+  [style*="top: 46."],
+  [style*="top: 47px"],
+  [style*="top: 47."],
+  [style*="top: 48px"],
+  [style*="top: 48."],
+  [style*="top: 49px"],
+  [style*="top: 49."],
+  [style*="top: 50px"],
+  [style*="top: 50."],
+  [style*="top: 51px"],
+  [style*="top: 51."],
+  [style*="top: 52px"],
+  [style*="top: 52."],
+  [style*="top: 53px"],
+  [style*="top: 53."],
+  [style*="top: 54px"],
+  [style*="top: 54."],
+  [style*="top: 55px"],
+  [style*="top: 55."],
+  [style*="top: 56px"],
+  [style*="top: 56."],
+  [style*="top: 57px"],
+  [style*="top: 57."],
+  [style*="top: 58px"],
+  [style*="top: 58."],
+  [style*="top: 59px"],
+  [style*="top: 59."],
+  [style*="top: 60px"],
+  [style*="top: 60."],
+  [style*="top: 61px"],
+  [style*="top: 61."],
+  [style*="top: 62px"],
+  [style*="top: 62."],
+  [style*="top: 63px"],
+  [style*="top: 63."],
+  [style*="top: 64px"],
+  [style*="top: 64."],
+  [style*="top: 65px"],
+  [style*="top: 65."],
+  [style*="top: 66px"],
+  [style*="top: 66."],
+  [style*="top: 67px"],
+  [style*="top: 67."],
+  [style*="top: 68px"],
+  [style*="top: 68."],
+  [style*="top: 69px"],
+  [style*="top: 69."],
+  [style*="top: 70px"],
+  [style*="top: 70."],
+  [style*="top: 71px"],
+  [style*="top: 71."],
+  [style*="top: 72px"],
+  [style*="top: 72."],
+  [style*="top: 73px"],
+  [style*="top: 73."],
+  [style*="top: 74px"],
+  [style*="top: 74."],
+  [style*="top: 75px"],
+  [style*="top: 75."],
+  [style*="top: 76px"],
+  [style*="top: 76."],
+  [style*="top: 77px"],
+  [style*="top: 77."],
+  [style*="top: 78px"],
+  [style*="top: 78."],
+  [style*="top: 79px"],
+  [style*="top: 79."],
+  [style*="top: 80px"],
+  [style*="top: 80."],
+  [style*="top: 81px"],
+  [style*="top: 81."],
+  [style*="top: 82px"],
+  [style*="top: 82."],
+  [style*="top: 83px"],
+  [style*="top: 83."],
+  [style*="top: 84px"],
+  [style*="top: 84."],
+  [style*="top: 85px"],
+  [style*="top: 85."],
+  [style*="top: 86px"],
+  [style*="top: 86."],
+  [style*="top: 87px"],
+  [style*="top: 87."]
+) {
+  top: var(--h1-sheet-top) !important;
+  max-height: calc(100dvh - var(--h1-sheet-top) - 12px) !important;
+}
+
+/* ---- Multi-select (long press on a card on touch, the checkbox on desktop) ----
+   The command bar is Abyss glass at 69%; behind it the green tab pill and the header blur into a
+   green glow. A near solid panel with a little blur is enough. */
+html:not(.layout-tv) .selectionCommandsPanel {
+  background-color: rgba(var(--h1-panel-rgb), 0.96) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  backdrop-filter: blur(6px) !important;
+  border-bottom: 1px solid var(--h1-border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+/* The selection outline (.itemSelectionPanel) covers the whole card, so its border ran along the
+   left edge of the title. The card text gets some room inside it while select mode is on. */
+html:not(.layout-tv) .cardBox.withMultiSelect > :is(.cardText, .cardFooter) {
+  padding-left: 0.6em !important;
+  padding-right: 0.6em !important;
+}
+html:not(.layout-tv) .itemSelectionPanel {
+  border-radius: var(--abyss-radius, 12px);
+}
+
+/* ---- Header title ----
+   Abyss pads a non-empty page title and puts glass behind it. Where the title is empty (detail
+   pages, the header while a menu is open) that left a small dark capsule after the Home button.
+   The logo title is empty text too and stays. */
+html:not(.layout-tv) .skinHeader .pageTitle:empty:not(.pageTitleWithLogo) {
+  display: none !important;
+}
+
+/* A text title (Search, library names) keeps a gap from the buttons on both sides and cuts off
+   with an ellipsis before it reaches the right-hand icons on narrow phones. */
+html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerLeft .pageTitle:not(:empty):not(.pageTitleWithLogo) {
+  min-width: 0;
+  margin-left: 0.35em;
+  margin-right: 0.5em;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* ---- Fade above the floating header (wide screens) ----
+   The bar floats 24px below the window top, and scrolled content showed through that gap. A fade
+   from the page colour behind the header area covers the gap and runs out halfway down the bar,
+   so the bar keeps its floating look and the header stays as wide as before. */
+@media all and (min-width: 62.5em) {
+  html:not(.layout-tv) .skinHeader:not(.osdHeader)::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: calc(env(safe-area-inset-top) + var(--h1-bar-top) + var(--h1-bar-h) * 0.6);
+    background: linear-gradient(to bottom, rgba(var(--h1-bg-rgb), 0.96) 0%, rgba(var(--h1-bg-rgb), 0.85) 45%, rgba(var(--h1-bg-rgb), 0) 100%);
+    pointer-events: none;
+    z-index: -1;
+  }
+}
+
+/* ---- src/abyss/70-browse.css ---- */
+/* 70-browse.css: browsing pages on top of 30-home.css and 40-side-pill.css: card titles, home row
+   edges, the active link in the side pill and the phone drawer, the sort and filter dialogs, the
+   card overlay on focus, empty states, the phone tab row, the Collections grid and the A to Z
+   picker. Selectors checked against jellyfin-web v10.11.11 (components/cardbuilder,
+   components/homesections, components/filterdialog, elements/emby-radio, scripts/libraryMenu.js,
+   controllers/list.js, controllers/favorites.js, components/alphaPicker). */
+
+/* ---- Card titles: one style on every card ----
+   Continue Watching and Next Up used the sans title, the Latest rows and library grids small
+   uppercase Cascadia, which cut long titles after a few letters on a phone. Every card now uses the
+   page font (Google Sans), sentence case, one size. Cascadia stays for the line under it (year,
+   episode) and for the library tile labels in My Media (30-home.css). */
+.card:not(.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView])) .cardText-first {
+  font-family: "Google Sans", sans-serif;
+  font-size: 0.95em !important;
+  font-weight: 600;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+/* ---- Home rows ----
+   Abyss pads the home sections by 7px on both sides, so a row of posters ran to the window's right
+   edge while the header bar stops 24px short of it (10px on a phone). The right side now keeps the
+   header's gap. */
+.homeSectionsContainer,
+#favoritesTab > .sections {
+  padding-right: var(--h1-bar-top, 10px) !important;
+}
+@media all and (min-width: 62.5em) {
+  .homeSectionsContainer,
+  #favoritesTab > .sections {
+    padding-right: var(--h1-pill-inset, 24px) !important;
+  }
+}
+
+/* Rows that scroll by script (desktop) move their cards with a transform and never clipped them, so
+   the off screen posters made the whole page wider than the window (2345px at 1876). They are
+   clipped at the row's edge now, sideways only, so the focus zoom still shows above and below. */
+.emby-scroller[data-scroll-mode-x=custom] {
+  overflow-x: clip;
+  overflow-clip-margin: 0;
+}
+
+/* Row titles: rows with scroll arrows put the title in a grid cell (30-home.css). Jellyfin's
+   .padded-left is 3.3% of the parent's width, and that cell is narrower than the row by the arrows,
+   so those titles sat a few pixels left of the others. The padding is taken from the row's width. */
+html:not(.layout-tv) .emby-scroller-container:has(> .emby-scrollbuttons) {
+  container-type: inline-size;
+}
+html:not(.layout-tv) .emby-scroller-container:has(> .emby-scrollbuttons) > :is(.sectionTitleContainer, .sectionTitle).padded-left {
+  padding-left: 3.3cqw;
+}
+
+/* ---- Side pill and phone drawer: the current page ----
+   Jellyfin marks a library link as current (.navMenuOption-selected) on Movies and Shows, but not
+   Home and not the Collections library, which opens the generic list page (#/list?parentId=...).
+   Home is current while the home page (#indexPage) shows, Collections while a list page shows
+   collection cards (BoxSet). The Collections link is the list link with the boxsets icon. */
+body:has(#indexPage:not(.hide)) .mainDrawer a.navMenuOption[href="#/home"],
+body:has(.page.noSecondaryNavPage:not(.hide, [id]) .itemsContainer > .card[data-type=BoxSet]) .mainDrawer a.navMenuOption[href^="#/list?parentId="]:has(> .navMenuOptionIcon.video_library) {
+  background: var(--h1-green) !important;
+  color: var(--h1-bg) !important;
+}
+body:has(#indexPage:not(.hide)) .mainDrawer a.navMenuOption[href="#/home"] :is(.navMenuOptionIcon, .navMenuOptionText),
+body:has(.page.noSecondaryNavPage:not(.hide, [id]) .itemsContainer > .card[data-type=BoxSet]) .mainDrawer a.navMenuOption[href^="#/list?parentId="]:has(> .navMenuOptionIcon.video_library) :is(.navMenuOptionIcon, .navMenuOptionText) {
+  color: var(--h1-bg) !important;
+}
+body:has(#indexPage:not(.hide)) .mainDrawer a.navMenuOption[href="#/home"] .navMenuOptionIcon,
+body:has(.page.noSecondaryNavPage:not(.hide, [id]) .itemsContainer > .card[data-type=BoxSet]) .mainDrawer a.navMenuOption[href^="#/list?parentId="]:has(> .navMenuOptionIcon.video_library) .navMenuOptionIcon {
+  background: rgba(var(--h1-bg-rgb), 0.16) !important;
+}
+
+/* The docked pill: the same green disc and glow as the Movies and Shows links get there. Same
+   condition as in 40-side-pill.css. */
+@media all and (min-width: 62.5em) {
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))):has(#indexPage:not(.hide)) .mainDrawer a.navMenuOption[href="#/home"],
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))):has(.page.noSecondaryNavPage:not(.hide, [id]) .itemsContainer > .card[data-type=BoxSet]) .mainDrawer a.navMenuOption[href^="#/list?parentId="]:has(> .navMenuOptionIcon.video_library) {
+    background: var(--h1-green) !important;
+    color: var(--h1-bg) !important;
+    box-shadow: 0 0 0 1px rgba(57, 255, 20, 0.9), 0 0 10px rgba(57, 255, 20, 0.55);
+  }
+}
+
+/* The hamburger drawer (phones and narrow windows): Abyss floats it 24px from the window, the
+   header bar floats 10px from it, so the bar's edge and the avatar showed around the drawer's top
+   corner. The drawer now opens under the bar, on the bar's left edge and with its radius. */
+html:not(.layout-tv) .mainDrawer.drawer-open {
+  margin: calc(env(safe-area-inset-top) + var(--h1-bar-top, 10px) + var(--h1-bar-h, 56px) + 8px) var(--h1-bar-top, 10px) var(--h1-bar-top, 10px);
+  border-radius: 28px;
+}
+
+/* ---- Sort dialog: radio buttons ----
+   The focused option drew Jellyfin's blue ring, dot and halo. Checked and focused options use the
+   green of the rest of the theme, the halo a faint green. */
+.mdl-radio__button:checked + .mdl-radio__circles svg :is(.mdl-radio__outer-circle, .mdl-radio__inner-circle),
+.mdl-radio__button:focus + .mdl-radio__circles svg :is(.mdl-radio__outer-circle, .mdl-radio__inner-circle) {
+  color: var(--h1-green) !important;
+}
+.mdl-radio__button + .mdl-radio__circles .mdl-radio__focus-circle {
+  background-color: rgba(var(--h1-green-rgb), 0.18) !important;
+}
+
+/* ---- Filter dialog: as tall as its content ----
+   Jellyfin gives the centred dialog a fixed height, which left about 200px of empty glass under the
+   last filter group. It now fits the groups and still scrolls when they are opened. */
+.filterDialog.centeredDialog {
+  height: fit-content !important;
+  max-height: 85vh;
+  max-height: 85dvh;
+}
+
+/* ---- Card overlay on keyboard or remote focus ----
+   Focus showed Jellyfin's dark square behind a white play button, hover a green play on the
+   picture. Both now look like hover. The played check in the top corner repeats the green check of
+   the button row while the overlay shows, so it hides then. */
+.cardOverlayContainer > .cardOverlayButton.cardOverlayButton-hover {
+  background-color: transparent !important;
+  color: var(--h1-green);
+}
+.card:is(.card-hoverable:hover, :focus-within) .cardIndicators > .playedIndicator {
+  display: none;
+}
+
+/* ---- Empty states ----
+   Favorites with nothing marked showed an empty page, a collection with no items a bare heading.
+   Jellyfin hides the empty favourite rows and leaves the collection's items container empty, so a
+   short muted note goes in their place. */
+#favoritesTab > .sections:has(> .verticalSection):not(:has(> .verticalSection:not(.hide)))::after {
+  content: "No favorites yet. Mark a title with the heart and it shows up here.";
+  display: block;
+  padding: 3em 1em;
+  color: var(--h1-muted);
+  font-family: var(--h1-mono);
+  font-size: 0.9em;
+  text-align: center;
+}
+.collectionItems .collectionItemsContainer:empty::after {
+  content: "This collection is empty.";
+  display: block;
+  padding: 0.5em 0;
+  color: var(--h1-muted);
+  font-family: var(--h1-mono);
+  font-size: 0.9em;
+}
+
+/* The collection's items start on the same edge as the overview and genres above them */
+.itemDetailPage .collectionItems .sectionTitleContainer,
+.itemDetailPage .collectionItems .collectionItemsContainer {
+  padding-left: 0;
+}
+
+/* ---- Phone tab row (Shows: Suggestions, Upcoming, Genres, ...) ----
+   The row (.emby-tabs-slider scrolls) was cut at the edge with no hint. A fade shows on whichever
+   side still has tabs, driven by the row's own scroll position, so a row that fits gets none. */
+@supports (animation-timeline: scroll(self inline)) {
+  @keyframes h1-tab-fade {
+    from {
+      -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 2.5em), transparent);
+      mask-image: linear-gradient(to right, #000 calc(100% - 2.5em), transparent);
+    }
+    50% {
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5em, #000 calc(100% - 2.5em), transparent);
+      mask-image: linear-gradient(to right, transparent, #000 2.5em, #000 calc(100% - 2.5em), transparent);
+    }
+    to {
+      -webkit-mask-image: linear-gradient(to right, transparent, #000 2.5em);
+      mask-image: linear-gradient(to right, transparent, #000 2.5em);
+    }
+  }
+  html:not(.layout-tv) .skinHeader .headerTabs .emby-tabs-slider {
+    animation: h1-tab-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+}
+
+/* ---- Collections library: grid starts on the left like Movies and Shows ---- */
+.libraryPage .itemsContainer.vertical-wrap.centered {
+  justify-content: flex-start;
+}
+
+/* ---- A to Z picker: one place on every window ----
+   Jellyfin pins it to the bottom, so its top moved with the window height (168px on 1366x768,
+   362px on 1876x1000). It is centred in the space under the header bar now. */
+.alphaPicker-fixed.alphaPicker-vertical {
+  top: calc(50% + (var(--h1-bar-top, 10px) + var(--h1-bar-h, 56px)) / 2) !important;
+  bottom: auto !important;
+  transform: translateY(-50%);
 }
 
 /* ---- src/abyss/90-overrides.css ---- */
