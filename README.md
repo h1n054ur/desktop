@@ -54,6 +54,7 @@ I use two 1080p screens side by side, and the whole setup is built around that s
 | [`quickshell/`](quickshell) | [quickshell-h1n054ur](https://github.com/h1n054ur/quickshell-h1n054ur) | login screen for greetd, lock screen and session menu, built with Quickshell |
 | [`hyprland/`](hyprland) | [hyprland-h1n054ur](https://github.com/h1n054ur/hyprland-h1n054ur) | the Hyprland Lua config: screens, workspaces, keybinds, window rules |
 | [`setup/`](setup) | [h1n054ur-setup](https://github.com/h1n054ur/h1n054ur-setup) | an interactive installer for the software by group, and Windows apps through WinApps |
+| [`jellyfin-theme/`](jellyfin-theme) | this repo only | Jellyfin 10.11 in the h1n054ur palette: ElegantFin vendored at a pinned commit with a glowing wordmark, one CSS file that loads nothing from outside |
 
 ```mermaid
 flowchart TB
