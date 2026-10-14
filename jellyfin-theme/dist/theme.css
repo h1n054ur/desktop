@@ -255,33 +255,78 @@ img[src*="icon-transparent"] {
 
 /* ---- src/20-login.css ---- */
 /* 20-login.css: the login page (Jellyfin 10.11 web, src/controllers/session/login/index.html).
-   Dark green glass panel, cyan focus on inputs, a solid green "Sign In" and quiet outline buttons
-   for Quick Connect and the rest. The login disclaimer holds the "Sign in with Authentik" form
-   (src/login-disclaimer.html), shown as a green outline button under an "or" divider.
+   Layout follows the mockup in the theme note: wordmark above a neutral dark card, "Sign in to continue"
+   and a small mono subtitle inside the card at the top, muted labels with cyan on focus, a solid green
+   "Sign In" with a soft glow, Forgot Password and Quick Connect as small text links side by side,
+   then an "or" divider and the "Sign in with Authentik" button (src/login-disclaimer.html) in cyan.
+   The page background is a faint grid instead of the splash backdrop.
    ElegantFin marks its buttons with !important, so the overrides below need it too.
    Each var() carries the plain hex as a fallback, in case 00-palette.css is not there. */
 
-/* Panel: ElegantFin paints it navy (rgba(30,40,54,.7)) */
-#loginPage .padded-left.padded-right.padded-bottom-page {
-  background: rgba(16, 24, 22, 0.75);
-  border: 0.06em solid rgba(57, 255, 20, 0.22);
-  box-shadow: 0 0 0 0.06em rgba(6, 9, 10, 0.6), 0 0 2.5em rgba(57, 255, 20, 0.08), 0 1.5em 3em rgba(0, 0, 0, 0.55);
-  max-width: 100%;
+/* Background: a faint grid with a soft green haze at the top and darker edges, all CSS.
+   The login page has data-backdroptype="splashscreen", so Jellyfin puts the splash image (the big
+   wordmark, assets/splash.png) into .backdropContainer behind it, and ElegantFin blurs it
+   (.backdropImage::before). An opaque page background covers it, and the backdrop is hidden while
+   the login page is the visible view. The splash itself stays as the app start screen. */
+#loginPage {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(57, 255, 20, 0.06), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(rgba(61, 79, 74, 0.14) 0.06em, transparent 0.06em) 0 0 / 2em 2em,
+    linear-gradient(90deg, rgba(61, 79, 74, 0.14) 0.06em, transparent 0.06em) 0 0 / 2em 2em,
+    var(--h1-bg, #06090a);
+}
+body:has(#loginPage.mainAnimatedPage:not(.hide), .mainAnimatedPage:not(.hide) > #loginPage) .backdropContainer {
+  display: none;
 }
 
-/* Phone width: the fixed 28em / 40em panel must not run off the screen */
+/* Card: neutral grey-green border, no green glow. ElegantFin paints it navy (rgba(30,40,54,.7)) and
+   pushes it down 3em to make room for its heading above the card. The heading is inside now, so the
+   push only has to balance the wordmark that 10-logo.css puts above the card. */
+#loginPage .padded-left.padded-right.padded-bottom-page {
+  background: rgba(16, 24, 22, 0.82);
+  border: 0.06em solid var(--h1-border, #3d4f4a);
+  box-shadow: 0 1.5em 3em rgba(0, 0, 0, 0.55);
+  max-width: 100%;
+  padding: 1.75em 2em 1.5em !important;
+  transform: translateY(2em);
+}
+
+/* Phone width: the fixed 28em / 40em card must not run off the screen */
 @media (max-width: 34em) {
   #loginPage {
     padding: 1em 0.75em;
   }
   #loginPage .padded-left.padded-right.padded-bottom-page {
-    padding: 1.5em 1.25em 1em !important;
+    padding: 1.5em 1.25em 1.25em !important;
     width: 100% !important;
   }
 }
 
-#loginPage .sectionTitle {
+/* "Sign in to continue": ElegantFin draws it as ::before on both forms (content var(--loginPageText))
+   and floats it 3.5em above the card. Bring it inside, at the top. */
+#loginPage .manualLoginForm::before,
+#loginPage .visualLoginForm::before {
+  top: 0;
+  margin: 0;
   color: var(--h1-text, #d8e6e1);
+  font-size: 1.4em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+/* Subtitle under the heading. The manual form's first child is the row that holds the (hidden) stock
+   heading, and the user picker starts with #divUsers, so each takes the subtitle as a pseudo element. */
+#loginPage .manualLoginForm > div:first-child::after,
+#loginPage .visualLoginForm #divUsers::before {
+  content: "media server";
+  display: block;
+  flex: 1 1 100%;
+  margin: 0.4em 0 1.25em;
+  color: var(--h1-muted, #9fb2ac);
+  font-family: var(--h1-mono, "Cascadia Code", ui-monospace, monospace);
+  font-size: 0.8em;
+  text-align: center;
 }
 
 /* Inputs */
@@ -302,8 +347,14 @@ img[src*="icon-transparent"] {
   outline: none !important;
   box-shadow: 0 0 0 0.06em rgba(0, 229, 255, 0.9), 0 0 0.6em rgba(0, 229, 255, 0.3);
 }
+
+/* Labels: muted, cyan only while their field has focus */
 #loginPage .inputLabel {
-  color: var(--h1-muted, #9fb2ac);
+  color: var(--h1-muted, #9fb2ac) !important;
+  font-size: 0.9em;
+}
+#loginPage .inputLabel.inputLabelFocused {
+  color: var(--h1-cyan, #00e5ff) !important;
 }
 
 /* Remember me */
@@ -315,21 +366,22 @@ img[src*="icon-transparent"] {
   color: var(--h1-bg, #06090a);
 }
 
-/* Primary "Sign In": solid green, dark text */
+/* Primary "Sign In": solid green, dark text, a soft glow */
 #loginPage .manualLoginForm .button-submit {
   background: var(--h1-green, #39ff14) !important;
   border: 0.06em solid var(--h1-green, #39ff14) !important;
   color: var(--h1-bg, #06090a) !important;
   font-weight: 700;
-  box-shadow: 0 0 0 0.06em rgba(57, 255, 20, 0.9), 0 0 0.7em rgba(57, 255, 20, 0.35);
+  box-shadow: 0 0 1em rgba(57, 255, 20, 0.25);
 }
 #loginPage .manualLoginForm .button-submit:hover,
 #loginPage .manualLoginForm .button-submit:focus-visible {
   background: var(--h1-green-hi, #7dff63) !important;
   border-color: var(--h1-green-hi, #7dff63) !important;
+  box-shadow: 0 0 1.2em rgba(57, 255, 20, 0.35);
 }
 
-/* Secondary buttons: Cancel, Manual Login, Quick Connect, Forgot Password, Change Server */
+/* Outline buttons: Cancel, Manual Login (user picker view) and Change Server */
 #loginPage .emby-button.cancel,
 #loginPage .readOnlyContent .btnSelectServer {
   background: transparent !important;
@@ -345,9 +397,53 @@ img[src*="icon-transparent"] {
   color: var(--h1-cyan, #00e5ff) !important;
 }
 
+/* Below the form: full-width rows for Manual Login, Change Server and the disclaimer, with
+   Quick Connect and Forgot Password as small underlined text links side by side in between.
+   Quick Connect stays: TV apps sign in with it. */
+#loginPage .readOnlyContent {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 1.5em;
+  row-gap: 0.25em;
+}
+#loginPage .readOnlyContent > .btnManual,
+#loginPage .readOnlyContent > .btnSelectServer,
+#loginPage .readOnlyContent > .loginDisclaimerContainer {
+  flex: 1 1 100%;
+}
+#loginPage .readOnlyContent > .hide {
+  display: none !important;
+}
+#loginPage .readOnlyContent .emby-button.btnQuick,
+#loginPage .readOnlyContent .emby-button.btnForgotPassword {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 0;
+  margin: 0.25em 0;
+  padding: 0.25em 0.1em;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--h1-muted, #9fb2ac) !important;
+  font-size: 0.85em;
+  font-weight: 400;
+  text-decoration: underline;
+  text-decoration-color: rgba(159, 178, 172, 0.5);
+  text-underline-offset: 0.2em;
+}
+#loginPage .readOnlyContent .emby-button.btnQuick:hover,
+#loginPage .readOnlyContent .emby-button.btnQuick:focus-visible,
+#loginPage .readOnlyContent .emby-button.btnForgotPassword:hover,
+#loginPage .readOnlyContent .emby-button.btnForgotPassword:focus-visible {
+  background: none !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+  text-decoration-color: currentColor;
+}
+
 /* Login disclaimer: an "or" divider, then the SSO button */
 #loginPage .loginDisclaimerContainer {
-  margin-top: 1em;
+  margin-top: 0.75em;
 }
 #loginPage .loginDisclaimer {
   color: var(--h1-muted, #9fb2ac);
@@ -375,20 +471,20 @@ img[src*="icon-transparent"] {
   margin: 0;
 }
 
-/* "Sign in with Authentik": green outline, the secondary action */
+/* "Sign in with Authentik": full width, cyan text and border on a dark cyan tint */
 #loginPage .loginDisclaimer .button-submit {
   width: 100%;
   margin: 0;
-  background: rgba(16, 24, 22, 0.6) !important;
-  border: 0.06em solid var(--h1-green, #39ff14) !important;
-  color: var(--h1-green, #39ff14) !important;
+  background: rgba(0, 229, 255, 0.07) !important;
+  border: 0.06em solid var(--h1-cyan, #00e5ff) !important;
+  color: var(--h1-cyan, #00e5ff) !important;
   font-weight: 600;
   box-shadow: none;
 }
 #loginPage .loginDisclaimer .button-submit:hover,
 #loginPage .loginDisclaimer .button-submit:focus-visible {
-  background: rgba(57, 255, 20, 0.08) !important;
-  box-shadow: 0 0 0 0.06em rgba(57, 255, 20, 0.9), 0 0 0.7em rgba(57, 255, 20, 0.35);
+  background: rgba(0, 229, 255, 0.13) !important;
+  box-shadow: 0 0 0.9em rgba(0, 229, 255, 0.25);
 }
 
 /* ---- src/90-overrides.css ---- */
