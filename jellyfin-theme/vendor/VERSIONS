@@ -1,5 +1,5 @@
 Vendored third-party files for the Jellyfin theme. Nothing here loads from the internet at runtime.
-Fetched 2026-10-14. All sha256 values are of the upstream file as downloaded.
+Fetched 2026-10-14 by vendor/update.sh. All sha256 values are of the upstream file as downloaded.
 
 ElegantFin (vendor/elegantfin/)
   repo:     https://github.com/lscambo13/ElegantFin
