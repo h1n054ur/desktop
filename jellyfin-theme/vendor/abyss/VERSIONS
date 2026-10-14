@@ -1,0 +1,49 @@
+Abyss theme for Jellyfin, vendored for offline use. Nothing here loads from the internet at runtime.
+Fetched 2026-10-14 by vendor/abyss/update.sh. All sha256 values are of the upstream file as downloaded.
+
+Abyss (vendor/abyss/)
+  repo:     https://github.com/AumGupta/abyss-jellyfin
+  release:  tag v1.2.3, latest release
+  commit:   97f872d6e940be224d7a84cbc8a736f42fdd2edd (2026-09-11, "fix: update Google Sans font weight range to fix broken font link (#99)")
+  license:  MIT (LICENSE)
+  upstream compatibility table (README.md at this commit):
+            12.0.x: Tested (Modern and Legacy web UI)
+            10.11.x: Tested
+            10.10.x: Should work
+  source files:
+    abyss.css  57762 bytes
+      5c7a7d1698dc55af753ef85401a322c79c4f8df18bf10679475bc0d111f3b90b
+    styles/abyss-lite.css  637 bytes
+      db6976e2166cc7c925f4114398e5df62c1545d41dba2a8b22e315df221d3aac9
+    LICENSE  1065 bytes
+      cb40fd5a6eb4d181e9fb9a1166dc1414c8231aeaaaf5a6a266a61ee52fdc4040
+    README.md  9817 bytes
+      d790d5ea26296ee39f440452d5aecd7062b9d2bf735ea53688e4bad9a2cf20db
+  output:
+    abyss.css  363161 bytes
+      5d4e9d88230316e790171c618c2d45459b01c145aafd223b0f5569bfe662972d
+    abyss-lite.css  637 bytes (upstream styles/abyss-lite.css, unchanged, optional low-power override)
+      db6976e2166cc7c925f4114398e5df62c1545d41dba2a8b22e315df221d3aac9
+  patches applied to abyss.css (the only changes):
+    1. @import of Google Fonts "Google Sans" replaced by one inline @font-face: Google Sans
+       latin subset, normal style, variable weight 400 to 700, as a woff2 data URI.
+       https://fonts.gstatic.com/s/googlesans/v71/4UaRrENHsxJlGDuGo1OIlJfC6l_24rlCK1Yo_Iq2vgCI.woff2  55184 bytes
+         76522cb09c91d6f8fcb3b4163ca574cbf2bba901965fa02351fd5bdff17b4fce
+       Dropped: the italic face (4UaXrENHsxJlGDuGo1OIlL3L2JB874GPhFI9_IqmuTCKjsg.woff2) and the
+       non-latin subsets. Browsers synthesise italic from the normal face.
+       License: OFL-1.1 (LICENSE-google-sans.txt, google/fonts a0e3dbcdc3a3 ofl/googlesans/OFL.txt,
+         2b75ef20f13d83a7514aee452c4782c20cdc9ff2dee17600f44d37a06d4fb958)
+    2. "Material Icons Round" @font-face src: the jsDelivr URL replaced by the same file as a
+       woff2 data URI. Kept whole: abyss.css forces this family with !important on every icon
+       element and upstream documents no smaller subset.
+       https://cdn.jsdelivr.net/npm/material-icons@1.13.12/iconfont/material-icons-round.woff2  173620 bytes
+         c948f1263341699b3c1e9c55d8d0f3e446669d0f2b9d55494c6169222c0243a6
+       taken from the npm tarball https://registry.npmjs.org/material-icons/-/material-icons-1.13.12.tgz
+         integrity sha512-/2YoaB79IjUK2B2JB+vIXXYGtBfHb/XG66LvoKVM5ykHW7yfrV5SP6d7KLX6iijY6/G9GqwgtPQ/sbhFnOURVA== (verified, and byte-identical to the jsDelivr file)
+       License: Apache-2.0 (LICENSE-material-icons.txt, material-icons 1.13.12 package LICENSE,
+         cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30)
+    3. A one-line comment at the top naming these patches.
+  not vendored: Spotlight (scripts/spotlight/, needs a script tag added to jellyfin-web index.html
+    on the server), the installers, the plugin add-ons styles/abyss-je.css and styles/abyss-mbe.css.
+
+Total vendored CSS: 363798 bytes (about 360 KiB).
