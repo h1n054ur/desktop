@@ -1,0 +1,23 @@
+# Throwaway Jellyfin for looking at the theme on a local machine. Never deployed.
+# See README.md in this folder. Media comes from a cache folder outside the repo (seed.sh fills it).
+name: jellyfin-theme-test
+
+services:
+  jellyfin:
+    # Same release and digest as the real server, so the theme is checked against the same web client.
+    image: jellyfin/jellyfin:10.11.11@sha256:aefb67e6a7ff1debdd154a78a7bbb780fd0c873d8639210a7f6a2016ad2b35db
+    container_name: jellyfin-theme-test
+    restart: "no"
+    mem_limit: 1g
+    ports:
+      - "127.0.0.1:8097:8096"
+    environment:
+      TZ: UTC
+    volumes:
+      - config:/config
+      - cache:/cache
+      - ${JF_TEST_MEDIA:-${HOME}/.cache/jellyfin-theme-test/media}:/media:ro
+
+volumes:
+  config:
+  cache:
