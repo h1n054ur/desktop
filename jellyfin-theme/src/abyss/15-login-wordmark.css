@@ -1,2 +1,22 @@
 /* 15-login-wordmark.css: where the wordmark (--h1-wordmark from common/10-logo.css) sits on the
-   Abyss login page. Placeholder, filled in by a later task of #299. */
+   Abyss login page. Jellyfin has no logo there, so it goes just above the card. 20-login.css makes
+   the page's padded container the card (glass panel, position relative), so the wordmark hangs off
+   that box. Abyss hides the stock "Please sign in" heading and pushes the container down 8em, which
+   leaves the room above. */
+
+#loginPage > .padded-left.padded-right.padded-bottom-page {
+  position: relative;
+}
+
+#loginPage > .padded-left.padded-right.padded-bottom-page::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 1.25em);
+  height: 2.75em;
+  max-width: 80vw;
+  margin: 0 auto;
+  background: var(--h1-wordmark) center / contain no-repeat;
+  pointer-events: none;
+}

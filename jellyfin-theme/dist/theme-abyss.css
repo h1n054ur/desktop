@@ -2772,15 +2772,626 @@ img[src*="icon-transparent"] {
 
 /* ---- src/abyss/15-login-wordmark.css ---- */
 /* 15-login-wordmark.css: where the wordmark (--h1-wordmark from common/10-logo.css) sits on the
-   Abyss login page. Placeholder, filled in by a later task of #299. */
+   Abyss login page. Jellyfin has no logo there, so it goes just above the card. 20-login.css makes
+   the page's padded container the card (glass panel, position relative), so the wordmark hangs off
+   that box. Abyss hides the stock "Please sign in" heading and pushes the container down 8em, which
+   leaves the room above. */
+
+#loginPage > .padded-left.padded-right.padded-bottom-page {
+  position: relative;
+}
+
+#loginPage > .padded-left.padded-right.padded-bottom-page::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + 1.25em);
+  height: 2.75em;
+  max-width: 80vw;
+  margin: 0 auto;
+  background: var(--h1-wordmark) center / contain no-repeat;
+  pointer-events: none;
+}
 
 /* ---- src/abyss/20-login.css ---- */
-/* 20-login.css: the login page on top of Abyss, same look as the ElegantFin build (card, green
-   Sign In, cyan "Sign in with Authentik" from common/login-disclaimer.html). Placeholder for #299. */
+/* 20-login.css: the login page on top of Abyss (Jellyfin 10.11 web,
+   src/controllers/session/login/index.html), the same look as the ElegantFin build: wordmark above a
+   glass card (15-login-wordmark.css), "Sign in to continue" and a small mono subtitle inside the card
+   at the top, muted labels with cyan on focus, a solid green "Sign In", Forgot Password and Quick
+   Connect as small text links side by side, then an "or" divider and the full-width cyan "Sign in
+   with Authentik" button (src/common/login-disclaimer.html). The page background is a faint grid.
+
+   Abyss draws only the manual form as a glass card (radius 24px) and leaves the links and the
+   disclaimer under it. Here the page's padded container is the card instead, keeping Abyss's glass
+   and radius, so the heading, the form, the links and the SSO button all sit inside one panel.
+   Abyss marks its glass, buttons and login links with !important (some with five classes), so the
+   overrides below need !important and enough classes too.
+   Each var() carries the plain hex as a fallback, in case 00-palette.css is not there. */
+
+/* Background: a faint grid with a soft green haze at the top and darker edges, all CSS.
+   Abyss sets background-size: cover !important on #loginPage, which would stretch the grid tiles,
+   so the sizes are set again here with one more class. The login page has
+   data-backdroptype="splashscreen": the splash image (assets/splash.png) would show blurred behind
+   it, so the backdrop is hidden while the login page is the visible view. */
+#loginPage.page {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(57, 255, 20, 0.06), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(rgba(61, 79, 74, 0.14) 0.06em, transparent 0.06em),
+    linear-gradient(90deg, rgba(61, 79, 74, 0.14) 0.06em, transparent 0.06em),
+    var(--h1-bg, #06090a);
+  background-position: 0 0 !important;
+  background-size: auto, auto, 2em 2em, 2em 2em !important;
+}
+body:has(#loginPage.mainAnimatedPage:not(.hide), .mainAnimatedPage:not(.hide) > #loginPage) .backdropContainer {
+  display: none;
+}
+
+/* The card: Abyss glass (blurred, translucent) in the h1n054ur panel tint with a neutral border */
+#loginPage > .padded-left.padded-right.padded-bottom-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 26em;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1.75em 2em 1.5em !important;
+  border: 1px solid var(--h1-border, #3d4f4a);
+  border-radius: 24px;
+  background-color: rgba(16, 24, 22, 0.72);
+  box-shadow: 0 1.5em 3em rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(var(--abyss-glass-blur, 15px));
+  backdrop-filter: blur(var(--abyss-glass-blur, 15px));
+}
+#loginPage .readOnlyContent,
+#loginPage form {
+  max-width: 100%;
+}
+
+/* Abyss's own card on the manual form goes, so there is no card inside the card */
+#loginPage .manualLoginForm {
+  margin-bottom: 0;
+  padding: 0;
+  border: none !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Phone width: the card fills the screen less a small margin, and starts higher */
+@media (max-width: 34em) {
+  #loginPage {
+    padding-left: 0.75em;
+    padding-right: 0.75em;
+  }
+  #loginPage > .padded-left.padded-right.padded-bottom-page {
+    margin-top: 6em;
+    padding: 1.5em 1.25em 1.25em !important;
+  }
+}
+
+/* "Sign in to continue" and the mono subtitle. Abyss hides the stock h1 ("Please sign in"); its row
+   (the manual form's first child) stays, so it carries both lines as pseudo elements. The user picker
+   (visual form) gets the same: heading on the form, subtitle at the start of #divUsers. */
+#loginPage .manualLoginForm > div:first-child {
+  flex-direction: column;
+}
+#loginPage .manualLoginForm > div:first-child::before,
+#loginPage .visualLoginForm::before {
+  content: "Sign in to continue";
+  display: block;
+  color: var(--h1-text, #d8e6e1);
+  font-size: 1.4em;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+}
+#loginPage .manualLoginForm > div:first-child::after,
+#loginPage .visualLoginForm #divUsers::before {
+  content: "media server";
+  display: block;
+  flex: 1 1 100%;
+  margin: 0.4em 0 1.25em;
+  color: var(--h1-muted, #9fb2ac);
+  font-family: var(--h1-mono, "Cascadia Code", ui-monospace, monospace);
+  font-size: 0.8em;
+  text-align: center;
+}
+
+/* Inputs (Abyss keeps its 12px radius) */
+#loginPage .emby-input {
+  background-color: var(--h1-bg, #06090a);
+  border: 1px solid var(--h1-border, #3d4f4a);
+  color: var(--h1-text, #d8e6e1);
+  font-family: var(--h1-mono, "Cascadia Code", ui-monospace, monospace);
+  caret-color: var(--h1-cyan, #00e5ff);
+}
+#loginPage .emby-input:hover:not(:focus) {
+  border-color: var(--h1-muted, #9fb2ac) !important;
+}
+#loginPage .emby-input:focus {
+  background-color: var(--h1-bg, #06090a);
+  border-color: var(--h1-cyan, #00e5ff) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.9), 0 0 0.6em rgba(0, 229, 255, 0.3);
+}
+
+/* Labels: muted, cyan only while their field has focus */
+#loginPage .inputLabel {
+  color: var(--h1-muted, #9fb2ac) !important;
+  font-size: 0.9em;
+}
+#loginPage .inputLabel.inputLabelFocused {
+  color: var(--h1-cyan, #00e5ff) !important;
+}
+
+/* Remember me */
+#loginPage .emby-checkbox:checked + span + .checkboxOutline:not(.multiSelectCheckboxOutline) {
+  background: var(--h1-green, #39ff14);
+  border-color: var(--h1-green, #39ff14);
+}
+#loginPage .emby-checkbox:checked + span + .checkboxOutline .checkboxIcon {
+  color: var(--h1-bg, #06090a);
+}
+
+/* Abyss makes every .button-submit sticky (bottom 24px) with a 48px top margin, which suits long
+   settings forms. On the login card both submit buttons stay in place. */
+#loginPage .button-submit {
+  position: static;
+}
+
+/* Primary "Sign In": solid green, dark text, a soft glow */
+#loginPage .manualLoginForm .button-submit {
+  margin-top: 1.25em !important;
+  background: var(--h1-green, #39ff14) !important;
+  border: 1px solid var(--h1-green, #39ff14) !important;
+  color: var(--h1-bg, #06090a) !important;
+  font-weight: 700;
+  box-shadow: 0 0 1em rgba(57, 255, 20, 0.25);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#loginPage .manualLoginForm .button-submit:hover,
+#loginPage .manualLoginForm .button-submit:focus-visible {
+  background: var(--h1-green-hi, #7dff63) !important;
+  border-color: var(--h1-green-hi, #7dff63) !important;
+  box-shadow: 0 0 1.2em rgba(57, 255, 20, 0.35);
+}
+
+/* Outline buttons: Cancel, Manual Login (user picker view) and Change Server */
+#loginPage .raised.emby-button.cancel:not(.btnQuick, .btnForgotPassword),
+#loginPage .readOnlyContent .raised.emby-button.btnSelectServer {
+  background: transparent !important;
+  border: 1px solid var(--h1-border, #3d4f4a) !important;
+  color: var(--h1-text, #d8e6e1) !important;
+  font-weight: 600;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#loginPage .raised.emby-button.cancel:not(.btnQuick, .btnForgotPassword):hover,
+#loginPage .raised.emby-button.cancel:not(.btnQuick, .btnForgotPassword):focus-visible,
+#loginPage .readOnlyContent .raised.emby-button.btnSelectServer:hover,
+#loginPage .readOnlyContent .raised.emby-button.btnSelectServer:focus-visible {
+  background: rgba(19, 34, 29, 0.6) !important;
+  border-color: var(--h1-cyan, #00e5ff) !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+}
+
+/* Below the form: full-width rows for Manual Login, Change Server and the disclaimer, with
+   Quick Connect and Forgot Password as small underlined text links side by side in between.
+   Quick Connect stays: TV apps sign in with it. */
+#loginPage .readOnlyContent {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 1.5em;
+  row-gap: 0.25em;
+  margin: 0.75em auto 0 !important;
+}
+#loginPage .readOnlyContent > .btnManual,
+#loginPage .readOnlyContent > .btnSelectServer,
+#loginPage .readOnlyContent > .loginDisclaimerContainer {
+  flex: 1 1 100%;
+}
+#loginPage .readOnlyContent > .hide {
+  display: none !important;
+}
+#loginPage .readOnlyContent .raised.cancel.block.emby-button:is(.btnQuick, .btnForgotPassword) {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 0;
+  margin: 0.25em 0 !important;
+  padding: 0.25em 0.1em;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  color: var(--h1-muted, #9fb2ac) !important;
+  font-size: 0.85em;
+  font-weight: 400;
+  text-decoration: underline;
+  text-decoration-color: rgba(159, 178, 172, 0.5);
+  text-underline-offset: 0.2em;
+}
+#loginPage .readOnlyContent .raised.cancel.block.emby-button:is(.btnQuick, .btnForgotPassword):is(:hover, :focus-visible) {
+  background: none !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+  font-weight: 400;
+  text-decoration-color: currentColor;
+}
+
+/* Login disclaimer: an "or" divider, then the SSO button */
+#loginPage .loginDisclaimerContainer {
+  margin-top: 0.75em;
+}
+#loginPage .loginDisclaimer {
+  color: var(--h1-muted, #9fb2ac);
+  text-align: center;
+}
+#loginPage .loginDisclaimer:empty {
+  display: none;
+}
+#loginPage .loginDisclaimer:has(form)::before {
+  content: "or";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 1em;
+  color: var(--h1-muted, #9fb2ac);
+  font-family: var(--h1-mono, "Cascadia Code", ui-monospace, monospace);
+  font-size: 0.85em;
+  background:
+    linear-gradient(var(--h1-border, #3d4f4a), var(--h1-border, #3d4f4a)) left center / calc(50% - 1.5em) 1px no-repeat,
+    linear-gradient(var(--h1-border, #3d4f4a), var(--h1-border, #3d4f4a)) right center / calc(50% - 1.5em) 1px no-repeat;
+}
+#loginPage .loginDisclaimer form,
+#loginPage .loginDisclaimer p {
+  margin: 0;
+}
+
+/* "Sign in with Authentik": full width, cyan text and border on a dark cyan tint */
+#loginPage .loginDisclaimer .raised.button-submit {
+  width: 100%;
+  margin: 0 !important;
+  background: rgba(0, 229, 255, 0.07) !important;
+  border: 1px solid var(--h1-cyan, #00e5ff) !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+  font-weight: 600;
+  box-shadow: none;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#loginPage .loginDisclaimer .raised.button-submit:hover,
+#loginPage .loginDisclaimer .raised.button-submit:focus-visible {
+  background: rgba(0, 229, 255, 0.13) !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+  font-weight: 600;
+  box-shadow: 0 0 0.9em rgba(0, 229, 255, 0.25);
+}
 
 /* ---- src/abyss/30-home.css ---- */
-/* 30-home.css: header, home rows and library tiles on top of Abyss, following the Abyss mockup in
-   the theme note. Placeholder, filled in by a later task of #299. */
+/* 30-home.css: header, home rows and library tiles on top of Abyss, following the Abyss mockup in the
+   theme note (home-abyss.png). The header becomes one glass bar level with the side pill
+   (40-side-pill.css): wordmark on the left, the tabs as a dark pill in the middle with the active tab
+   in green, the header buttons and a cyan-ring avatar on the right. Library tiles get a centred cyan
+   line icon and an uppercase Cascadia label, Continue Watching keeps its text left-aligned with a
+   Cascadia line under the title, and the A to Z picker uses the page font.
+   Abyss's Spotlight banner is a script and is not used, so the home page starts with its rows.
+   Selectors checked against jellyfin-web v10.11.11 (scripts/libraryMenu.js renderHeader,
+   styles/librarybrowser.scss, components/homesections, components/cardbuilder/cardBuilder.js). */
+
+/* Line icons for the library tiles, one per Jellyfin collection type (utils/image.ts getLibraryIcon).
+   Cyan strokes baked in, so a drop-shadow can glow them. Anything unknown gets the folder. */
+:root {
+  --h1-lib-folder: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z'/%3E%3C/svg%3E");
+  --h1-lib-movies: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Cpath d='M7 3v18M17 3v18M3 7.5h4M3 12h18M3 16.5h4M17 7.5h4M17 16.5h4'/%3E%3C/svg%3E");
+  --h1-lib-tvshows: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='15' rx='2'/%3E%3Cpath d='m17 2-5 5-5-5'/%3E%3C/svg%3E");
+  --h1-lib-music: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 18V5l12-2v13'/%3E%3Ccircle cx='6' cy='18' r='3'/%3E%3Ccircle cx='18' cy='16' r='3'/%3E%3C/svg%3E");
+  --h1-lib-homevideos: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m16 13 5.2 3.5a.5.5 0 0 0 .8-.4V7.9a.5.5 0 0 0-.8-.4L16 11'/%3E%3Crect x='2' y='6' width='14' height='12' rx='2'/%3E%3C/svg%3E");
+  --h1-lib-photos: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2'/%3E%3Ccircle cx='9' cy='9' r='2'/%3E%3Cpath d='m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21'/%3E%3C/svg%3E");
+  --h1-lib-books: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20'/%3E%3C/svg%3E");
+  --h1-lib-livetv: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='2' y='7' width='20' height='15' rx='2'/%3E%3Cpath d='m17 2-5 5-5-5'/%3E%3Ccircle cx='12' cy='14.5' r='2.5'/%3E%3C/svg%3E");
+  --h1-lib-playlists: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2300e5ff' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 6h13M3 12h13M3 18h8M18 14v7M21 17.5l-3 3.5'/%3E%3C/svg%3E");
+
+  /* The header bar: its distance from the top of the window and its height. The tabs are placed
+     inside it by these, so they stay in step. On wide screens the top matches the side pill. */
+  --h1-bar-top: 10px;
+  --h1-bar-h: 56px;
+}
+
+@media all and (min-width: 62.5em) {
+  :root {
+    --h1-bar-top: var(--h1-pill-inset, 24px);
+  }
+}
+
+/* ---- Header bar ----
+   The stock header (.skinHeader, fixed, a column of .headerTop and .headerTabs) is transparent in
+   Abyss. .headerTop becomes the glass bar. Not on TV layouts and not on the video player header. */
+
+html:not(.layout-tv) .skinHeader:not(.osdHeader) {
+  flex-direction: column;
+}
+
+html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTop {
+  flex: none;
+  box-sizing: border-box;
+  height: var(--h1-bar-h);
+  margin: var(--h1-bar-top) 10px 0;
+  padding: 0 0.5em !important;
+  border: 1px solid var(--h1-border);
+  border-radius: 28px;
+  background-color: rgba(16, 24, 22, 0.8);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px);
+}
+
+@media all and (min-width: 62.5em) {
+  html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTop {
+    margin-left: var(--h1-pill-inset, 24px);
+    margin-right: var(--h1-pill-inset, 24px);
+  }
+
+  /* With the side pill docked, 40-side-pill.css moves the header to the pill's right edge. One more
+     gap lines the bar up with the page content (--h1-pill-space from the window edge). Same
+     condition as in 40-side-pill.css. */
+  html.layout-desktop body[dir="ltr"].libraryDocument:not(.dashboardDocument):has(.mainDrawer:not(.hide)):not(:has(div[style*="display: none"] > .mainDrawer, #videoOsdPage:not(.hide))) .skinHeader:not(.osdHeader) > .headerTop {
+    margin-left: var(--h1-pill-gap, 16px);
+  }
+}
+
+/* Abyss pads both header ends by 31px for its open layout. Inside the bar a little is enough. */
+html:not(.layout-tv) .skinHeader:not(.osdHeader) :is(.headerLeft, .headerRight) {
+  padding: 0 0.25em;
+}
+html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerLeft {
+  min-width: 0;
+  padding-left: 0.75em;
+}
+
+/* The wordmark: Abyss hides the header logo, the mockup has it at the left of the bar.
+   10-logo.css paints it and sizes it. Abyss's dimming and glass on the page title are dropped. */
+html:not(.layout-tv) .skinHeader .pageTitle.pageTitleWithLogo.pageTitleWithDefaultLogo {
+  display: block !important;
+  flex: none;
+  margin: 0;
+  padding: 0;
+  opacity: 1;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Header buttons: text colour, green on hover. No extra glass of their own inside the glass bar. */
+html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerButton {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerButton:not(.headerUserButton) {
+  color: var(--h1-text);
+}
+html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerButton:not(.headerUserButton):hover {
+  background-color: rgba(57, 255, 20, 0.08) !important;
+  color: var(--h1-green);
+}
+
+/* Avatar: a cyan ring. Jellyfin still decides what is inside (the user's picture, else the person icon). */
+.skinHeader .headerUserButton {
+  border: 2px solid var(--h1-cyan);
+  border-radius: 50% !important;
+  color: var(--h1-cyan);
+  overflow: hidden;
+  box-shadow: 0 0 0.5em rgba(0, 229, 255, 0.3);
+}
+.skinHeader .headerUserButton:hover:not(:disabled),
+.skinHeader .headerUserButton:focus-visible {
+  background-color: rgba(0, 229, 255, 0.15) !important;
+  color: var(--h1-cyan);
+  box-shadow: var(--h1-glow-cyan);
+}
+
+/* Phones: tighter buttons so wordmark, menu button and the right-hand icons fit one row */
+@media all and (max-width: 40em) {
+  html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerButton {
+    margin: 0 0.05em;
+  }
+  html:not(.layout-tv) .skinHeader:not(.osdHeader) .headerLeft {
+    padding-left: 0.25em;
+  }
+}
+
+/* ---- Header tabs (Home, Favorites, and library tabs like Movies, Suggestions, Genres) ----
+   Abyss pulls the tab row up into the header with negative margins. With the bar they either sit
+   inside it, centred (wide screens), or in their own row just under it. */
+
+html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTabs.sectionTabs {
+  margin-top: 8px !important;
+  padding-top: 0;
+}
+
+@media all and (min-width: 75em) {
+  html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTabs.sectionTabs {
+    position: absolute;
+    top: calc(env(safe-area-inset-top) + var(--h1-bar-top));
+    left: 0;
+    right: 0;
+    width: fit-content;
+    height: var(--h1-bar-h);
+    max-width: calc(100% - 30em); /* room for the wordmark and the header buttons */
+    margin: 0 auto !important;
+    align-items: center;
+    z-index: 1;
+  }
+  html:not(.layout-tv) .skinHeader:not(.osdHeader) > .headerTabs.sectionTabs:not(.hide) {
+    display: flex;
+  }
+}
+
+/* Under 75em the tab row sits below the bar, so pages with tabs start a little lower */
+@media all and (max-width: 74.99em) {
+  html:not(.layout-tv) body:has(.skinHeader:not(.osdHeader) > .headerTabs:not(.hide)) .libraryPage:not(.noSecondaryNavPage, .itemDetailPage) {
+    padding-top: calc(var(--h1-bar-top) + var(--h1-bar-h) + 4.75em) !important;
+  }
+}
+
+/* The tab pill: dark, a hairline border, compact enough for the bar */
+.skinHeader .headerTabs .emby-tabs-slider {
+  padding: 4px 2px;
+  border: 1px solid rgba(61, 79, 74, 0.6);
+  background-color: rgba(6, 9, 10, 0.75) !important;
+  box-shadow: none;
+}
+html:not(.layout-tv) .skinHeader .headerTabs .emby-tab-button {
+  padding: 0.4em 1.25em;
+  border-width: 0;
+}
+
+/* Inactive tabs: plain text. Hover turns the word green instead of filling a pill. */
+.skinHeader .headerTabs .emby-tab-button:not(.emby-tab-button-active) {
+  background-color: transparent;
+  color: var(--h1-text);
+}
+.skinHeader .headerTabs .emby-tab-button:not(.emby-tab-button-active):hover {
+  background-color: transparent !important;
+  color: var(--h1-green);
+}
+
+/* Active tab: a green pill with bold dark text */
+.skinHeader .headerTabs .emby-tab-button.emby-tab-button-active {
+  background: var(--h1-green) !important;
+  color: var(--h1-bg) !important;
+  font-weight: 700;
+  box-shadow: 0 0 0.8em rgba(57, 255, 20, 0.3);
+}
+
+/* ---- My Media library tiles ---- */
+
+/* The tile picture is dimmed (Jellyfin's generated library images carry their own big title), and
+   the label sits on top: cyan icon, uppercase Cascadia name. Abyss hides the card text in this row,
+   it comes back here as the label. The label ignores the pointer, so the whole tile still opens the
+   library and the hover buttons still work. Abyss's radius on the picture stays. */
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) {
+  --h1-lib-icon: var(--h1-lib-folder);
+}
+.overflowBackdropCard:is([data-collectiontype=movies], [data-collectiontype=trailers]) {
+  --h1-lib-icon: var(--h1-lib-movies);
+}
+.overflowBackdropCard[data-collectiontype=tvshows] {
+  --h1-lib-icon: var(--h1-lib-tvshows);
+}
+.overflowBackdropCard:is([data-collectiontype=music], [data-collectiontype=musicvideos]) {
+  --h1-lib-icon: var(--h1-lib-music);
+}
+.overflowBackdropCard[data-collectiontype=homevideos] {
+  --h1-lib-icon: var(--h1-lib-homevideos);
+}
+.overflowBackdropCard[data-collectiontype=photos] {
+  --h1-lib-icon: var(--h1-lib-photos);
+}
+.overflowBackdropCard[data-collectiontype=books] {
+  --h1-lib-icon: var(--h1-lib-books);
+}
+.overflowBackdropCard[data-collectiontype=livetv] {
+  --h1-lib-icon: var(--h1-lib-livetv);
+}
+.overflowBackdropCard[data-collectiontype=playlists] {
+  --h1-lib-icon: var(--h1-lib-playlists);
+}
+
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardBox {
+  position: relative;
+}
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardImageContainer {
+  box-shadow: inset 0 0 3px rgba(200, 200, 200, 0.35), inset 0 0 0 100vmax rgba(6, 9, 10, 0.62);
+}
+/* Libraries without a picture show Jellyfin's grey icon, our label replaces it */
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardImageIcon {
+  display: none;
+}
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardFooter {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4em;
+  margin: 0;
+  padding: 0 0.75em;
+  pointer-events: none;
+}
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardFooter::before {
+  content: "";
+  flex: none;
+  width: 2em;
+  height: 2em;
+  background: var(--h1-lib-icon) center / contain no-repeat;
+  filter: drop-shadow(0 0 0.35em rgba(0, 229, 255, 0.55));
+}
+.homeSectionsContainer .verticalSection .overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardText.cardText-first,
+.overflowBackdropCard:is([data-type=CollectionFolder], [data-type=UserView]) .cardText.cardText-first {
+  display: block !important;
+  max-width: 100%;
+  margin: 0 !important;
+  padding: 0;
+  font-family: var(--h1-mono);
+  font-size: 1.05em !important;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-align: center !important;
+  text-transform: uppercase;
+  color: #fff;
+  opacity: 1;
+  text-shadow: 0 1px 0.4em rgba(0, 0, 0, 0.85);
+}
+
+/* ---- Continue Watching and Next Up (wide cards on the home page) ----
+   Abyss already sets card text left-aligned. Title as Abyss has it, the line under it (time left,
+   year, or the episode for shows) small, muted and in Cascadia. */
+.homeSectionsContainer .overflowBackdropCard:not([data-type=CollectionFolder], [data-type=UserView]) .cardText {
+  text-align: left !important;
+}
+.homeSectionsContainer .overflowBackdropCard:not([data-type=CollectionFolder], [data-type=UserView]) .cardText-secondary {
+  font-family: var(--h1-mono);
+  font-size: 0.8em;
+  font-weight: 400;
+  color: var(--h1-muted);
+  opacity: 1;
+}
+
+/* ---- Poster rows (home Latest rows) and poster grids (library pages) ---- */
+
+/* Title under the poster in the mockup's accent style: small uppercase Cascadia, left-aligned.
+   Abyss sets the first line to font-size: larger !important, so the size needs !important too. */
+.homeSectionsContainer .overflowPortraitCard .cardText,
+.portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText {
+  text-align: left !important;
+}
+.homeSectionsContainer .overflowPortraitCard .cardText-first,
+.portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-first {
+  font-family: var(--h1-mono);
+  font-size: 0.78em !important;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.homeSectionsContainer .overflowPortraitCard .cardText-secondary,
+.portraitCard:is([data-type=Movie], [data-type=Series], [data-type=BoxSet], [data-type=Season]) .cardText-secondary {
+  font-size: 0.75em;
+  font-weight: 400;
+  color: var(--h1-muted);
+  opacity: 1;
+}
+
+/* ---- A to Z picker on library pages ---- */
+
+/* The page font (Abyss's sans), Cascadia stays for accents */
+.alphaPickerButton {
+  font-family: inherit;
+}
 
 /* ---- src/abyss/40-side-pill.css ---- */
 /* 40-side-pill.css: Jellyfin's navigation drawer as an always visible floating side pill on wide

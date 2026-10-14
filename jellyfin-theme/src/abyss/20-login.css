@@ -1,2 +1,276 @@
-/* 20-login.css: the login page on top of Abyss, same look as the ElegantFin build (card, green
-   Sign In, cyan "Sign in with Authentik" from common/login-disclaimer.html). Placeholder for #299. */
+/* 20-login.css: the login page on top of Abyss (Jellyfin 10.11 web,
+   src/controllers/session/login/index.html), the same look as the ElegantFin build: wordmark above a
+   glass card (15-login-wordmark.css), "Sign in to continue" and a small mono subtitle inside the card
+   at the top, muted labels with cyan on focus, a solid green "Sign In", Forgot Password and Quick
+   Connect as small text links side by side, then an "or" divider and the full-width cyan "Sign in
+   with Authentik" button (src/common/login-disclaimer.html). The page background is a faint grid.
+
+   Abyss draws only the manual form as a glass card (radius 24px) and leaves the links and the
+   disclaimer under it. Here the page's padded container is the card instead, keeping Abyss's glass
+   and radius, so the heading, the form, the links and the SSO button all sit inside one panel.
+   Abyss marks its glass, buttons and login links with !important (some with five classes), so the
+   overrides below need !important and enough classes too.
+   Each var() carries the plain hex as a fallback, in case 00-palette.css is not there. */
+
+/* Background: a faint grid with a soft green haze at the top and darker edges, all CSS.
+   Abyss sets background-size: cover !important on #loginPage, which would stretch the grid tiles,
+   so the sizes are set again here with one more class. The login page has
+   data-backdroptype="splashscreen": the splash image (assets/splash.png) would show blurred behind
+   it, so the backdrop is hidden while the login page is the visible view. */
+#loginPage.page {
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(57, 255, 20, 0.06), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 45%, transparent 55%, rgba(0, 0, 0, 0.55) 100%),
+    linear-gradient(rgba(61, 79, 74, 0.14) 0.06em, transparent 0.06em),
+    linear-gradient(90deg, rgba(61, 79, 74, 0.14) 0.06em, transparent 0.06em),
+    var(--h1-bg, #06090a);
+  background-position: 0 0 !important;
+  background-size: auto, auto, 2em 2em, 2em 2em !important;
+}
+body:has(#loginPage.mainAnimatedPage:not(.hide), .mainAnimatedPage:not(.hide) > #loginPage) .backdropContainer {
+  display: none;
+}
+
+/* The card: Abyss glass (blurred, translucent) in the h1n054ur panel tint with a neutral border */
+#loginPage > .padded-left.padded-right.padded-bottom-page {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 26em;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 1.75em 2em 1.5em !important;
+  border: 1px solid var(--h1-border, #3d4f4a);
+  border-radius: 24px;
+  background-color: rgba(16, 24, 22, 0.72);
+  box-shadow: 0 1.5em 3em rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(var(--abyss-glass-blur, 15px));
+  backdrop-filter: blur(var(--abyss-glass-blur, 15px));
+}
+#loginPage .readOnlyContent,
+#loginPage form {
+  max-width: 100%;
+}
+
+/* Abyss's own card on the manual form goes, so there is no card inside the card */
+#loginPage .manualLoginForm {
+  margin-bottom: 0;
+  padding: 0;
+  border: none !important;
+  border-radius: 0;
+  background: transparent !important;
+  box-shadow: none;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+
+/* Phone width: the card fills the screen less a small margin, and starts higher */
+@media (max-width: 34em) {
+  #loginPage {
+    padding-left: 0.75em;
+    padding-right: 0.75em;
+  }
+  #loginPage > .padded-left.padded-right.padded-bottom-page {
+    margin-top: 6em;
+    padding: 1.5em 1.25em 1.25em !important;
+  }
+}
+
+/* "Sign in to continue" and the mono subtitle. Abyss hides the stock h1 ("Please sign in"); its row
+   (the manual form's first child) stays, so it carries both lines as pseudo elements. The user picker
+   (visual form) gets the same: heading on the form, subtitle at the start of #divUsers. */
+#loginPage .manualLoginForm > div:first-child {
+  flex-direction: column;
+}
+#loginPage .manualLoginForm > div:first-child::before,
+#loginPage .visualLoginForm::before {
+  content: "Sign in to continue";
+  display: block;
+  color: var(--h1-text, #d8e6e1);
+  font-size: 1.4em;
+  font-weight: 700;
+  line-height: 1.3;
+  text-align: center;
+}
+#loginPage .manualLoginForm > div:first-child::after,
+#loginPage .visualLoginForm #divUsers::before {
+  content: "media server";
+  display: block;
+  flex: 1 1 100%;
+  margin: 0.4em 0 1.25em;
+  color: var(--h1-muted, #9fb2ac);
+  font-family: var(--h1-mono, "Cascadia Code", ui-monospace, monospace);
+  font-size: 0.8em;
+  text-align: center;
+}
+
+/* Inputs (Abyss keeps its 12px radius) */
+#loginPage .emby-input {
+  background-color: var(--h1-bg, #06090a);
+  border: 1px solid var(--h1-border, #3d4f4a);
+  color: var(--h1-text, #d8e6e1);
+  font-family: var(--h1-mono, "Cascadia Code", ui-monospace, monospace);
+  caret-color: var(--h1-cyan, #00e5ff);
+}
+#loginPage .emby-input:hover:not(:focus) {
+  border-color: var(--h1-muted, #9fb2ac) !important;
+}
+#loginPage .emby-input:focus {
+  background-color: var(--h1-bg, #06090a);
+  border-color: var(--h1-cyan, #00e5ff) !important;
+  outline: none !important;
+  box-shadow: 0 0 0 1px rgba(0, 229, 255, 0.9), 0 0 0.6em rgba(0, 229, 255, 0.3);
+}
+
+/* Labels: muted, cyan only while their field has focus */
+#loginPage .inputLabel {
+  color: var(--h1-muted, #9fb2ac) !important;
+  font-size: 0.9em;
+}
+#loginPage .inputLabel.inputLabelFocused {
+  color: var(--h1-cyan, #00e5ff) !important;
+}
+
+/* Remember me */
+#loginPage .emby-checkbox:checked + span + .checkboxOutline:not(.multiSelectCheckboxOutline) {
+  background: var(--h1-green, #39ff14);
+  border-color: var(--h1-green, #39ff14);
+}
+#loginPage .emby-checkbox:checked + span + .checkboxOutline .checkboxIcon {
+  color: var(--h1-bg, #06090a);
+}
+
+/* Abyss makes every .button-submit sticky (bottom 24px) with a 48px top margin, which suits long
+   settings forms. On the login card both submit buttons stay in place. */
+#loginPage .button-submit {
+  position: static;
+}
+
+/* Primary "Sign In": solid green, dark text, a soft glow */
+#loginPage .manualLoginForm .button-submit {
+  margin-top: 1.25em !important;
+  background: var(--h1-green, #39ff14) !important;
+  border: 1px solid var(--h1-green, #39ff14) !important;
+  color: var(--h1-bg, #06090a) !important;
+  font-weight: 700;
+  box-shadow: 0 0 1em rgba(57, 255, 20, 0.25);
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#loginPage .manualLoginForm .button-submit:hover,
+#loginPage .manualLoginForm .button-submit:focus-visible {
+  background: var(--h1-green-hi, #7dff63) !important;
+  border-color: var(--h1-green-hi, #7dff63) !important;
+  box-shadow: 0 0 1.2em rgba(57, 255, 20, 0.35);
+}
+
+/* Outline buttons: Cancel, Manual Login (user picker view) and Change Server */
+#loginPage .raised.emby-button.cancel:not(.btnQuick, .btnForgotPassword),
+#loginPage .readOnlyContent .raised.emby-button.btnSelectServer {
+  background: transparent !important;
+  border: 1px solid var(--h1-border, #3d4f4a) !important;
+  color: var(--h1-text, #d8e6e1) !important;
+  font-weight: 600;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#loginPage .raised.emby-button.cancel:not(.btnQuick, .btnForgotPassword):hover,
+#loginPage .raised.emby-button.cancel:not(.btnQuick, .btnForgotPassword):focus-visible,
+#loginPage .readOnlyContent .raised.emby-button.btnSelectServer:hover,
+#loginPage .readOnlyContent .raised.emby-button.btnSelectServer:focus-visible {
+  background: rgba(19, 34, 29, 0.6) !important;
+  border-color: var(--h1-cyan, #00e5ff) !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+}
+
+/* Below the form: full-width rows for Manual Login, Change Server and the disclaimer, with
+   Quick Connect and Forgot Password as small underlined text links side by side in between.
+   Quick Connect stays: TV apps sign in with it. */
+#loginPage .readOnlyContent {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  column-gap: 1.5em;
+  row-gap: 0.25em;
+  margin: 0.75em auto 0 !important;
+}
+#loginPage .readOnlyContent > .btnManual,
+#loginPage .readOnlyContent > .btnSelectServer,
+#loginPage .readOnlyContent > .loginDisclaimerContainer {
+  flex: 1 1 100%;
+}
+#loginPage .readOnlyContent > .hide {
+  display: none !important;
+}
+#loginPage .readOnlyContent .raised.cancel.block.emby-button:is(.btnQuick, .btnForgotPassword) {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 0;
+  margin: 0.25em 0 !important;
+  padding: 0.25em 0.1em;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  color: var(--h1-muted, #9fb2ac) !important;
+  font-size: 0.85em;
+  font-weight: 400;
+  text-decoration: underline;
+  text-decoration-color: rgba(159, 178, 172, 0.5);
+  text-underline-offset: 0.2em;
+}
+#loginPage .readOnlyContent .raised.cancel.block.emby-button:is(.btnQuick, .btnForgotPassword):is(:hover, :focus-visible) {
+  background: none !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+  font-weight: 400;
+  text-decoration-color: currentColor;
+}
+
+/* Login disclaimer: an "or" divider, then the SSO button */
+#loginPage .loginDisclaimerContainer {
+  margin-top: 0.75em;
+}
+#loginPage .loginDisclaimer {
+  color: var(--h1-muted, #9fb2ac);
+  text-align: center;
+}
+#loginPage .loginDisclaimer:empty {
+  display: none;
+}
+#loginPage .loginDisclaimer:has(form)::before {
+  content: "or";
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 0 1em;
+  color: var(--h1-muted, #9fb2ac);
+  font-family: var(--h1-mono, "Cascadia Code", ui-monospace, monospace);
+  font-size: 0.85em;
+  background:
+    linear-gradient(var(--h1-border, #3d4f4a), var(--h1-border, #3d4f4a)) left center / calc(50% - 1.5em) 1px no-repeat,
+    linear-gradient(var(--h1-border, #3d4f4a), var(--h1-border, #3d4f4a)) right center / calc(50% - 1.5em) 1px no-repeat;
+}
+#loginPage .loginDisclaimer form,
+#loginPage .loginDisclaimer p {
+  margin: 0;
+}
+
+/* "Sign in with Authentik": full width, cyan text and border on a dark cyan tint */
+#loginPage .loginDisclaimer .raised.button-submit {
+  width: 100%;
+  margin: 0 !important;
+  background: rgba(0, 229, 255, 0.07) !important;
+  border: 1px solid var(--h1-cyan, #00e5ff) !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+  font-weight: 600;
+  box-shadow: none;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+}
+#loginPage .loginDisclaimer .raised.button-submit:hover,
+#loginPage .loginDisclaimer .raised.button-submit:focus-visible {
+  background: rgba(0, 229, 255, 0.13) !important;
+  color: var(--h1-cyan, #00e5ff) !important;
+  font-weight: 600;
+  box-shadow: 0 0 0.9em rgba(0, 229, 255, 0.25);
+}
