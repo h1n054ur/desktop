@@ -1,6 +1,6 @@
 # h1n054ur desktop
 
-**Install CachyOS, run one script, get this desktop.** A two-screen Hyprland setup with the Noctalia shell in a dark green-to-cyan terminal look, my own bar plugins, a matching login and lock screen, the terminal, and the software and Windows apps I use. Take all of it, or any single piece: every folder here is also its own repository.
+**Install CachyOS, run one script, get this desktop.** A two-screen Hyprland setup with the Noctalia shell in a dark green-to-cyan terminal look, my own bar plugins, a matching login and lock screen, the terminal, and the software and Windows apps I use. Take all of it, or any single piece: most folders here are also published as their own repository, and a few, like `jellyfin-theme`, live only here.
 
 ![Both screens: the left (main) screen and the right screen](docs/desktop.png)
 
@@ -107,7 +107,7 @@ Each folder's README explains its piece on its own, if you'd rather not run the 
 
 ## How this repo works
 
-All work happens here. On every push, CI splits each folder into its own repository with [splitsh-lite](https://github.com/splitsh/lite) and pushes it, so the standalone repos are read-only copies: open issues and pull requests here. [`splits.toml`](splits.toml) lists which folder goes where.
+All work happens here. On every push, CI splits each published folder into its own repository with [splitsh-lite](https://github.com/splitsh/lite) and pushes it, so the standalone repos are read-only copies: open issues and pull requests here. [`splits.toml`](splits.toml) lists which folder goes where.
 
 ## Licence
 
