@@ -245,7 +245,7 @@ img[src*="icon-transparent"] {
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(100% + 5.25em);
+  bottom: calc(100% + 1.25em);
   height: 2.75em;
   max-width: 80vw;
   margin: 0 auto;
