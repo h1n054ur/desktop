@@ -31,14 +31,35 @@ Edit `src/`, never `dist/theme.css`. After every change run `./build.sh` and com
 
 ## Apply and roll back
 
-Both scripts read the server and an admin API key from the environment:
+Both scripts talk to the Jellyfin 10.11 API and need `curl` and `jq`. They read the server and an admin API key from the environment. The key is written to a header file only the current user can read, so it never shows up in a process list.
 
 ```sh
-export JELLYFIN_URL=https://jellyfin.example.com
-export JELLYFIN_API_KEY=...        # Dashboard > API Keys
+export JELLYFIN_URL=https://jellyfin.example.com   # the server itself, see below
+export JELLYFIN_API_KEY=...                         # Dashboard > API Keys
+export JELLYFIN_THEME_BACKUP_DIR=~/jellyfin-branding-backups
+export SERVER_NAME=h1n054ur                         # optional, this is the default
 
-./apply.sh      # saves the current custom CSS to backup/, then sets it to dist/theme.css
-./rollback.sh   # puts the CSS from backup/ back
+./apply.sh --dry-run   # print the plan and sizes, contact nothing
+./apply.sh             # back up, apply, read back
+./rollback.sh          # put the backup back, read back
 ```
 
-The theme goes into the Custom CSS setting on the dashboard's Branding page. A browser reload shows it.
+`apply.sh` does, in order:
+
+1. Runs `build.sh --check` and stops if `dist/theme.css` is stale or fails the lint. It also needs `src/login-disclaimer.html` and `assets/splash.png`.
+2. Saves the current branding (custom CSS, login disclaimer, splash switch), the server name and any custom splash image to `$JELLYFIN_THEME_BACKUP_DIR/pre-apply-<UTC time>.json` (and `-splash.png`). Without that folder it refuses, unless you pass `--no-backup`.
+3. Posts the branding: `CustomCss` from `dist/theme.css`, `LoginDisclaimer` from `src/login-disclaimer.html` (this keeps the "Sign in with Authentik" button), splash screen on.
+4. Uploads `assets/splash.png` to `/Branding/Splashscreen`. Jellyfin wants the image base64 encoded with `Content-Type: image/png`.
+5. Sets the server name: reads the whole server configuration, changes `ServerName` only and writes it back.
+6. Reads everything back and compares sha256 hashes with what it sent. A mismatch exits non-zero. The splash is reported but not failed on a different hash, since the server may re-encode it on the way out.
+
+The branding body is about 440 KB, so `JELLYFIN_URL` should point at Jellyfin directly (or at a proxy that allows a body that size), not through one with a small upload limit.
+
+`rollback.sh [--dry-run] [SOURCE]` restores from either layout:
+
+- a `pre-apply-<time>.json` written by `apply.sh` (the newest one in `$JELLYFIN_THEME_BACKUP_DIR` when no SOURCE is given)
+- a snapshot folder holding `branding.json` (`LoginDisclaimer`, `CustomCss`, `SplashscreenEnabled`), `server-name.txt`, and optionally `custom.css`, `login-disclaimer.html` and `splash.png`. When `$JELLYFIN_THEME_BACKUP_DIR` itself holds a `branding.json`, it is used as such a folder. Loose copies have to match `branding.json` or the script stops.
+
+It posts the branding back, re-uploads the backed-up splash or deletes the custom one when the backup had none, restores the server name and reads it all back the same way.
+
+Backups can hold the login disclaimer, which may name private addresses, so keep `$JELLYFIN_THEME_BACKUP_DIR` outside this repo (see `backup/README.md`). After an apply or a rollback, a browser reload shows the change.
