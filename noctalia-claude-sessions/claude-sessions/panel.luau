@@ -381,7 +381,7 @@ function render()
 
   local header = {
     ui.row({ width = 28, height = 28, radius = 8, fill = "primary/0.15", align = "center", justify = "center" }, {
-      ui.glyph({ name = "brain", size = 16, color = "primary" }),
+      shared.mark("primary", 16),
     }),
     ui.column({ gap = 0 }, {
       ui.label({ text = "Claude Sessions", fontSize = 15, fontWeight = "bold", color = "on_surface" }),

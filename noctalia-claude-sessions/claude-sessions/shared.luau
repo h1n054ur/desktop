@@ -1,5 +1,5 @@
 --!nonstrict
--- Helpers shared by the panel and the launcher provider.
+-- Helpers shared by the bar, the panel and the launcher provider.
 local M = {}
 local PLUGIN = noctalia.pluginDir()
 local HOME = noctalia.getenv("HOME") or ""
@@ -14,6 +14,23 @@ function M.projectPath(p)
 end
 
 function M.workRoot() return WORK and string.sub(WORK, 1, -2) or HOME end
+
+-- The Anthropic mark is an SVG, and images take no theme tint, so it is drawn from a copy of
+-- icons/anthropic.svg with currentColor swapped for the role's palette hex. One copy per role is kept:
+-- writing a new colour for a role removes that role's older copies.
+local MARK = noctalia.readFile(PLUGIN .. "/icons/anthropic.svg") or ""
+function M.mark(role, size)
+  local dir = noctalia.pluginDataDir()
+  local hex = noctalia.getColor(role) or "#888888"
+  local name = `anthropic-{role}-{string.sub(hex, 2)}.svg`
+  if not noctalia.fileExists(`{dir}/{name}`) then
+    for _, f in ipairs(noctalia.listDir(dir) or {}) do
+      if f ~= name and string.sub(f, 1, #role + 11) == `anthropic-{role}-` then noctalia.removeFile(`{dir}/{f}`) end
+    end
+    noctalia.writeFile(`{dir}/{name}`, (string.gsub(MARK, "currentColor", hex)))
+  end
+  return ui.image({ path = `{dir}/{name}`, width = size, height = size })
+end
 
 local function quote(s) return "'" .. string.gsub(s, "'", "'\\''") .. "'" end
 
