@@ -1,0 +1,28 @@
+# Noctalia plugins catalog for the AI usage widgets: one [[plugin]] row per plugin subdirectory
+# (claude-sessions, codex-usage). Each plugin's own plugin.toml stays authoritative.
+
+[[plugin]]
+id = "hani/claude-sessions"
+name = "Claude Sessions"
+version = "1.5.2"
+updated_at = 1792397361
+added_at = 1791402743
+author = "hani (fork of lfdominguez/claude-sessions 1.5.2, MIT)"
+license = "MIT"
+icon = "brain"
+description = "Live Claude Code sessions: what each is doing, which need you, plan limits, and jump to its terminal. Fork with a floating panel."
+plugin_api = 31
+tags = ["bar", "panel", "launcher", "service", "ai", "development", "productivity", "hyprland", "niri", "sway"]
+
+[[plugin]]
+id = "hani/codex-usage"
+name = "Codex Usage"
+version = "0.1.0"
+updated_at = 1792397361
+added_at = 1792397361
+author = "hani"
+license = "MIT"
+icon = "brand-openai"
+description = "ChatGPT plan limits for Codex (5-hour and weekly windows) on the bar, with reset countdowns in a panel."
+plugin_api = 24
+tags = ["bar", "panel", "service", "ai", "development", "productivity"]

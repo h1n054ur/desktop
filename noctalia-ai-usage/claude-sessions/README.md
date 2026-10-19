@@ -120,7 +120,7 @@ also choose which account it runs under:
 | --- | --- |
 | `↑` / `↓` | Select a session |
 | `Enter` | Jump to the selected session |
-| `1`–`9` | Jump straight to that session |
+| `1` to `9` | Jump straight to that session |
 | `n` | New session |
 | `r` | Show or hide Recent |
 | `Esc` | Close |

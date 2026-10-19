@@ -17,10 +17,10 @@ command -v sqlite3 >/dev/null || { echo "sqlite3 not found" >&2; exit 2; }
 cred=$(sqlite3 -readonly "$db" \
   "select value from credential where integration_id = 'openai' order by active desc limit 1" 2>/dev/null)
 token=$(printf '%s' "$cred" | jq -r 'select(.type == "oauth") | .access // empty' 2>/dev/null)
-[ -n "$token" ] || { echo "no OpenCode OpenAI sign-in in $db" >&2; exit 2; }
+[ -n "$token" ] || { echo "no OpenCode OpenAI sign-in in $db; run: opencode auth login openai --method chatgpt-browser" >&2; exit 2; }
 method=$(printf '%s' "$cred" | jq -r '.methodID // empty')
 if [ "$method" = chatgpt-token-sharing ]; then
-  echo "OpenCode's 'Sign in with ChatGPT' cannot read usage; sign in with 'Codex browser (legacy)'" >&2
+  echo "OpenCode's 'Sign in with ChatGPT' cannot read usage; run: opencode auth login openai --method chatgpt-browser" >&2
   exit 2
 fi
 expires=$(printf '%s' "$cred" | jq -r '.expires // 0')
@@ -39,7 +39,7 @@ body=$(printf '%s' "$resp" | sed '$d')
 case "$code" in
   200) ;;
   401) if printf '%s' "$body" | jq -e '.error.type == "rejected_by_access_enforcement"' >/dev/null 2>&1; then
-         echo "this OpenCode sign-in cannot read usage; sign in with 'Codex browser (legacy)'" >&2; exit 2
+         echo "this OpenCode sign-in cannot read usage; run: opencode auth login openai --method chatgpt-browser" >&2; exit 2
        fi
        echo "OAuth token rejected (401)" >&2; exit 3 ;;
   *) echo "usage request failed: HTTP $code" >&2; exit 1 ;;

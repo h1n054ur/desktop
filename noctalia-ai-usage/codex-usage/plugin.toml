@@ -7,7 +7,7 @@ icon = "brand-openai"
 license = "MIT"
 description = "ChatGPT plan limits for Codex (5-hour and weekly windows) on the bar, with reset countdowns in a panel."
 tags = ["bar", "panel", "service", "ai", "development", "productivity"]
-dependencies = ["jq", "curl"]
+dependencies = ["sqlite3", "jq", "curl"]
 
 [[setting]]
 key = "bar_limits"
