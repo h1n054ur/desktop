@@ -68,7 +68,7 @@ It shows one dot per session, sorted by status:
 | Accent color | Working |
 | Grey | Idle |
 
-After the dots it shows your plan usage, colored by how close it is to the limit. By default that's the 5-hour window,
+After the dots it shows your plan usage, yellow from 70% used and red from 90%. By default that's the 5-hour window,
 as in the image above. Choose which windows with **Bar limits**, and a linear bar or a ring with **Bar limits style**.
 Here it shows the 5-hour and 7-day windows as rings, for two accounts:
 
@@ -176,7 +176,9 @@ Open them from **Settings → Plugins → Claude Sessions**.
 | `bar_limits_style` | `select` | `bar` | How each limit is drawn on the bar: a linear `bar` or a circular `ring`. |
 | `config_dirs` | `string_list` | empty | Claude config dirs (`CLAUDE_CONFIG_DIR`) to always show, one per account. Dirs of running sessions are detected automatically. |
 | `account_labels` | `string_map` | empty | Display name per config dir, e.g. `~/.claude-work` → `Work`. *(Advanced)* |
-| `accent_color` | `color` | `#D97757` | Colour of the icon, working dots, limit bars and panel highlights (Claude's coral). Empty uses the theme's primary colour. Limits at 70% and 90% still switch to the theme's warning and error colours. |
+| `accent_color` | `color` | `#D97757` | Colour of the icon, working dots, limit bars and panel highlights (Claude's coral). Empty uses the theme's primary colour. Limits switch to `warn_color` from 70% and `critical_color` from 90%. |
+| `warn_color` | `color` | `#FFC53D` | Colour of a limit from 70% used (yellow). |
+| `critical_color` | `color` | `#FF4D4F` | Colour of a limit from 90% used (red). Empty uses the theme's error colour. |
 | `work_root` | `folder` | empty | Project paths under this folder are shown relative to it (e.g. `~/Work`). Empty shows full paths. |
 | `context_window` | `int` | `1000000` | Context window size in tokens, used to draw the context gauge. |
 

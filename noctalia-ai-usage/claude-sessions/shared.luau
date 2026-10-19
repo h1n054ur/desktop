@@ -16,7 +16,6 @@ end
 function M.workRoot() return WORK and string.sub(WORK, 1, -2) or HOME end
 
 -- The widget's accent: the accent_color setting (Claude's coral by default), or the theme primary when empty.
--- Warning and critical colours (secondary, error) stay theme roles so a near-full limit still stands out.
 local accentSetting = noctalia.string.trim(tostring(noctalia.getConfig("accent_color") or ""))
 local ACCENT = accentSetting ~= "" and accentSetting or "primary"
 
@@ -30,6 +29,18 @@ function M.tint(color, alpha)
 end
 
 function M.accent(alpha) return M.tint(ACCENT, alpha) end
+
+-- Limit colours: warn_color from 70% (yellow by default) and critical_color from 90% (red by default).
+-- Noctalia has no yellow palette role (tertiary is often green or teal) and some themes' error is pink,
+-- so both are hex settings. An empty critical_color uses the theme's error colour.
+local function colorSetting(key, fallback)
+  local v = noctalia.string.trim(tostring(noctalia.getConfig(key) or ""))
+  return v ~= "" and v or fallback
+end
+local WARN = colorSetting("warn_color", "#FFC53D")
+local CRITICAL = colorSetting("critical_color", "error")
+
+function M.severity(pct) return pct >= 90 and CRITICAL or pct >= 70 and WARN or M.accent() end
 
 local function quote(s) return "'" .. string.gsub(s, "'", "'\\''") .. "'" end
 

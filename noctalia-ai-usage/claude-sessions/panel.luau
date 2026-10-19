@@ -322,7 +322,7 @@ local function limitsStrip(limits)
   local meters = {}
   for _, w in ipairs(limits.windows) do
     local p = math.max(0, math.min(100, w.percent)) / 100
-    local color = p >= 0.9 and "error" or p >= 0.7 and "secondary" or shared.accent()
+    local color = shared.severity(p * 100)
     local mins = w.resetsAt and math.floor((w.resetsAt - noctalia.nowMs()) / 60000) or -1
     local left = mins >= 1440 and `{mins // 1440}d {mins % 1440 // 60}h` or mins >= 0 and `{mins // 60}h {mins % 60}m` or nil
     meters[#meters + 1] = ui.column({ gap = 3, flexGrow = 1 }, {

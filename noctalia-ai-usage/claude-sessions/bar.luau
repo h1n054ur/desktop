@@ -38,8 +38,6 @@ local function ring(progress, color)
   return ui.column({ gap = 0 }, rows)
 end
 
-local function severity(p) return p >= 90 and "error" or p >= 70 and "secondary" or shared.accent() end
-
 -- Compact limit readouts for one account: "5h ▬▬▭ 45%" per window picked by the bar_limits setting.
 local function limitNodes(account, vertical)
   local nodes = {}
@@ -47,7 +45,7 @@ local function limitNodes(account, vertical)
   for _, w in ipairs(account.limits.windows or {}) do
     if limitsMode == "all" or (SHOWN[limitsMode] and SHOWN[limitsMode][w.label]) then
       local pct = math.floor(w.percent + 0.5)
-      local color = severity(pct)
+      local color = shared.severity(pct)
       local progress = math.max(0, math.min(100, pct)) / 100
       local gauge = gaugeStyle == "ring" and ring(progress, color)
         or ui.progress({ progress = progress, width = vertical and 16 or 28, height = 4, fill = color, track = "on_surface/0.18" })

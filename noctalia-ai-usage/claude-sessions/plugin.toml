@@ -109,6 +109,20 @@ description_key = "settings.accent_color.description"
 default = "#D97757"
 
 [[setting]]
+key = "warn_color"
+type = "color"
+label_key = "settings.warn_color.label"
+description_key = "settings.warn_color.description"
+default = "#FFC53D"
+
+[[setting]]
+key = "critical_color"
+type = "color"
+label_key = "settings.critical_color.label"
+description_key = "settings.critical_color.description"
+default = "#FF4D4F"
+
+[[setting]]
 key = "work_root"
 type = "folder"
 label_key = "settings.work_root.label"

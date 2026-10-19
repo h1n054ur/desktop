@@ -23,7 +23,6 @@ function M.resetsIn(ms)
 end
 
 -- The widget's accent: the accent_color setting (a greyish white by default), or the theme primary when empty.
--- Warning and critical colours (secondary, error) stay theme roles so a near-full limit still stands out.
 local accentSetting = noctalia.string.trim(tostring(noctalia.getConfig("accent_color") or ""))
 local ACCENT = accentSetting ~= "" and accentSetting or "primary"
 
@@ -38,8 +37,17 @@ end
 
 function M.accent(alpha) return M.tint(ACCENT, alpha) end
 
--- Same thresholds as the Claude widget: 90% and up is red, 70% and up the theme secondary, below that the accent.
-function M.severity(pct) return pct >= 90 and "error" or pct >= 70 and "secondary" or M.accent() end
+-- Limit colours: warn_color from 70% (yellow by default) and critical_color from 90% (red by default).
+-- Noctalia has no yellow palette role (tertiary is often green or teal) and some themes' error is pink,
+-- so both are hex settings. An empty critical_color uses the theme's error colour.
+local function colorSetting(key, fallback)
+  local v = noctalia.string.trim(tostring(noctalia.getConfig(key) or ""))
+  return v ~= "" and v or fallback
+end
+local WARN = colorSetting("warn_color", "#FFC53D")
+local CRITICAL = colorSetting("critical_color", "error")
+
+function M.severity(pct) return pct >= 90 and CRITICAL or pct >= 70 and WARN or M.accent() end
 
 -- limits.sh exit codes (see service.luau) -> what to tell the user.
 M.ERRORS = {
