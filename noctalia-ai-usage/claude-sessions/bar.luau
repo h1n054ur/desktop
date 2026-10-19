@@ -6,7 +6,7 @@ local style = noctalia.getConfig("bar_style") or "dots"
 local limitsMode = noctalia.getConfig("bar_limits") or "5h" -- "5h" | "7d" | "5h_7d" | "all" | "none"
 local gaugeStyle = noctalia.getConfig("bar_limits_style") or "bar" -- "bar" | "ring"
 local SHOWN = { ["5h"] = { ["5h"] = true }, ["7d"] = { ["7d"] = true }, ["5h_7d"] = { ["5h"] = true, ["7d"] = true } }
-local COLOR = { waiting = "error", busy = "primary", idle = "on_surface_variant/0.45" }
+local COLOR = { waiting = "error", busy = shared.accent(), idle = "on_surface_variant/0.45" }
 local MAX_DOTS = 8
 
 local function resetsIn(ms)
@@ -38,7 +38,7 @@ local function ring(progress, color)
   return ui.column({ gap = 0 }, rows)
 end
 
-local function severity(p) return p >= 90 and "error" or p >= 70 and "secondary" or "primary" end
+local function severity(p) return p >= 90 and "error" or p >= 70 and "secondary" or shared.accent() end
 
 -- Compact limit readouts for one account: "5h ▬▬▭ 45%" per window picked by the bar_limits setting.
 local function limitNodes(account, vertical)
@@ -79,8 +79,8 @@ local function render()
 
   local vertical = barWidget.isVertical()
   local children = {
-    waiting > 0 and ui.glyph({ name = "bell-ringing", size = 15, color = "error" })
-      or shared.mark(busy > 0 and "primary" or "on_surface_variant", 15),
+    ui.glyph({ name = waiting > 0 and "bell-ringing" or "brain", size = 15,
+      color = waiting > 0 and "error" or busy > 0 and shared.accent() or "on_surface_variant" }),
   }
   local function divider()
     children[#children + 1] = ui.box({ width = vertical and 10 or 1, height = vertical and 1 or 10, fill = "outline/0.6" })
@@ -90,8 +90,8 @@ local function render()
   local function accountTag(account)
     if not multi then return end
     if #children > 1 then divider() end
-    children[#children + 1] = ui.row({ paddingH = 5, paddingV = 1, radius = 6, fill = "secondary/0.18", align = "center" }, {
-      ui.label({ text = account.label, fontSize = 9, fontWeight = "bold", color = "secondary" }),
+    children[#children + 1] = ui.row({ paddingH = 5, paddingV = 1, radius = 6, fill = shared.accent(0.18), align = "center" }, {
+      ui.label({ text = account.label, fontSize = 9, fontWeight = "bold", color = shared.accent() }),
     })
   end
   local function addLimits(account)
@@ -105,7 +105,7 @@ local function render()
   if style == "counts" or #sessions > MAX_DOTS then
     if waiting > 0 then children[#children + 1] = ui.label({ text = tostring(waiting), fontSize = 11, fontWeight = "bold", color = "error" }) end
     if #sessions > 0 then
-      children[#children + 1] = ui.label({ text = `{busy}/{#sessions}`, fontSize = 11, color = busy > 0 and "primary" or "on_surface_variant" })
+      children[#children + 1] = ui.label({ text = `{busy}/{#sessions}`, fontSize = 11, color = busy > 0 and shared.accent() or "on_surface_variant" })
     end
     for _, a in ipairs(accounts) do
       if multi and #limitNodes(a, vertical) > 0 then accountTag(a) end
