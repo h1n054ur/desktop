@@ -6,8 +6,8 @@ local style = noctalia.getConfig("bar_style") or "dots" -- "dots" | "counts"
 local limitsMode = noctalia.getConfig("bar_limits") or "5h" -- "5h" | "7d" | "5h_7d" | "all" | "none"
 local gaugeStyle = noctalia.getConfig("bar_limits_style") or "bar" -- "bar" | "ring"
 local SHOWN = { ["5h"] = { ["5h"] = true }, ["7d"] = { ["7d"] = true }, ["5h_7d"] = { ["5h"] = true, ["7d"] = true } }
--- Same session colours as the Claude widget.
-local COLOR = { waiting = "error", busy = "primary", idle = "on_surface_variant/0.45" }
+-- Same session colours as the Claude widget, with working sessions in the accent.
+local COLOR = { waiting = "error", busy = shared.accent(), idle = "on_surface_variant/0.45" }
 local MAX_DOTS = 8
 
 -- Noctalia has no circular progress control and images can't follow the theme palette, so the ring
@@ -70,14 +70,14 @@ local function render()
   local failing = limits.error ~= nil and #(limits.windows or {}) == 0
   local children = {
     waiting > 0 and ui.glyph({ name = "bell-ringing", size = 15, color = "error" })
-      or ui.glyph({ name = shared.ICON, size = 15, color = failing and "error" or busy > 0 and "primary" or "on_surface_variant" }),
+      or ui.glyph({ name = shared.ICON, size = 15, color = failing and "error" or busy > 0 and shared.accent() or "on_surface_variant" }),
   }
   -- Sessions first (one dot each, sorted waiting > busy > idle, or counts), then the limits.
   local marks = {}
   if style == "counts" or #sessions > MAX_DOTS then
     if waiting > 0 then marks[#marks + 1] = ui.label({ text = tostring(waiting), fontSize = 11, fontWeight = "bold", color = "error" }) end
     if #sessions > 0 then
-      marks[#marks + 1] = ui.label({ text = `{busy}/{#sessions}`, fontSize = 11, color = busy > 0 and "primary" or "on_surface_variant" })
+      marks[#marks + 1] = ui.label({ text = `{busy}/{#sessions}`, fontSize = 11, color = busy > 0 and shared.accent() or "on_surface_variant" })
     end
   else
     for _, s in ipairs(sessions) do

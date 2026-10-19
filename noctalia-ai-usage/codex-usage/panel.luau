@@ -4,10 +4,10 @@ local shared = require("./shared.luau")
 local limits = noctalia.state.get("limits") or {}
 local sessions = noctalia.state.get("sessions") or {}
 
--- Same groups and colours as the Claude panel.
+-- Same groups and colours as the Claude panel, with Working in the accent.
 local GROUPS = {
   { status = "waiting", title = "Needs you", glyph = "bell-ringing", color = "error" },
-  { status = "busy", title = "Working", glyph = "loader-2", color = "primary" },
+  { status = "busy", title = "Working", glyph = "loader-2", color = shared.accent() },
   { status = "idle", title = "Idle", glyph = "circle-check", color = "on_surface_variant" },
 }
 local LOOK = {}
@@ -39,7 +39,7 @@ local function chip(glyph, text)
 end
 
 local function badge(glyph, color)
-  return ui.column({ width = 34, height = 34, radius = 9, fill = color .. "/0.15", align = "center", justify = "center" }, {
+  return ui.column({ width = 34, height = 34, radius = 9, fill = shared.tint(color, 0.15), align = "center", justify = "center" }, {
     ui.glyph({ name = glyph, size = 18, color = color }),
   })
 end
@@ -76,7 +76,7 @@ local function sessionCard(s)
   if s.status == "waiting" then
     body[#body + 1] = iconLine("alert-circle", s.waitingFor ~= "" and s.waitingFor or "Needs your input", "error", 12)
   elseif s.status == "busy" and tool then
-    body[#body + 1] = iconLine(TOOL_GLYPH[string.lower(tool)] or "tool", tool .. (toolArg and ("  " .. toolArg) or ""), "primary", 12)
+    body[#body + 1] = iconLine(TOOL_GLYPH[string.lower(tool)] or "tool", tool .. (toolArg and ("  " .. toolArg) or ""), shared.accent(), 12)
   end
   body[#body + 1] = ui.row({ gap = 4, align = "center" }, {
     chip("terminal", s.terminal or "no terminal open"),
@@ -130,8 +130,8 @@ end
 
 function render()
   local header = {
-    ui.row({ width = 28, height = 28, radius = 8, fill = "primary/0.15", align = "center", justify = "center" }, {
-      ui.glyph({ name = shared.ICON, size = 16, color = "primary" }),
+    ui.row({ width = 28, height = 28, radius = 8, fill = shared.accent(0.15), align = "center", justify = "center" }, {
+      ui.glyph({ name = shared.ICON, size = 16, color = shared.accent() }),
     }),
     ui.column({ gap = 0 }, {
       ui.label({ text = "Codex Usage", fontSize = 15, fontWeight = "bold", color = "on_surface" }),

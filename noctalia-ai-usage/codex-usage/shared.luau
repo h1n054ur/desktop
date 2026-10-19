@@ -22,8 +22,24 @@ function M.resetsIn(ms)
   return left >= 1440 and `{left // 1440}d {left % 1440 // 60}h` or `{left // 60}h {left % 60}m`
 end
 
--- Same thresholds as the Claude widget: 90% and up is red, 70% and up amber.
-function M.severity(pct) return pct >= 90 and "error" or pct >= 70 and "secondary" or "primary" end
+-- The widget's accent: the accent_color setting (a greyish white by default), or the theme primary when empty.
+-- Warning and critical colours (secondary, error) stay theme roles so a near-full limit still stands out.
+local accentSetting = noctalia.string.trim(tostring(noctalia.getConfig("accent_color") or ""))
+local ACCENT = accentSetting ~= "" and accentSetting or "primary"
+
+-- A colour at some alpha: "role/0.15" for palette roles, an alpha byte on "#rrggbb" or "#rrggbbaa" hex.
+-- Hex in other lengths is returned as is.
+function M.tint(color, alpha)
+  if alpha == nil then return color end
+  if string.sub(color, 1, 1) ~= "#" then return `{color}/{alpha}` end
+  if #color ~= 7 and #color ~= 9 then return color end
+  return string.sub(color, 1, 7) .. string.format("%02x", math.floor(alpha * 255 + 0.5))
+end
+
+function M.accent(alpha) return M.tint(ACCENT, alpha) end
+
+-- Same thresholds as the Claude widget: 90% and up is red, 70% and up the theme secondary, below that the accent.
+function M.severity(pct) return pct >= 90 and "error" or pct >= 70 and "secondary" or M.accent() end
 
 -- limits.sh exit codes (see service.luau) -> what to tell the user.
 M.ERRORS = {

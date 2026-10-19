@@ -77,6 +77,13 @@ options = [
 ]
 visible_when = { key = "bar_limits", values = ["5h", "7d", "5h_7d", "all"] }
 
+[[setting]]
+key = "accent_color"
+type = "color"
+label_key = "settings.accent_color.label"
+description_key = "settings.accent_color.description"
+default = "#E6E6E6"
+
 [[service]]
 id = "poller"
 entry = "service.luau"
