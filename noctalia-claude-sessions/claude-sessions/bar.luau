@@ -1,4 +1,5 @@
 --!nonstrict
+local shared = require("./shared.luau")
 local sessions = noctalia.state.get("sessions") or {}
 local accounts = noctalia.state.get("accounts") or {}
 local style = noctalia.getConfig("bar_style") or "dots"
@@ -78,8 +79,8 @@ local function render()
 
   local vertical = barWidget.isVertical()
   local children = {
-    ui.glyph({ name = waiting > 0 and "bell-ringing" or "brain", size = 15,
-      color = waiting > 0 and "error" or busy > 0 and "primary" or "on_surface_variant" }),
+    waiting > 0 and ui.glyph({ name = "bell-ringing", size = 15, color = "error" })
+      or shared.mark(busy > 0 and "primary" or "on_surface_variant", 15),
   }
   local function divider()
     children[#children + 1] = ui.box({ width = vertical and 10 or 1, height = vertical and 1 or 10, fill = "outline/0.6" })
