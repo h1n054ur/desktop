@@ -2,6 +2,23 @@
 local shared = require("./shared.luau")
 
 local limits = noctalia.state.get("limits") or {}
+local sessions = noctalia.state.get("sessions") or {}
+
+-- Same groups and colours as the Claude panel.
+local GROUPS = {
+  { status = "waiting", title = "Needs you", glyph = "bell-ringing", color = "error" },
+  { status = "busy", title = "Working", glyph = "loader-2", color = "primary" },
+  { status = "idle", title = "Idle", glyph = "circle-check", color = "on_surface_variant" },
+}
+local LOOK = {}
+for _, g in ipairs(GROUPS) do LOOK[g.status] = g end
+
+-- OpenCode tool names (sessions.sh gives "name: detail").
+local TOOL_GLYPH = {
+  shell = "terminal-2", bash = "terminal-2", edit = "pencil", patch = "pencil", write = "file-plus", read = "file-text",
+  grep = "search", glob = "folder-search", list = "folder", task = "robot", webfetch = "world", websearch = "world-search",
+  todowrite = "list-check", skill = "sparkles", question = "help-circle",
+}
 
 local function iconLine(glyph, text, color, size)
   return ui.row({ gap = 6, align = "center" }, {
@@ -12,6 +29,79 @@ end
 
 local function action(glyph, tooltip, fn, variant)
   return ui.button({ glyph = glyph, tooltip = tooltip, variant = variant or "ghost", controlSize = "sm", onClick = fn })
+end
+
+local function chip(glyph, text)
+  return ui.row({ gap = 4, align = "center", paddingH = 6, paddingV = 2, radius = 6, fill = "on_surface/0.06" }, {
+    ui.glyph({ name = glyph, size = 11, color = "on_surface_variant" }),
+    ui.label({ text = text, fontSize = 10, color = "on_surface_variant" }),
+  })
+end
+
+local function badge(glyph, color)
+  return ui.column({ width = 34, height = 34, radius = 9, fill = color .. "/0.15", align = "center", justify = "center" }, {
+    ui.glyph({ name = glyph, size = 18, color = color }),
+  })
+end
+
+local function sectionHeader(text, count, color)
+  return ui.row({ gap = 6, align = "center", paddingH = 2 }, {
+    ui.label({ text = string.upper(text), fontSize = 10, fontWeight = "bold", color = color }),
+    ui.label({ text = tostring(count), fontSize = 10, color = "on_surface_variant" }),
+    ui.separator({ orientation = "horizontal", color = "outline", opacity = 0.2, flexGrow = 1 }),
+  })
+end
+
+-- One OpenCode session, laid out like the Claude panel's live card. Click jumps to its TUI's terminal
+-- when sessions.sh found one (pid); the copy button gives the command that reopens it.
+local function sessionCard(s)
+  local look = LOOK[s.status] or LOOK.idle
+  local tool = s.tool ~= "" and string.match(s.tool, "^([^:]+)") or nil
+  local toolArg = s.tool ~= "" and string.match(s.tool, "^[^:]+: (.*)$") or nil
+  local body = {
+    ui.row({ gap = 8, align = "center" }, {
+      ui.label({ text = s.title, fontSize = 13, fontWeight = "bold", color = "on_surface", maxLines = 1, flexGrow = 1 }),
+      ui.label({ text = (s.since or 0) > 0 and shared.ago(s.since) or "", fontSize = 11, color = look.color }),
+    }),
+    ui.row({ gap = 5, align = "center" }, {
+      ui.glyph({ name = "folder", size = 12, color = "on_surface_variant" }),
+      ui.label({ text = shared.projectPath(s.cwd or ""), fontSize = 11, color = "on_surface_variant", maxLines = 1, flexGrow = 1 }),
+      ui.button({ glyph = "copy", tooltip = "Copy resume command", variant = "ghost", controlSize = "sm", height = 24, width = 26,
+        glyphSize = 13, onClick = function()
+          noctalia.copyToClipboard(shared.resumeCommand(s.cwd, s.id), "text/plain")
+          noctalia.notify("Copied", shared.resumeCommand(s.cwd, s.id))
+        end }),
+    }),
+  }
+  if s.status == "waiting" then
+    body[#body + 1] = iconLine("alert-circle", s.waitingFor ~= "" and s.waitingFor or "Needs your input", "error", 12)
+  elseif s.status == "busy" and tool then
+    body[#body + 1] = iconLine(TOOL_GLYPH[string.lower(tool)] or "tool", tool .. (toolArg and ("  " .. toolArg) or ""), "primary", 12)
+  end
+  body[#body + 1] = ui.row({ gap = 4, align = "center" }, {
+    chip("terminal", s.terminal or "no terminal open"),
+  })
+  return ui.column({
+    key = "session:" .. s.id, gap = 4, padding = 10, radius = 10,
+    opacity = s.status == "idle" and 0.7 or 1,
+    fill = "on_surface/0.04",
+    border = s.status == "waiting" and "error/0.5" or nil,
+    borderWidth = s.status == "waiting" and 1 or nil,
+    onClick = s.pid and function() shared.focus(s.pid); panel.close() end or nil,
+  }, {
+    ui.row({ gap = 12, align = "start" }, { badge(look.glyph, look.color), ui.column({ gap = 5, flexGrow = 1 }, body) }),
+  })
+end
+
+local function sessionList(content)
+  for _, g in ipairs(GROUPS) do
+    local list = {}
+    for _, s in ipairs(sessions) do if (LOOK[s.status] and s.status or "idle") == g.status then list[#list + 1] = s end end
+    if #list > 0 then
+      content[#content + 1] = sectionHeader(g.title, #list, g.color)
+      for _, s in ipairs(list) do content[#content + 1] = sessionCard(s) end
+    end
+  end
 end
 
 -- Plan usage windows (5h / 7d), one meter each, laid out like the Claude panel's limits strip.
@@ -72,20 +162,29 @@ function render()
     })
   end
 
+  if #sessions > 0 then
+    sessionList(content)
+  else
+    content[#content + 1] = iconLine("moon", "No OpenCode sessions open")
+  end
+
   local updated = limits.updated and `Last updated {shared.ago(limits.updated)} ago` or "Not updated yet"
   panel.render(ui.column({ gap = 10, flexGrow = 1 }, {
     ui.row({ gap = 8, align = "center" }, header),
     ui.scroll({ flexGrow = 1, gap = 8 }, content),
     ui.row({ gap = 12, align = "center" }, {
       iconLine("clock", updated),
-      iconLine("pointer", "Right-click the bar to refresh"),
+      iconLine("pointer", "Click a session to jump to it"),
+      iconLine("refresh", "Right-click the bar to refresh"),
     }),
   }))
 end
 
 noctalia.state.watch("limits", function(v) limits = v or {}; render() end)
+noctalia.state.watch("sessions", function(v) sessions = v or {}; render() end)
 function onOpen(_ctx)
   limits = noctalia.state.get("limits") or {}
+  sessions = noctalia.state.get("sessions") or {}
   noctalia.state.set("command", { action = "refresh", at = noctalia.nowMs() })
   panel.setWantsSecondTicks(true)
   render()

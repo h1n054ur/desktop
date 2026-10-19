@@ -13,6 +13,27 @@
       "bar": "Linear bar",
       "label": "Bar limits style",
       "ring": "Ring"
+    },
+    "bar_style": {
+      "counts": "Counts",
+      "dots": "One dot per session",
+      "label": "Bar style"
+    },
+    "finished_min_minutes": {
+      "description": "Only notify about turns that took at least this long.",
+      "label": "Minimum turn length (minutes)"
+    },
+    "hide_idle_hours": {
+      "description": "Hide live sessions idle longer than this. 0 shows all.",
+      "label": "Hide sessions idle for (hours)"
+    },
+    "notify_finished": {
+      "description": "Desktop notification when a session goes from working to idle.",
+      "label": "Notify when a long turn finishes"
+    },
+    "notify_waiting": {
+      "description": "Desktop notification when a session starts waiting for input or a permission.",
+      "label": "Notify when a session needs you"
     }
   }
 }

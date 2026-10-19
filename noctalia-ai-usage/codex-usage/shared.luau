@@ -1,6 +1,8 @@
 --!nonstrict
 -- Helpers shared by the bar widget and the panel.
 local M = {}
+local PLUGIN = noctalia.pluginDir()
+local HOME = noctalia.getenv("HOME") or ""
 
 -- One place for the icon (also `icon` in plugin.toml).
 M.ICON = "brand-openai"
@@ -36,5 +38,18 @@ function M.errorText(err)
   if err.kind == "failed" and err.detail and err.detail ~= "" then text = `{text}: {err.detail}` end
   return text
 end
+
+-- Paths under the home folder show as ~/...
+function M.projectPath(p)
+  if HOME ~= "" and (p == HOME or string.sub(p, 1, #HOME + 1) == HOME .. "/") then return "~" .. string.sub(p, #HOME + 1) end
+  return p
+end
+
+local function quote(s) return "'" .. string.gsub(s, "'", "'\\''") .. "'" end
+
+-- Brings the terminal of the OpenCode TUI with this pid to the front (focus.sh, copied from claude-sessions).
+function M.focus(pid) noctalia.runAsync({ PLUGIN .. "/focus.sh", tostring(pid) }) end
+
+function M.resumeCommand(cwd, id) return `cd {quote(cwd)} && opencode -s {id}` end
 
 return M

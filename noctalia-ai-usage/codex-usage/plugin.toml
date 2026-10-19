@@ -1,13 +1,56 @@
 id = "hani/codex-usage"
 name = "Codex Usage"
-version = "0.1.0"
+version = "0.2.0"
 plugin_api = 24
 author = "hani"
 icon = "brand-openai"
 license = "MIT"
-description = "ChatGPT plan limits for Codex (5-hour and weekly windows) on the bar, with reset countdowns in a panel."
+description = "ChatGPT plan limits for Codex (5-hour and weekly windows) and live OpenCode sessions on the bar, with a panel to jump to each session."
 tags = ["bar", "panel", "service", "ai", "development", "productivity"]
-dependencies = ["sqlite3", "jq", "curl"]
+dependencies = ["sqlite3", "jq", "curl", "opencode", "kitty", "hyprctl", "niri", "swaymsg"]
+
+[[setting]]
+key = "notify_waiting"
+type = "bool"
+label_key = "settings.notify_waiting.label"
+description_key = "settings.notify_waiting.description"
+default = true
+
+[[setting]]
+key = "notify_finished"
+type = "bool"
+label_key = "settings.notify_finished.label"
+description_key = "settings.notify_finished.description"
+default = true
+
+[[setting]]
+key = "finished_min_minutes"
+type = "int"
+label_key = "settings.finished_min_minutes.label"
+description_key = "settings.finished_min_minutes.description"
+default = 2
+min = 0
+max = 240
+visible_when = { key = "notify_finished", values = ["true"] }
+
+[[setting]]
+key = "hide_idle_hours"
+type = "int"
+label_key = "settings.hide_idle_hours.label"
+description_key = "settings.hide_idle_hours.description"
+default = 0
+min = 0
+max = 720
+
+[[setting]]
+key = "bar_style"
+type = "select"
+label_key = "settings.bar_style.label"
+default = "dots"
+options = [
+  { value = "dots", label_key = "settings.bar_style.dots" },
+  { value = "counts", label_key = "settings.bar_style.counts" },
+]
 
 [[setting]]
 key = "bar_limits"
@@ -46,7 +89,7 @@ entry = "bar.luau"
 id = "panel"
 entry = "panel.luau"
 width = 560
-height = 300
+height = 520
 placement = "floating"
 position = "auto"
 open_near_click = true
