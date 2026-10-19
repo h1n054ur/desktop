@@ -41,7 +41,7 @@ Noctalia's launcher uses compact rows in the same font (this setup uses [fuzzel]
 
 ## Install
 
-1. Install the plugins the bar uses: [noctalia-glow-plugins](https://github.com/h1n054ur/noctalia-glow-plugins) and, for the Claude widget, [noctalia-claude-sessions](https://github.com/h1n054ur/noctalia-claude-sessions).
+1. Install the plugins the bar uses: [noctalia-glow-plugins](https://github.com/h1n054ur/noctalia-glow-plugins) and, for the Claude and Codex widgets, [noctalia-ai-usage](https://github.com/h1n054ur/noctalia-ai-usage).
 2. Clone this repo and link the palette and icons:
 
 ```sh
@@ -63,7 +63,7 @@ files = [ "~/noctalia-h1n054ur/noctalia/h1n054ur.toml" ]
 ```toml
 [bar.default.monitor.right]
 match = "SERIAL-OF-YOUR-RIGHT-SCREEN"
-start = [ "workspaces", "claude" ]
+start = [ "workspaces", "claude", "codex" ]
 center = [ "gw_title" ]
 end = [ "tray" ]
 ```
