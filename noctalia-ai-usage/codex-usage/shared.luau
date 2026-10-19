@@ -25,7 +25,7 @@ function M.severity(pct) return pct >= 90 and "error" or pct >= 70 and "secondar
 
 -- limits.sh exit codes (see service.luau) -> what to tell the user.
 M.ERRORS = {
-  not_signed_in = "Not signed in to ChatGPT in OpenCode (run `opencode auth login`)",
+  not_signed_in = "Not signed in to ChatGPT in OpenCode (run `opencode auth login openai --method chatgpt-browser`)",
   expired = "ChatGPT sign-in expired (open OpenCode to refresh it)",
   failed = "Could not fetch Codex limits",
 }

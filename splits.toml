@@ -18,8 +18,8 @@ folder = "noctalia-glow-plugins"
 repo = "noctalia-glow-plugins"
 
 [[split]]
-folder = "noctalia-claude-sessions"
-repo = "noctalia-claude-sessions"
+folder = "noctalia-ai-usage"
+repo = "noctalia-ai-usage"
 
 [[split]]
 folder = "quickshell"

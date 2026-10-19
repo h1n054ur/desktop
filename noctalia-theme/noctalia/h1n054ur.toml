@@ -5,8 +5,8 @@
 #   files = [ "~/desktop/noctalia-theme/noctalia/h1n054ur.toml" ]
 #
 # Anything set in config.toml itself wins over this file (per-screen layouts, location, idle, ...).
-# Needs the glow plugins (github.com/h1n054ur/noctalia-glow-plugins) and, for the "claude" widget,
-# github.com/h1n054ur/noctalia-claude-sessions.
+# Needs the glow plugins (github.com/h1n054ur/noctalia-glow-plugins) and, for the "claude" and "codex"
+# widgets, github.com/h1n054ur/noctalia-ai-usage.
 
 [theme]
 mode = "dark"
@@ -198,3 +198,6 @@ capsule = true
 
 [widget.claude]
 type = "hani/claude-sessions:bar"
+
+[widget.codex]
+type = "hani/codex-usage:bar"
