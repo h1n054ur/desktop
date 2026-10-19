@@ -1,7 +1,7 @@
 id = "hani/claude-sessions"
 name = "Claude Sessions"
 version = "1.5.2"
-plugin_api = 24
+plugin_api = 31
 author = "hani (fork of lfdominguez/claude-sessions 1.5.2, MIT)"
 icon = "brain"
 license = "MIT"

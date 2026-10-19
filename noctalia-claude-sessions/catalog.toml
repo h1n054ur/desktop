@@ -11,5 +11,5 @@ author = "hani (fork of lfdominguez/claude-sessions 1.5.2, MIT)"
 license = "MIT"
 icon = "brain"
 description = "Live Claude Code sessions: what each is doing, which need you, plan limits, and jump to its terminal. Fork with a floating panel."
-plugin_api = 24
+plugin_api = 31
 tags = ["bar", "panel", "launcher", "service", "ai", "development", "productivity", "hyprland", "niri", "sway"]

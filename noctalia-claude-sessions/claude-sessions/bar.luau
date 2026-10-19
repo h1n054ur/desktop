@@ -37,6 +37,16 @@ local function ring(progress, color)
   return ui.column({ gap = 0 }, rows)
 end
 
+-- The Anthropic mark is an SVG, and images take no theme tint, so it is drawn from a copy of
+-- icons/anthropic.svg with currentColor swapped for the role's palette hex (one cached file per colour).
+local MARK = noctalia.readFile("icons/anthropic.svg") or ""
+local function mark(role)
+  local hex = noctalia.getColor(role) or "#888888"
+  local path = `{noctalia.pluginDataDir()}/anthropic-{string.sub(hex, 2)}.svg`
+  if not noctalia.fileExists(path) then noctalia.writeFile(path, (string.gsub(MARK, "currentColor", hex))) end
+  return ui.image({ path = path, width = 15, height = 15 })
+end
+
 local function severity(p) return p >= 90 and "error" or p >= 70 and "secondary" or "primary" end
 
 -- Compact limit readouts for one account: "5h ▬▬▭ 45%" per window picked by the bar_limits setting.
@@ -78,8 +88,8 @@ local function render()
 
   local vertical = barWidget.isVertical()
   local children = {
-    ui.glyph({ name = waiting > 0 and "bell-ringing" or "brain", size = 15,
-      color = waiting > 0 and "error" or busy > 0 and "primary" or "on_surface_variant" }),
+    waiting > 0 and ui.glyph({ name = "bell-ringing", size = 15, color = "error" })
+      or mark(busy > 0 and "primary" or "on_surface_variant"),
   }
   local function divider()
     children[#children + 1] = ui.box({ width = vertical and 10 or 1, height = vertical and 1 or 10, fill = "outline/0.6" })
