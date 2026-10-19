@@ -1,5 +1,9 @@
 {
   "settings": {
+    "accent_color": {
+      "description": "Colour for the icon, working dots, limit bars and panel highlights. A greyish white by default. Empty uses the theme's primary colour. Limits near full still turn to the theme's warning and error colours.",
+      "label": "Accent colour"
+    },
     "bar_limits": {
       "all": "All windows",
       "description": "Plan usage shown on the bar widget, next to the icon.",

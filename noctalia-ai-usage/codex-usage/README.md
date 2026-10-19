@@ -51,6 +51,7 @@ Requirements: OpenCode signed in as above, `sqlite3`, `jq` and `curl`. Jumping t
 | Bar style | One dot per session | Dots, or counts (`waiting` and `working/open`). More than 8 sessions always show as counts |
 | Bar limits | 5-hour window | Which windows the bar shows: 5-hour, 7-day, both, all, or hidden (icon only) |
 | Bar limits style | Linear bar | A small bar or a ring for each window |
+| Accent colour | `#E6E6E6` | Colour of the icon, working dots, limit bars and panel highlights (a greyish white). Empty uses the theme's primary colour. Limits at 70% and 90% still switch to the theme's warning and error colours |
 
 ## What it reads and sends
 
