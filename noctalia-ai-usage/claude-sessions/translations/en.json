@@ -1,7 +1,7 @@
 {
   "settings": {
     "accent_color": {
-      "description": "Colour for the icon, working dots, limit bars and panel highlights. Claude's coral by default. Empty uses the theme's primary colour. Limits near full still turn to the theme's warning and error colours.",
+      "description": "Colour for the icon, working dots, limit bars and panel highlights. Claude's coral by default. Empty uses the theme's primary colour. Limits near full switch to the warning and critical colours below.",
       "label": "Accent colour"
     },
     "account_labels": {
@@ -35,6 +35,10 @@
       "description": "Used to draw the context gauge.",
       "label": "Context window (tokens)"
     },
+    "critical_color": {
+      "description": "Colour of a limit from 90% used. Red by default. Empty uses the theme's error colour.",
+      "label": "Critical colour"
+    },
     "finished_min_minutes": {
       "description": "Only notify about turns that took at least this long.",
       "label": "Minimum turn length (minutes)"
@@ -54,6 +58,10 @@
     "recent_count": {
       "description": "Closed sessions listed in the Recent section and the launcher. 0 disables it.",
       "label": "Recent sessions to show"
+    },
+    "warn_color": {
+      "description": "Colour of a limit from 70% used. Yellow by default.",
+      "label": "Warning colour"
     },
     "work_root": {
       "description": "Project paths under this folder are shown relative to it. Empty shows full paths.",

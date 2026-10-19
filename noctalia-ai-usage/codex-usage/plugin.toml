@@ -84,6 +84,20 @@ label_key = "settings.accent_color.label"
 description_key = "settings.accent_color.description"
 default = "#E6E6E6"
 
+[[setting]]
+key = "warn_color"
+type = "color"
+label_key = "settings.warn_color.label"
+description_key = "settings.warn_color.description"
+default = "#FFC53D"
+
+[[setting]]
+key = "critical_color"
+type = "color"
+label_key = "settings.critical_color.label"
+description_key = "settings.critical_color.description"
+default = "#FF4D4F"
+
 [[service]]
 id = "poller"
 entry = "service.luau"

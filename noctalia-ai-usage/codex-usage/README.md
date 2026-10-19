@@ -6,7 +6,7 @@ It reads the ChatGPT sign-in that OpenCode already keeps, so there is nothing ex
 
 ## What it shows
 
-- On the bar: the OpenAI icon, one dot per open OpenCode session, then a meter and a percentage per window. Dots use the Claude widget's colours: red when a session waits for you (a permission or a question), accent while it works, grey when idle. The icon turns into a red bell while any session waits. The limit colour turns amber from 70% and red from 90%.
+- On the bar: the OpenAI icon, one dot per open OpenCode session, then a meter and a percentage per window. Dots use the Claude widget's colours: red when a session waits for you (a permission or a question), accent while it works, grey when idle. The icon turns into a red bell while any session waits. The limit colour turns yellow from 70% and red from 90%.
 - Hover: each session and what it is doing, every window with its reset countdown, and when the numbers were last fetched.
 - Click: a floating panel with one meter per window, the reset times, your plan name (Plus, Pro and so on), any error, and the open sessions grouped as Needs you, Working and Idle. Each card shows the title, the project folder, how long ago it changed, and the tool it is running or what it is waiting for. Clicking a card jumps to the terminal running that session (the exact tab in kitty). The copy button gives the command that reopens it (`opencode -s <id>`).
 - Right-click: fetch fresh numbers now (at most once every 30 seconds).
@@ -51,7 +51,9 @@ Requirements: OpenCode signed in as above, `sqlite3`, `jq` and `curl`. Jumping t
 | Bar style | One dot per session | Dots, or counts (`waiting` and `working/open`). More than 8 sessions always show as counts |
 | Bar limits | 5-hour window | Which windows the bar shows: 5-hour, 7-day, both, all, or hidden (icon only) |
 | Bar limits style | Linear bar | A small bar or a ring for each window |
-| Accent colour | `#E6E6E6` | Colour of the icon, working dots, limit bars and panel highlights (a greyish white). Empty uses the theme's primary colour. Limits at 70% and 90% still switch to the theme's warning and error colours |
+| Accent colour | `#E6E6E6` | Colour of the icon, working dots, limit bars and panel highlights (a greyish white). Empty uses the theme's primary colour. Limits switch to the warning colour from 70% and the critical colour from 90% |
+| Warning colour | `#FFC53D` | Colour of a limit from 70% used (yellow) |
+| Critical colour | `#FF4D4F` | Colour of a limit from 90% used (red). Empty uses the theme's error colour |
 
 ## What it reads and sends
 
