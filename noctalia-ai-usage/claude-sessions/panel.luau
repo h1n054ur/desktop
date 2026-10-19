@@ -18,7 +18,7 @@ local armedKill, armedAt = nil, 0 -- kill needs a second click within 3s
 
 local GROUPS = {
   { status = "waiting", title = "Needs you", glyph = "bell-ringing", color = "error" },
-  { status = "busy", title = "Working", glyph = "loader-2", color = "primary" },
+  { status = "busy", title = "Working", glyph = "loader-2", color = shared.accent() },
   { status = "idle", title = "Idle", glyph = "circle-check", color = "on_surface_variant" },
 }
 local LOOK = {}
@@ -54,8 +54,8 @@ local function chip(glyph, text, extra)
   return ui.row({ gap = 4, align = "center", paddingH = 6, paddingV = 2, radius = 6, fill = "on_surface/0.06" }, kids)
 end
 
-local function action(glyph, tooltip, fn, variant)
-  return ui.button({ glyph = glyph, tooltip = tooltip, variant = variant or "ghost", controlSize = "sm", onClick = fn })
+local function action(glyph, tooltip, fn)
+  return ui.button({ glyph = glyph, tooltip = tooltip, variant = "ghost", controlSize = "sm", onClick = fn })
 end
 
 -- Compact icon button for card actions.
@@ -141,7 +141,7 @@ local function cardShell(key, status, main, onActivate)
     key = key, gap = 4, padding = 10, radius = 10,
     opacity = status == "idle" and not active and 0.7 or 1,
     fill = active and "on_surface/0.10" or "on_surface/0.04",
-    border = status == "waiting" and "error/0.5" or (selected == key and "primary/0.6" or nil),
+    border = status == "waiting" and "error/0.5" or (selected == key and shared.accent(0.6) or nil),
     borderWidth = (status == "waiting" or selected == key) and 1 or nil,
     onHover = hoverHandler(key),
     onClick = onActivate,
@@ -149,7 +149,7 @@ local function cardShell(key, status, main, onActivate)
 end
 
 local function badge(glyph, color)
-  return ui.column({ width = 34, height = 34, radius = 9, fill = color .. "/0.15", align = "center", justify = "center" }, {
+  return ui.column({ width = 34, height = 34, radius = 9, fill = shared.tint(color, 0.15), align = "center", justify = "center" }, {
     ui.glyph({ name = glyph, size = 18, color = color }),
   })
 end
@@ -198,14 +198,14 @@ local function liveCard(s)
   if s.status == "waiting" then
     body[#body + 1] = iconLine("alert-circle", s.waitingFor ~= "" and s.waitingFor or "Needs your input", "error", 12)
   elseif s.status == "busy" and tool then
-    body[#body + 1] = iconLine(TOOL_GLYPH[tool] or "tool", tool .. (toolArg and toolArg ~= "" and ("  " .. toolArg) or ""), "primary", 12)
+    body[#body + 1] = iconLine(TOOL_GLYPH[tool] or "tool", tool .. (toolArg and toolArg ~= "" and ("  " .. toolArg) or ""), shared.accent(), 12)
   end
   if d.todos then
     local t = d.todos
     body[#body + 1] = ui.row({ gap = 6, align = "center" }, {
       ui.glyph({ name = "list-check", size = 12, color = "on_surface_variant" }),
       ui.label({ text = `{t.done}/{t.total}`, fontSize = 11, fontWeight = "bold", color = "on_surface" }),
-      ui.progress({ progress = t.total > 0 and t.done / t.total or 0, width = 60, height = 4 }),
+      ui.progress({ progress = t.total > 0 and t.done / t.total or 0, width = 60, height = 4, fill = shared.accent() }),
       ui.label({ text = t.current or "", fontSize = 11, color = "on_surface_variant", maxLines = 1, flexGrow = 1 }),
     })
   end
@@ -218,7 +218,7 @@ local function liveCard(s)
   if d.context then
     local p = math.min(1, d.context / CTX)
     chips[#chips + 1] = chip("stack-2", tokens(d.context),
-      ui.progress({ progress = p, width = 36, height = 4, fill = p > 0.8 and "error" or "primary" }))
+      ui.progress({ progress = p, width = 36, height = 4, fill = p > 0.8 and "error" or shared.accent() }))
   end
   if d.cost then chips[#chips + 1] = chip("coin", money(d.cost)) end
   if (d.agents or 0) > 0 then chips[#chips + 1] = chip("robot", tostring(d.agents)) end
@@ -260,7 +260,7 @@ local function recentCard(r)
   table.insert(actions, 1, cardAction("player-play", "Resume", function() shared.resume(r.account, r.cwd, r.sessionId); panel.close() end))
   table.insert(body, 2, whereRow(r.cwd, nil, actionsRow(key, actions)))
   return cardShell(key, "idle", {
-    badge("history", "secondary"),
+    badge("history", shared.accent()),
     ui.column({ gap = 4, flexGrow = 1 }, body),
   }, function() shared.resume(r.account, r.cwd, r.sessionId); panel.close() end)
 end
@@ -273,14 +273,20 @@ local function picker()
   for _, s in ipairs(sessions) do addDir(s.cwd) end
   for _, r in ipairs(recent) do addDir(r.cwd) end
   addDir(shared.workRoot())
-  local rows = { ui.label({ text = "START CLAUDE IN…", fontSize = 10, fontWeight = "bold", color = "primary" }) }
+  local rows = { ui.label({ text = "START CLAUDE IN…", fontSize = 10, fontWeight = "bold", color = shared.accent() }) }
   if multi() then
     pickAccount = pickAccount or accounts[1].dir
     local choices = { ui.label({ text = "Account", fontSize = 11, color = "on_surface_variant" }) }
     for _, a in ipairs(accounts) do
-      choices[#choices + 1] = ui.button({ text = a.label, glyph = "user-circle", controlSize = "sm",
-        variant = pickAccount == a.dir and "primary" or "ghost", tooltip = a.email or a.dir,
-        onClick = function() pickAccount = a.dir; render() end })
+      -- Drawn as a row, not a button: button variants take only theme roles, so the pick would show in green.
+      local picked = pickAccount == a.dir
+      choices[#choices + 1] = ui.row({ gap = 4, align = "center", paddingH = 8, paddingV = 3, radius = 8,
+        fill = picked and shared.accent(0.18) or "on_surface/0.06", border = picked and shared.accent(0.6) or nil,
+        borderWidth = picked and 1 or nil, tooltip = a.email or a.dir,
+        onClick = function() pickAccount = a.dir; render() end }, {
+        ui.glyph({ name = "user-circle", size = 13, color = picked and shared.accent() or "on_surface_variant" }),
+        ui.label({ text = a.label, fontSize = 11, color = picked and shared.accent() or "on_surface" }),
+      })
     end
     rows[#rows + 1] = ui.row({ gap = 4, align = "center" }, choices)
   end
@@ -292,11 +298,11 @@ local function picker()
       onHover = hoverHandler("dir:" .. d),
       onClick = function() shared.launch(d, shared.claudeArgv(multi() and pickAccount or nil)); panel.close() end,
     }, {
-      ui.glyph({ name = "folder-plus", size = 14, color = "primary" }),
+      ui.glyph({ name = "folder-plus", size = 14, color = shared.accent() }),
       ui.label({ text = shared.projectPath(d), fontSize = 12, color = "on_surface", maxLines = 1, flexGrow = 1 }),
     })
   end
-  return ui.column({ gap = 4, padding = 10, radius = 10, fill = "primary/0.06", border = "primary/0.3", borderWidth = 1 }, rows)
+  return ui.column({ gap = 4, padding = 10, radius = 10, fill = shared.accent(0.06), border = shared.accent(0.3), borderWidth = 1 }, rows)
 end
 
 -- ── Layout ──────────────────────────────────────────────────────────────────
@@ -316,7 +322,7 @@ local function limitsStrip(limits)
   local meters = {}
   for _, w in ipairs(limits.windows) do
     local p = math.max(0, math.min(100, w.percent)) / 100
-    local color = p >= 0.9 and "error" or p >= 0.7 and "secondary" or "primary"
+    local color = p >= 0.9 and "error" or p >= 0.7 and "secondary" or shared.accent()
     local mins = w.resetsAt and math.floor((w.resetsAt - noctalia.nowMs()) / 60000) or -1
     local left = mins >= 1440 and `{mins // 1440}d {mins % 1440 // 60}h` or mins >= 0 and `{mins // 60}h {mins % 60}m` or nil
     meters[#meters + 1] = ui.column({ gap = 3, flexGrow = 1 }, {
@@ -341,7 +347,7 @@ local function countPills(by)
   local pills = {}
   for _, g in ipairs(GROUPS) do
     if #by[g.status] > 0 then
-      pills[#pills + 1] = ui.row({ gap = 4, align = "center", paddingH = 8, paddingV = 3, radius = 10, fill = g.color .. "/0.15" }, {
+      pills[#pills + 1] = ui.row({ gap = 4, align = "center", paddingH = 8, paddingV = 3, radius = 10, fill = shared.tint(g.color, 0.15) }, {
         ui.glyph({ name = g.glyph, size = 12, color = g.color }),
         ui.label({ text = tostring(#by[g.status]), fontSize = 11, fontWeight = "bold", color = g.color }),
       })
@@ -354,8 +360,8 @@ local function accountHeader(a, by)
   local folded = collapsed[a.dir]
   local kids = {
     ui.glyph({ name = folded and "chevron-right" or "chevron-down", size = 14, color = "on_surface_variant" }),
-    ui.row({ width = 26, height = 26, radius = 13, fill = "secondary/0.18", align = "center", justify = "center" }, {
-      ui.glyph({ name = "user-circle", size = 16, color = "secondary" }),
+    ui.row({ width = 26, height = 26, radius = 13, fill = shared.accent(0.18), align = "center", justify = "center" }, {
+      ui.glyph({ name = "user-circle", size = 16, color = shared.accent() }),
     }),
     ui.column({ gap = 0, flexGrow = 1 }, {
       ui.label({ text = a.label, fontSize = 13, fontWeight = "bold", color = "on_surface", maxLines = 1 }),
@@ -368,7 +374,7 @@ local function accountHeader(a, by)
 end
 
 local function countPill(g, n)
-  return ui.row({ gap = 4, align = "center", paddingH = 8, paddingV = 3, radius = 10, fill = g.color .. "/0.15" }, {
+  return ui.row({ gap = 4, align = "center", paddingH = 8, paddingV = 3, radius = 10, fill = shared.tint(g.color, 0.15) }, {
     ui.glyph({ name = g.glyph, size = 12, color = g.color }),
     ui.label({ text = tostring(n), fontSize = 11, fontWeight = "bold", color = g.color }),
   })
@@ -380,8 +386,8 @@ function render()
   for _, s in ipairs(sessions) do total += (s.d and s.d.cost or 0) end
 
   local header = {
-    ui.row({ width = 28, height = 28, radius = 8, fill = "primary/0.15", align = "center", justify = "center" }, {
-      shared.mark("primary", 16),
+    ui.row({ width = 28, height = 28, radius = 8, fill = shared.accent(0.15), align = "center", justify = "center" }, {
+      ui.glyph({ name = "brain", size = 16, color = shared.accent() }),
     }),
     ui.column({ gap = 0 }, {
       ui.label({ text = "Claude Sessions", fontSize = 15, fontWeight = "bold", color = "on_surface" }),
@@ -393,8 +399,7 @@ function render()
   for _, g in ipairs(GROUPS) do
     if #by[g.status] > 0 then header[#header + 1] = countPill(g, #by[g.status]) end
   end
-  header[#header + 1] = action(showPicker and "x" or "plus", "New session (n)", function() showPicker = not showPicker; render() end,
-    showPicker and "secondary" or "ghost")
+  header[#header + 1] = action(showPicker and "x" or "plus", "New session (n)", function() showPicker = not showPicker; render() end)
   header[#header + 1] = action("x", "Close", function() panel.close() end)
 
   local content = {}

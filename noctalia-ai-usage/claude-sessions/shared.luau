@@ -15,22 +15,21 @@ end
 
 function M.workRoot() return WORK and string.sub(WORK, 1, -2) or HOME end
 
--- The Anthropic mark is an SVG, and images take no theme tint, so it is drawn from a copy of
--- icons/anthropic.svg with currentColor swapped for the role's palette hex. One copy per role is kept:
--- writing a new colour for a role removes that role's older copies.
-local MARK = noctalia.readFile(PLUGIN .. "/icons/anthropic.svg") or ""
-function M.mark(role, size)
-  local dir = noctalia.pluginDataDir()
-  local hex = noctalia.getColor(role) or "#888888"
-  local name = `anthropic-{role}-{string.sub(hex, 2)}.svg`
-  if not noctalia.fileExists(`{dir}/{name}`) then
-    for _, f in ipairs(noctalia.listDir(dir) or {}) do
-      if f ~= name and string.sub(f, 1, #role + 11) == `anthropic-{role}-` then noctalia.removeFile(`{dir}/{f}`) end
-    end
-    noctalia.writeFile(`{dir}/{name}`, (string.gsub(MARK, "currentColor", hex)))
-  end
-  return ui.image({ path = `{dir}/{name}`, width = size, height = size })
+-- The widget's accent: the accent_color setting (Claude's coral by default), or the theme primary when empty.
+-- Warning and critical colours (secondary, error) stay theme roles so a near-full limit still stands out.
+local accentSetting = noctalia.string.trim(tostring(noctalia.getConfig("accent_color") or ""))
+local ACCENT = accentSetting ~= "" and accentSetting or "primary"
+
+-- A colour at some alpha: "role/0.15" for palette roles, an alpha byte on "#rrggbb" or "#rrggbbaa" hex.
+-- Hex in other lengths is returned as is.
+function M.tint(color, alpha)
+  if alpha == nil then return color end
+  if string.sub(color, 1, 1) ~= "#" then return `{color}/{alpha}` end
+  if #color ~= 7 and #color ~= 9 then return color end
+  return string.sub(color, 1, 7) .. string.format("%02x", math.floor(alpha * 255 + 0.5))
 end
+
+function M.accent(alpha) return M.tint(ACCENT, alpha) end
 
 local function quote(s) return "'" .. string.gsub(s, "'", "'\\''") .. "'" end
 

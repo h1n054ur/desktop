@@ -176,6 +176,7 @@ Open them from **Settings → Plugins → Claude Sessions**.
 | `bar_limits_style` | `select` | `bar` | How each limit is drawn on the bar: a linear `bar` or a circular `ring`. |
 | `config_dirs` | `string_list` | empty | Claude config dirs (`CLAUDE_CONFIG_DIR`) to always show, one per account. Dirs of running sessions are detected automatically. |
 | `account_labels` | `string_map` | empty | Display name per config dir, e.g. `~/.claude-work` → `Work`. *(Advanced)* |
+| `accent_color` | `color` | `#D97757` | Colour of the icon, working dots, limit bars and panel highlights (Claude's coral). Empty uses the theme's primary colour. Limits at 70% and 90% still switch to the theme's warning and error colours. |
 | `work_root` | `folder` | empty | Project paths under this folder are shown relative to it (e.g. `~/Work`). Empty shows full paths. |
 | `context_window` | `int` | `1000000` | Context window size in tokens, used to draw the context gauge. |
 

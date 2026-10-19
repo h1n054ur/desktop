@@ -69,7 +69,7 @@ Every Claude Code session at a glance: which ones are working, which are waiting
 |---|---|---|
 | Panel placement | Attached to the bar, using the bar's background | Floating card with its own background, border and shadow |
 | Plugin ID | `lfdominguez/claude-sessions` | `hani/claude-sessions`, so both can be installed side by side |
-| Bar and panel icon | Tabler `brain` glyph | The Anthropic mark, tinted to the theme |
+| Accent colour | Theme primary | Claude's coral (`#D97757`), set with `accent_color` |
 | Updates | Community source | This repo, as its own Noctalia plugin source |
 
 With an attached panel and a transparent bar (`background_opacity = 0`), the panel has nothing behind it and its content floats over your windows. A floating panel brings its own card, which also suits floating or pill-style bars.

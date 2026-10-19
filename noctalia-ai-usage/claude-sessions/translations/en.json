@@ -1,5 +1,9 @@
 {
   "settings": {
+    "accent_color": {
+      "description": "Colour for the icon, working dots, limit bars and panel highlights. Claude's coral by default. Empty uses the theme's primary colour. Limits near full still turn to the theme's warning and error colours.",
+      "label": "Accent colour"
+    },
     "account_labels": {
       "description": "Optional display name per config dir, e.g. ~/.claude-work = Work. By default the name comes from the dir (~/.claude-work shows as \"work\").",
       "label": "Account names"

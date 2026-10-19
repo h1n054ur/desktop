@@ -1,7 +1,7 @@
 id = "hani/claude-sessions"
 name = "Claude Sessions"
 version = "1.5.2"
-plugin_api = 31
+plugin_api = 24
 author = "hani (fork of lfdominguez/claude-sessions 1.5.2, MIT)"
 icon = "brain"
 license = "MIT"
@@ -100,6 +100,13 @@ label_key = "settings.account_labels.label"
 description_key = "settings.account_labels.description"
 default = {}
 advanced = true
+
+[[setting]]
+key = "accent_color"
+type = "color"
+label_key = "settings.accent_color.label"
+description_key = "settings.accent_color.description"
+default = "#D97757"
 
 [[setting]]
 key = "work_root"
