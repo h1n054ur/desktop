@@ -1,0 +1,4 @@
+# False positives: upstream git commit hashes (ElegantFin, google/material-design-icons) in the
+# vendored-sources comment header of the generated Jellyfin theme, not credentials.
+d33ffdd20ba4d887aa6d9a5e90adc2a88ce47851:jellyfin-theme/dist/theme-abyss.css:sourcegraph-access-token:11
+d33ffdd20ba4d887aa6d9a5e90adc2a88ce47851:jellyfin-theme/dist/theme-abyss.css:sourcegraph-access-token:41
