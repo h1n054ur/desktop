@@ -32,11 +32,13 @@ const MESSAGES: any[] = [
 ]
 
 // speak-where prints `intro` (empty means the window is focused).
-function recorder(intro = "") {
+// voice-from-reply answers with `picked` (an empty object means no label and no saved persona).
+function recorder(intro = "", picked: object = {}) {
   const calls: Call[] = []
   const exec: Run = async (cmd, args, stdin, env) => {
     calls.push({ cmd, args, stdin, env })
     if (cmd === "speak" && args[0] === "voice-for") return { code: 0, stdout: "codex\n" }
+    if (cmd === "speak" && args[0] === "voice-from-reply") return { code: 0, stdout: JSON.stringify(picked) + "\n" }
     if (cmd === "speak-where") return { code: 0, stdout: intro ? intro + "\n" : "" }
     return { code: 0, stdout: "" }
   }
@@ -102,7 +104,7 @@ describe("speak plugin", () => {
     expect(rec.says()).toHaveLength(1)
     const say = rec.says()[0]
     expect(say.args).toEqual([
-      "say", "--voice", "codex", "--source", "opencode: project", "--id", "opencode:msg_a1", "--intro", "",
+      "say", "--voice", "codex", "--source", "opencode: project", "--id", "opencode:msg_a1", "--strip-label", "--intro", "",
     ])
     expect(say.stdin).toBe("Doing well, thanks.")
   })
@@ -174,7 +176,7 @@ describe("speak plugin", () => {
     const where = rec.where()[0]
     expect(where.args).toEqual([
       "--kitty-pid", "6595", "--kitty-window", "7", "--agent", "opencode", "--voice", "codex",
-      "--model", "openai/gpt-5-codex", "--project", "/home/user/project",
+      "--model", "openai/gpt-5-codex", "--name", "", "--project", "/home/user/project",
     ])
     expect(where.env).toEqual({ HYPRLAND_INSTANCE_SIGNATURE: "abc" })
     const say = rec.says()[0]
@@ -187,6 +189,39 @@ describe("speak plugin", () => {
     await createHandler(context(broadcast().subscribe()), rec.exec, fresh(), noTuis)(finished())
     expect(rec.where()[0].args.slice(0, 4)).toEqual(["--kitty-pid", "", "--kitty-window", ""])
     expect(rec.says()[0].args.slice(-1)).toEqual(["Codex in project."])
+  })
+
+  test("a label picks the voice and the intro name, and the label is stripped by say", async () => {
+    const rec = recorder("Workspace 3, Ada in project.", { voice: "ada", name: "Ada", from: "label" })
+    const messages = [MESSAGES[0], { ...MESSAGES[1], content: [{ type: "text", text: "**Ada:** Done." }] }]
+    await createHandler(context(broadcast().subscribe(), messages), rec.exec, fresh(), noTuis)(finished())
+    const pick = rec.calls.find((c) => c.args[0] === "voice-from-reply")!
+    expect(pick.args).toEqual(["voice-from-reply", "--tool", "opencode", "--session", "ses_1"])
+    expect(pick.stdin).toBe("**Ada:** Done.")
+    const where = rec.where()[0].args
+    expect(where[where.indexOf("--voice") + 1]).toBe("ada")
+    expect(where[where.indexOf("--name") + 1]).toBe("Ada")
+    const say = rec.says()[0]
+    expect(say.args.slice(0, 3)).toEqual(["say", "--voice", "ada"])
+    expect(say.args).toContain("--strip-label")
+    expect(say.stdin).toBe("**Ada:** Done.")
+  })
+
+  test("no label and no saved persona: the model voice", async () => {
+    const rec = recorder()
+    await createHandler(context(broadcast().subscribe()), rec.exec, fresh(), noTuis)(finished())
+    expect(rec.says()[0].args.slice(0, 3)).toEqual(["say", "--voice", "codex"])
+  })
+
+  test("SPEAK_OFF=1 keeps it quiet", async () => {
+    const rec = recorder()
+    process.env.SPEAK_OFF = "1"
+    try {
+      await createHandler(context(broadcast().subscribe()), rec.exec, fresh(), noTuis)(finished())
+    } finally {
+      delete process.env.SPEAK_OFF
+    }
+    expect(rec.calls).toHaveLength(0)
   })
 
   test("an update prompt stays quiet", async () => {

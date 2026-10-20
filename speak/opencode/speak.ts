@@ -4,7 +4,10 @@
 //   - it is a top-level session (child sessions have parentID set)
 //   - the run answered a prompt a person typed (the last prompt is a user message, not a
 //     synthetic one, and its text is not "update")
-// The voice comes from `speak voice-for <provider>/<model>`. Errors never leave the handler.
+// The voice comes from a name label at the start of the reply ("**Name:**") or the session's saved
+// persona, through `speak voice-from-reply`, else from `speak voice-for <provider>/<model>`. The
+// label is left out of the speech (`say --strip-label`). SPEAK_OFF=1 in the service's environment
+// keeps it quiet. Errors never leave the handler.
 //
 // Intro: when the window showing the session is not focused, `speak-where` prints an intro such
 // as "Workspace 3, Codex in desktop." that goes before the reply. The plugin runs in the
@@ -216,6 +219,21 @@ export function findTui(sessionID: string, directory: string, tuis: readonly Tui
   return here.length === 1 ? here[0] : undefined
 }
 
+// The voice and name `speak voice-from-reply` printed, or nothing when it found none.
+export function pickedVoice(result: { code: number; stdout: string }): { voice?: string; name?: string } {
+  if (result.code !== 0) return {}
+  try {
+    const data: unknown = JSON.parse(result.stdout)
+    if (!data || typeof data !== "object") return {}
+    const { voice, name } = data as { voice?: unknown; name?: unknown }
+    return typeof voice === "string" && voice
+      ? { voice, name: typeof name === "string" && name ? name : undefined }
+      : {}
+  } catch {
+    return {}
+  }
+}
+
 export function createHandler(
   ctx: SpeakContext,
   exec: Run = run,
@@ -223,6 +241,7 @@ export function createHandler(
   tuis: () => Tui[] = () => listTuis(),
 ) {
   return async function handle(event: ServerEvent) {
+    if (process.env.SPEAK_OFF === "1") return
     const sessionID = event.data?.sessionID
     if (event.type !== FINISH_EVENT || !sessionID || state.busy.has(sessionID)) return
     // Claimed before the first await, so a copy of the same event from another setup stops here.
@@ -238,7 +257,10 @@ export function createHandler(
 
       const model = `${reply.model.providerID}/${reply.model.id}`
       const found = await exec("speak", ["voice-for", model])
-      const voice = (found.code === 0 && found.stdout.trim()) || "default"
+      const picked = pickedVoice(
+        await exec("speak", ["voice-from-reply", "--tool", "opencode", "--session", sessionID], reply.text),
+      )
+      const voice = picked.voice ?? ((found.code === 0 && found.stdout.trim()) || "default")
       const dir = session.location?.directory ?? event.location?.directory ?? ctx.location.directory
       const tui = findTui(sessionID, dir, tuis())
       const where = await exec("speak-where", [
@@ -247,6 +269,7 @@ export function createHandler(
         "--agent", "opencode",
         "--voice", voice,
         "--model", model,
+        "--name", picked.name ?? "",
         "--project", dir,
       ], undefined, tui?.hyprland ? { HYPRLAND_INSTANCE_SIGNATURE: tui.hyprland } : undefined)
       const intro = where.code === 0 ? where.stdout.trim() : ""
@@ -254,7 +277,7 @@ export function createHandler(
         "speak",
         [
           "say", "--voice", voice, "--source", `opencode: ${basename(dir)}`,
-          "--id", `opencode:${reply.id}`, "--intro", intro,
+          "--id", `opencode:${reply.id}`, "--strip-label", "--intro", intro,
         ],
         reply.text,
       )

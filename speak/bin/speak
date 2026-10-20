@@ -2,8 +2,9 @@
 """speak: read coding agent replies aloud through a local Pocket TTS server.
 
 Usage:
-  speak say --voice NAME --source LABEL [--id ID] [--intro TEXT]   (text on stdin)
+  speak say --voice NAME --source LABEL [--id ID] [--intro TEXT] [--strip-label]   (text on stdin)
   speak voice-for PROVIDER/MODEL
+  speak voice-from-reply --tool claude|opencode --session ID   (reply on stdin)
   speak mute | unmute | toggle | stop | replay
   speak status [--json]
 
@@ -21,6 +22,7 @@ import fnmatch
 import hashlib
 import json
 import os
+import re
 import shlex
 import signal
 import subprocess
@@ -43,6 +45,10 @@ DEFAULT_CONFIG = {
         "meta/*": "muse",
         "*muse*": "muse",
     },
+    # A reply that starts with a name label ("**Name:**") speaks in that name's voice.
+    # state_dir holds <tool>-<session>.json files of the form {"persona": "<name>"}, the
+    # fallback when a reply has no label. Empty means no fallback.
+    "labels": {"enabled": True, "state_dir": ""},
 }
 
 STATE_DIR = os.path.join(
@@ -124,6 +130,8 @@ def load_config():
         cfg["voices"].update(user["voices"])
     if isinstance(user.get("models"), dict):
         cfg["models"] = dict(user["models"])
+    if isinstance(user.get("labels"), dict):
+        cfg["labels"].update(user["labels"])
     if os.environ.get("SPEAK_SERVER"):
         cfg["server"] = os.environ["SPEAK_SERVER"]
     cfg["server"] = str(cfg["server"]).rstrip("/")
@@ -222,6 +230,89 @@ def voice_fields(name, cfg):
             return []
         return ["-F", f"voice_wav=@{value};filename={os.path.basename(value)}"]
     return ["--form-string", f"voice_url={value}"]
+
+
+# ---------- name labels ----------
+
+_NAME = r"[A-Za-z][A-Za-z0-9_-]{0,31}"
+LABEL_RE = re.compile(
+    rf"\A\s*(?:\*\*\s*(?P<a>{_NAME})\s*:\s*\*\*|\*\*(?P<b>{_NAME})\*\*\s*:|(?P<c>{_NAME})\s*:)[ \t]*"
+)
+
+
+def labels_on(cfg):
+    return bool(cfg.get("labels", {}).get("enabled", True))
+
+
+def voice_key(name, cfg):
+    """The [voices] key for a name, matched case-insensitively. Never "default"."""
+    want = name.strip().lower()
+    if want == "default":
+        return None
+    for key in cfg["voices"]:
+        if str(key).lower() == want:
+            return str(key)
+    return None
+
+
+def display_name(name):
+    return name[:1].upper() + name[1:]
+
+
+def split_label(text, cfg):
+    """(voice key, display name, rest) when the reply starts with a label naming a voice.
+
+    The label is "**Name:**", "**Name**:" or "Name:" at the very start, case-insensitive, and
+    counts only when the name is a key in [voices] other than "default". Else (None, None, text).
+    """
+    if not labels_on(cfg):
+        return None, None, text
+    m = LABEL_RE.match(text)
+    if not m:
+        return None, None, text
+    name = m.group("a") or m.group("b") or m.group("c")
+    key = voice_key(name, cfg)
+    if not key:
+        return None, None, text
+    return key, display_name(name), text[m.end():].lstrip()
+
+
+def state_persona(tool, session, cfg):
+    """The persona saved for this session, when it names a voice, else None."""
+    if not labels_on(cfg) or not tool or not session:
+        return None
+    state_dir = str(cfg.get("labels", {}).get("state_dir") or "")
+    if not state_dir or not re.fullmatch(r"[A-Za-z0-9_.-]+", f"{tool}-{session}") or ".." in session:
+        return None
+    path = os.path.join(os.path.expanduser(state_dir), f"{tool}-{session}.json")
+    data = read_json(path, {})
+    persona = data.get("persona") if isinstance(data, dict) else None
+    if not isinstance(persona, str):
+        return None
+    return voice_key(persona, cfg)
+
+
+def voice_from_reply(text, tool, session, cfg):
+    """{"voice", "name", "from"} for the reply's label, else the session's saved persona, else {}."""
+    key, name, _ = split_label(text, cfg)
+    if key:
+        return {"voice": key, "name": name, "from": "label"}
+    key = state_persona(tool, session, cfg)
+    if key:
+        return {"voice": key, "name": display_name(key), "from": "state"}
+    return {}
+
+
+def cmd_voice_from_reply(args):
+    tool, session = "", ""
+    it = iter(args)
+    for a in it:
+        if a == "--tool":
+            tool = next(it, "")
+        elif a == "--session":
+            session = next(it, "")
+    print(json.dumps(voice_from_reply(sys.stdin.read(), tool, session, load_config())))
+    return 0
 
 
 # ---------- queue and worker ----------
@@ -374,7 +465,7 @@ def recent_duplicate(text, source):
 # ---------- commands ----------
 
 def cmd_say(args):
-    voice, source, reply_id, intro = "default", "", "", ""
+    voice, source, reply_id, intro, strip = "default", "", "", "", False
     it = iter(args)
     for a in it:
         if a == "--voice":
@@ -385,6 +476,8 @@ def cmd_say(args):
             reply_id = next(it, "")
         elif a == "--intro":
             intro = " ".join(next(it, "").split())
+        elif a == "--strip-label":
+            strip = True
     ensure_dirs()
     if reply_id and not claim_id(reply_id):
         log(f"dropped repeat of reply {reply_id[:60]} from {source}")
@@ -394,18 +487,30 @@ def cmd_say(args):
         limit = int(cfg.get("max_sentences", 4))
     except (TypeError, ValueError):
         limit = 4
-    text = clean(sys.stdin.read(), limit)
+    raw = sys.stdin.read()
+    text = clean(raw, limit)
     if not text:
         return 0
+    # The bar keeps the whole reply, the speech leaves out a leading name label.
+    speech = text
+    if strip:
+        key, _, rest = split_label(raw, cfg)
+        if key:
+            speech = clean(rest, limit)
+            if not speech:
+                return 0
     with Locked(STATE_LOCK):
         if recent_duplicate(text, source):
             log(f"dropped the same text again from {source}")
             return 0
-        write_atomic(LAST_JSON, json.dumps({"text": text, "voice": voice, "source": source}))
+        last = {"text": text, "voice": voice, "source": source}
+        if speech != text:
+            last["speech"] = speech
+        write_atomic(LAST_JSON, json.dumps(last))
     if is_muted():
         write_state()
         return 0
-    enqueue(text, voice, source, intro)
+    enqueue(speech, voice, source, intro)
     write_state()
     start_worker()
     return 0
@@ -458,7 +563,7 @@ def cmd_replay():
     if not last.get("text"):
         return 0
     # Replay is a user action, so it plays even while muted.
-    enqueue(last["text"], last.get("voice") or "default", last.get("source") or "")
+    enqueue(last.get("speech") or last["text"], last.get("voice") or "default", last.get("source") or "")
     write_state()
     start_worker()
     return 0
@@ -494,6 +599,8 @@ def main(argv):
                 return 2
             print(voice_for(args[0], load_config()))
             return 0
+        if cmd == "voice-from-reply":
+            return cmd_voice_from_reply(args)
         if cmd == "mute":
             return cmd_mute()
         if cmd == "unmute":

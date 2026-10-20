@@ -13,6 +13,7 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 WHERE = os.path.join(HERE, "..", "bin", "speak-where")
+SPEAK = os.path.realpath(os.path.join(HERE, "..", "bin", "speak"))
 HOOK = os.path.join(HERE, "..", "hooks", "claude-stop.sh")
 
 KPID = 6595
@@ -133,27 +134,50 @@ class WhereTests(Base):
         )
         self.assertEqual(self.where("--agent", "opencode"), "Workspace 3, OpenCode in desktop.")
 
+    def test_persona_name_wins(self):
+        self.assertEqual(self.where("--agent", "claude", "--name", "Ada"), "Workspace 3, Ada in desktop.")
+        self.assertEqual(self.where("--agent", "opencode", "--voice", "codex", "--name", "Ada"),
+                         "Workspace 3, Ada in desktop.")
+        self.assertEqual(self.where("--agent", "claude", "--name", ""), "Workspace 3, Claude in desktop.")
+
 
 class HookTests(Base):
     def setUp(self):
         super().setUp()
         self.calls = os.path.join(self.tmp.name, "speak-calls")
-        self.stub("speak", f'for a in "$@"; do printf "%s\\n" "$a"; done > "{self.calls}.args"\n'
+        # voice-from-reply goes to the real speak, say is recorded.
+        self.stub("speak", f'[ "$1" = voice-from-reply ] && exec python3 "{SPEAK}" "$@"\n'
+                           f'for a in "$@"; do printf "%s\\n" "$a"; done > "{self.calls}.args"\n'
                            f'cat > "{self.calls}.stdin"\nmv "{self.calls}.args" "{self.calls}"\n')
         self.transcript = os.path.join(self.tmp.name, "t.jsonl")
+        self.sessions = os.path.join(self.tmp.name, "sessions")
+        os.makedirs(self.sessions)
+        conf = os.path.join(self.tmp.name, "config", "speak")
+        os.makedirs(conf)
+        with open(os.path.join(conf, "config.toml"), "w") as fh:
+            fh.write(f'[voices]\nada = "alba"\n\n[labels]\nstate_dir = "{self.sessions}"\n')
+        self.env.update(
+            XDG_CONFIG_HOME=os.path.join(self.tmp.name, "config"),
+            XDG_STATE_HOME=os.path.join(self.tmp.name, "state"),
+            CLAUDE_CODE_ENTRYPOINT="cli",
+        )
+        self.env.pop("SPEAK_OFF", None)
 
-    def run_hook(self, prompt, origin=None, kitty=(KPID, 2), wait=5):
+    def run_hook(self, prompt, origin=None, kitty=(KPID, 2), wait=5, reply="All tests pass.",
+                 entrypoint=None, env=None):
         entry = {"type": "user", "message": {"role": "user", "content": prompt}}
         if origin:
             entry["origin"] = {"kind": origin}
+        if entrypoint:
+            entry["entrypoint"] = entrypoint
         with open(self.transcript, "w") as fh:
             fh.write(json.dumps(entry) + "\n")
             fh.write(json.dumps({"type": "assistant", "message": {"content": [{"type": "text", "text": "Done."}]}}) + "\n")
         hook = {
             "session_id": "s1", "transcript_path": self.transcript, "cwd": "/home/u/desktop",
-            "stop_hook_active": False, "last_assistant_message": "All tests pass.",
+            "stop_hook_active": False, "last_assistant_message": reply,
         }
-        env = dict(self.env, KITTY_PID=str(kitty[0]), KITTY_WINDOW_ID=str(kitty[1]))
+        env = dict(self.env, KITTY_PID=str(kitty[0]), KITTY_WINDOW_ID=str(kitty[1]), **(env or {}))
         env["PATH"] = f"{self.bin}:{os.path.dirname(WHERE)}:{os.environ['PATH']}"
         out = subprocess.run([HOOK], input=json.dumps(hook), env=env, capture_output=True, text=True, timeout=10)
         self.assertEqual((out.returncode, out.stdout), (0, ""))
@@ -190,6 +214,41 @@ class HookTests(Base):
 
     def test_plugin_prompt_is_skipped(self):
         self.assertIsNone(self.run_hook("check things", origin="plugin", wait=1))
+
+    def voice(self, args):
+        return args[args.index("--voice") + 1]
+
+    def test_label_picks_voice_and_names_the_intro(self):
+        args, text = self.run_hook("how are you", reply="**Ada:** All tests pass.")
+        self.assertEqual(self.voice(args), "ada")
+        self.assertEqual(self.intro(args), "Workspace 3, Ada in desktop.")
+        self.assertIn("--strip-label", args)
+        self.assertEqual(text, "**Ada:** All tests pass.")
+
+    def test_saved_persona_without_label(self):
+        with open(os.path.join(self.sessions, "claude-s1.json"), "w") as fh:
+            json.dump({"persona": "ada", "updated": 1}, fh)
+        args, _ = self.run_hook("how are you")
+        self.assertEqual(self.voice(args), "ada")
+        self.assertEqual(self.intro(args), "Workspace 3, Ada in desktop.")
+
+    def test_unknown_label_keeps_claude(self):
+        args, _ = self.run_hook("how are you", reply="**Zed:** All tests pass.")
+        self.assertEqual(self.voice(args), "claude")
+        self.assertEqual(self.intro(args), "Workspace 3, Claude in desktop.")
+
+    def test_print_mode_transcript_is_skipped(self):
+        self.assertIsNone(self.run_hook("summarise this", entrypoint="sdk-cli", wait=1))
+
+    def test_print_mode_env_is_skipped(self):
+        self.assertIsNone(self.run_hook("summarise this", env={"CLAUDE_CODE_ENTRYPOINT": "sdk-cli"}, wait=1))
+
+    def test_interactive_transcript_is_spoken(self):
+        args, _ = self.run_hook("how are you", entrypoint="cli")
+        self.assertEqual(self.voice(args), "claude")
+
+    def test_speak_off(self):
+        self.assertIsNone(self.run_hook("how are you", env={"SPEAK_OFF": "1"}, wait=1))
 
 
 if __name__ == "__main__":

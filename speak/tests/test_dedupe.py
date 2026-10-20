@@ -37,7 +37,9 @@ class StubTTS(http.server.BaseHTTPRequestHandler):
         pass
 
 
-class DedupeTests(unittest.TestCase):
+class SayBase(unittest.TestCase):
+    """A stub server, a temp state dir and helpers to call `speak say`."""
+
     @classmethod
     def setUpClass(cls):
         cls.server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), StubTTS)
@@ -66,8 +68,10 @@ class DedupeTests(unittest.TestCase):
         self.wait_idle()
         self.tmp.cleanup()
 
-    def say(self, text, source="opencode: test", reply_id=None, intro=None):
-        args = [sys.executable, SPEAK, "say", "--voice", "codex", "--source", source]
+    def say(self, text, source="opencode: test", reply_id=None, intro=None, voice="codex", strip=False):
+        args = [sys.executable, SPEAK, "say", "--voice", voice, "--source", source]
+        if strip:
+            args.append("--strip-label")
         if reply_id:
             args += ["--id", reply_id]
         if intro is not None:
@@ -101,6 +105,7 @@ class DedupeTests(unittest.TestCase):
             time.sleep(0.05)
         self.fail("worker did not finish")
 
+class DedupeTests(SayBase):
     def test_parallel_same_id_plays_once(self):
         procs = [self.say("Doing well, thanks.", reply_id="opencode:msg_1") for _ in range(8)]
         self.run_all(procs, ["Doing well, thanks."] * 8)
@@ -156,6 +161,83 @@ class DedupeTests(unittest.TestCase):
         self.run_all([self.say("All tests pass.", intro="")], ["All tests pass."])
         self.wait_idle()
         self.assertIn(b"\r\nAll tests pass.\r\n", StubTTS.requests[0])
+
+
+class LabelTests(SayBase):
+    """Name labels: `speak voice-from-reply` picks the voice, `say --strip-label` drops the label."""
+
+    def setUp(self):
+        super().setUp()
+        self.sessions = os.path.join(self.tmp.name, "sessions")
+        os.makedirs(self.sessions)
+        conf = os.path.join(self.tmp.name, "config", "speak")
+        os.makedirs(conf)
+        with open(os.path.join(conf, "config.toml"), "w") as fh:
+            fh.write(f'[voices]\nada = "alba"\nBo = "jean"\n\n[labels]\nenabled = true\nstate_dir = "{self.sessions}"\n')
+
+    def pick(self, text, tool="claude", session="s1"):
+        out = subprocess.run(
+            [sys.executable, SPEAK, "voice-from-reply", "--tool", tool, "--session", session],
+            input=text, env=self.env, capture_output=True, text=True, timeout=10,
+        )
+        self.assertEqual(out.returncode, 0)
+        return json.loads(out.stdout)
+
+    def save_state(self, persona, tool="claude", session="s1"):
+        with open(os.path.join(self.sessions, f"{tool}-{session}.json"), "w") as fh:
+            json.dump({"persona": persona, "updated": 1}, fh)
+
+    def test_bold_label(self):
+        self.assertEqual(self.pick("**Ada:** All tests pass."), {"voice": "ada", "name": "Ada", "from": "label"})
+        self.assertEqual(self.pick("**ada**: All tests pass.")["voice"], "ada")
+
+    def test_label_without_bold_any_case(self):
+        self.assertEqual(self.pick("ADA: All tests pass.")["voice"], "ada")
+        self.assertEqual(self.pick("bo: done.")["voice"], "Bo")
+
+    def test_unknown_or_late_label_is_ignored(self):
+        self.assertEqual(self.pick("Note: this is fine."), {})
+        self.assertEqual(self.pick("Default: no."), {})
+        self.assertEqual(self.pick("I think **Ada:** said so."), {})
+
+    def test_state_fallback(self):
+        self.save_state("ada")
+        self.assertEqual(self.pick("All tests pass."), {"voice": "ada", "name": "Ada", "from": "state"})
+        self.assertEqual(self.pick("**Bo:** Done.")["voice"], "Bo")
+        self.assertEqual(self.pick("All tests pass.", tool="opencode"), {})
+
+    def test_state_naming_an_unknown_voice_is_ignored(self):
+        self.save_state("nobody")
+        self.assertEqual(self.pick("All tests pass."), {})
+
+    def test_no_state(self):
+        self.assertEqual(self.pick("All tests pass.", session="none"), {})
+        self.assertEqual(self.pick("All tests pass.", session="../x"), {})
+
+    def test_labels_off(self):
+        with open(os.path.join(self.tmp.name, "config", "speak", "config.toml"), "w") as fh:
+            fh.write('[voices]\nada = "alba"\n[labels]\nenabled = false\n')
+        self.assertEqual(self.pick("**Ada:** All tests pass."), {})
+
+    def test_label_is_not_spoken_but_kept(self):
+        intro = "Workspace 3, Ada in desktop."
+        reply = "**Ada:** All tests pass."
+        self.run_all([self.say(reply, intro=intro, voice="ada", strip=True)], [reply])
+        self.wait_idle()
+        self.assertEqual(len(StubTTS.requests), 1)
+        self.assertIn(b"\r\nWorkspace 3, Ada in desktop. All tests pass.\r\n", StubTTS.requests[0])
+        with open(os.path.join(self.state, "last.json")) as fh:
+            last = json.load(fh)
+        self.assertEqual(last["speech"], "All tests pass.")
+        self.assertTrue(last["text"].endswith("All tests pass."))
+        self.assertIn("Ada", last["text"])
+        self.assertNotIn("Workspace", last["text"])
+
+    def test_unknown_label_is_spoken_as_is(self):
+        reply = "Note: all tests pass."
+        self.run_all([self.say(reply, strip=True)], [reply])
+        self.wait_idle()
+        self.assertIn(b"Note: all tests pass.", StubTTS.requests[0])
 
 
 if __name__ == "__main__":
