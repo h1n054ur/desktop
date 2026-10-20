@@ -52,3 +52,16 @@ icon = "app-window"
 description = "Each bar shows the window selected on its own screen's visible workspace (Hyprland), and hides when that workspace is empty."
 plugin_api = 32
 tags = ["bar", "hyprland", "window"]
+
+[[plugin]]
+id = "hani/glow-speak"
+name = "Glow Speak"
+version = "0.1.0"
+updated_at = 1792470606
+added_at = 1792470606
+author = "hani"
+license = "MIT"
+icon = "volume"
+description = "Glow-icon bar button for the speak CLI that reads coding-agent replies aloud: dim when idle, bright while speaking, red when muted. Click to mute, right-click to stop, middle-click to replay."
+plugin_api = 32
+tags = ["bar", "audio", "ai"]

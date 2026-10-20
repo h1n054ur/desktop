@@ -1,0 +1,14 @@
+id          = "hani/glow-speak"
+name        = "Glow Speak"
+version     = "0.1.0"
+plugin_api  = 32
+author      = "hani"
+license     = "MIT"
+icon        = "volume"
+description = "Glow-icon bar button for the speak CLI that reads coding-agent replies aloud: dim when idle, bright while speaking, red when muted. Click to mute, right-click to stop, middle-click to replay."
+tags        = ["bar", "audio", "ai"]
+dependencies = ["speak"]
+
+[[widget]]
+id    = "speak"
+entry = "widget.luau"
