@@ -2,7 +2,7 @@
 """speak: read coding agent replies aloud through a local Pocket TTS server.
 
 Usage:
-  speak say --voice NAME --source LABEL [--id ID]   (text on stdin)
+  speak say --voice NAME --source LABEL [--id ID] [--intro TEXT]   (text on stdin)
   speak voice-for PROVIDER/MODEL
   speak mute | unmute | toggle | stop | replay
   speak status [--json]
@@ -226,9 +226,12 @@ def voice_fields(name, cfg):
 
 # ---------- queue and worker ----------
 
-def enqueue(text, voice, source):
+def enqueue(text, voice, source, intro=""):
+    """Queue a job. The intro is read before the text but kept apart, so the bar and replay
+    hold only the reply."""
     ensure_dirs()
-    job = {"text": text, "voice": voice, "source": source, "queued": time.time_ns()}
+    spoken = f"{intro} {text}" if intro else text
+    job = {"text": spoken, "voice": voice, "source": source, "queued": time.time_ns()}
     name = f"{job['queued']:020d}-{os.getpid()}.json"
     write_atomic(os.path.join(QUEUE_DIR, name + ".part"), json.dumps(job))
     os.replace(os.path.join(QUEUE_DIR, name + ".part"), os.path.join(QUEUE_DIR, name))
@@ -371,7 +374,7 @@ def recent_duplicate(text, source):
 # ---------- commands ----------
 
 def cmd_say(args):
-    voice, source, reply_id = "default", "", ""
+    voice, source, reply_id, intro = "default", "", "", ""
     it = iter(args)
     for a in it:
         if a == "--voice":
@@ -380,6 +383,8 @@ def cmd_say(args):
             source = next(it, "")
         elif a == "--id":
             reply_id = next(it, "")
+        elif a == "--intro":
+            intro = " ".join(next(it, "").split())
     ensure_dirs()
     if reply_id and not claim_id(reply_id):
         log(f"dropped repeat of reply {reply_id[:60]} from {source}")
@@ -400,7 +405,7 @@ def cmd_say(args):
     if is_muted():
         write_state()
         return 0
-    enqueue(text, voice, source)
+    enqueue(text, voice, source, intro)
     write_state()
     start_worker()
     return 0

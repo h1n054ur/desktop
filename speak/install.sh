@@ -40,8 +40,10 @@ fi
 link "$here/systemd/speak-tts.service" "$unit_dir/speak-tts.service"
 systemctl --user daemon-reload 2>/dev/null || true
 
-# --- speak-hooks: focus check, Claude Code hook, OpenCode plugin ---
-ln -sfn "$here/bin/speak-focused" "$HOME/.local/bin/speak-focused"
+# --- speak-hooks: where helper, Claude Code hook, OpenCode plugin ---
+ln -sfn "$here/bin/speak-where" "$HOME/.local/bin/speak-where"
+# speak-focused was replaced by speak-where: drop an old link to it.
+if [ -L "$HOME/.local/bin/speak-focused" ]; then rm -f "$HOME/.local/bin/speak-focused"; fi
 mkdir -p "$HOME/.config/opencode/plugins"
 ln -sfn "$here/opencode/speak.ts" "$HOME/.config/opencode/plugins/speak.ts"
 # The Claude Code Stop hook runs from the repo path: add it to ~/.claude/settings.json (see README).

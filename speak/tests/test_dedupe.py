@@ -6,6 +6,7 @@ state dir is a temp folder, so nothing reaches the speakers or the live state.
 
 import fcntl
 import http.server
+import json
 import os
 import subprocess
 import sys
@@ -65,10 +66,12 @@ class DedupeTests(unittest.TestCase):
         self.wait_idle()
         self.tmp.cleanup()
 
-    def say(self, text, source="opencode: test", reply_id=None):
+    def say(self, text, source="opencode: test", reply_id=None, intro=None):
         args = [sys.executable, SPEAK, "say", "--voice", "codex", "--source", source]
         if reply_id:
             args += ["--id", reply_id]
+        if intro is not None:
+            args += ["--intro", intro]
         return subprocess.Popen(args, stdin=subprocess.PIPE, env=self.env, text=True)
 
     def run_all(self, procs, texts):
@@ -139,6 +142,20 @@ class DedupeTests(unittest.TestCase):
         self.wait_idle()
         self.assertEqual(len(os.listdir(ids)), 1)
         self.assertNotEqual(os.listdir(ids)[0], name)
+
+    def test_intro_is_spoken_but_not_kept(self):
+        intro = "Workspace 3, Codex in desktop."
+        self.run_all([self.say("All tests pass.", intro=intro)], ["All tests pass."])
+        self.wait_idle()
+        self.assertEqual(len(StubTTS.requests), 1)
+        self.assertIn(b"Workspace 3, Codex in desktop. All tests pass.", StubTTS.requests[0])
+        with open(os.path.join(self.state, "last.json")) as fh:
+            self.assertEqual(json.load(fh)["text"], "All tests pass.")
+
+    def test_empty_intro_says_only_the_reply(self):
+        self.run_all([self.say("All tests pass.", intro="")], ["All tests pass."])
+        self.wait_idle()
+        self.assertIn(b"\r\nAll tests pass.\r\n", StubTTS.requests[0])
 
 
 if __name__ == "__main__":
