@@ -113,6 +113,45 @@ class CleanTests(unittest.TestCase):
         self.assertNotIn("git log", out)
         self.assertIn("then push", out)
 
+    def test_inline_path_becomes_the_file(self):
+        out = clean("The installer is in `~/setup/install.sh`, so it's quick.")
+        self.assertEqual(out, "The installer is in the file, so it's quick.")
+
+    def test_inline_url_becomes_the_link(self):
+        self.assertEqual(
+            clean("See https://example.com/docs/page for details."), "See the link for details."
+        )
+
+    def test_long_command_becomes_the_command(self):
+        out = clean("Run `git log --format='%h %G?' -n 5 main` first, then push.")
+        self.assertEqual(out, "Run the command first, then push.")
+
+    def test_bare_paths_in_prose(self):
+        self.assertEqual(
+            clean("The error is in src/app/main.ts, line 3."), "The error is in the file, line 3."
+        )
+        self.assertEqual(clean("Edit /etc/hosts. Then restart."), "Edit the file. Then restart.")
+        self.assertEqual(clean("Check lib/clean.py:42 now."), "Check the file now.")
+
+    def test_no_doubled_nouns_or_articles(self):
+        self.assertEqual(clean("Open the `~/a/b.toml` file."), "Open the file.")
+        self.assertEqual(clean("Open this `src/b.toml`."), "Open this file.")
+        self.assertEqual(clean("Edit `src/b.toml` file."), "Edit the file.")
+
+    def test_start_of_sentence_is_capitalised(self):
+        self.assertEqual(clean("`src/main.py` is fixed."), "The file is fixed.")
+        self.assertEqual(clean("Done. `src/main.py` is fixed."), "Done. The file is fixed.")
+
+    def test_flags_and_code(self):
+        self.assertEqual(clean("Pass `--force` to skip it."), "Pass the option to skip it.")
+        self.assertEqual(clean("I fixed `items[i]` in place."), "I fixed the code in place.")
+
+    def test_lines_of_only_paths_or_links_still_drop(self):
+        self.assertEqual(clean("/home/user/project/src/main.py"), "")
+        self.assertEqual(clean("`~/.config/speak/config.toml`"), "")
+        self.assertEqual(clean("Links: https://a.example https://b.example"), "")
+        self.assertEqual(clean("Done.\n\nsrc/lib/util.ts:42\n"), "Done.")
+
 
 if __name__ == "__main__":
     unittest.main()

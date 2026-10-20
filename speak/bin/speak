@@ -2,17 +2,23 @@
 """speak: read coding agent replies aloud through a local Pocket TTS server.
 
 Usage:
-  speak say --voice NAME --source LABEL   (text on stdin)
+  speak say --voice NAME --source LABEL [--id ID]   (text on stdin)
   speak voice-for PROVIDER/MODEL
   speak mute | unmute | toggle | stop | replay
   speak status [--json]
 
 Stdlib only. Playback runs in a detached worker that holds a flock and drains
 a FIFO queue directory, so `say` returns at once.
+
+`say` never repeats itself: a job whose --id was already seen in the last day is
+dropped (one marker file per id, created with O_EXCL, so parallel callers in
+different processes agree), and the same text from the same source within
+DUP_WINDOW seconds is dropped too.
 """
 
 import fcntl
 import fnmatch
+import hashlib
 import json
 import os
 import shlex
@@ -54,6 +60,11 @@ STOPPED_AT = os.path.join(STATE_DIR, "stopped_at")
 WORKER_LOCK = os.path.join(STATE_DIR, "worker.lock")
 STATE_LOCK = os.path.join(STATE_DIR, "state.lock")
 LOG = os.path.join(STATE_DIR, "speak.log")
+IDS_DIR = os.path.join(STATE_DIR, "ids")
+RECENT_JSON = os.path.join(STATE_DIR, "recent.json")
+
+ID_TTL = 24 * 3600  # seconds a reply id stays known
+DUP_WINDOW = 30  # seconds the same text from the same source is dropped
 
 CONNECT_TIMEOUT = 3
 MAX_TIME = 600
@@ -311,16 +322,68 @@ def worker():
             return
 
 
+# ---------- duplicates ----------
+
+def _digest(*parts):
+    return hashlib.sha1("\0".join(parts).encode("utf-8", "replace")).hexdigest()
+
+
+def claim_id(reply_id):
+    """True the first time a reply id is seen. Atomic across processes (O_EXCL)."""
+    os.makedirs(IDS_DIR, exist_ok=True)
+    now = time.time()
+    try:
+        for name in os.listdir(IDS_DIR):
+            path = os.path.join(IDS_DIR, name)
+            try:
+                if now - os.stat(path).st_mtime > ID_TTL:
+                    os.unlink(path)
+            except OSError:
+                pass
+    except OSError:
+        pass
+    try:
+        fd = os.open(os.path.join(IDS_DIR, _digest(reply_id)), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
+    except FileExistsError:
+        return False
+    os.close(fd)
+    return True
+
+
+def recent_duplicate(text, source):
+    """True when the same text from the same source was said within DUP_WINDOW.
+
+    Call with STATE_LOCK held. Records the text when it is new.
+    """
+    now = time.time()
+    recent = read_json(RECENT_JSON, {})
+    if not isinstance(recent, dict):
+        recent = {}
+    recent = {k: v for k, v in recent.items() if isinstance(v, (int, float)) and now - v < DUP_WINDOW}
+    key = _digest(source, text)
+    if key in recent:
+        return True
+    recent[key] = now
+    write_atomic(RECENT_JSON, json.dumps(recent))
+    return False
+
+
 # ---------- commands ----------
 
 def cmd_say(args):
-    voice, source = "default", ""
+    voice, source, reply_id = "default", "", ""
     it = iter(args)
     for a in it:
         if a == "--voice":
             voice = next(it, "default")
         elif a == "--source":
             source = next(it, "")
+        elif a == "--id":
+            reply_id = next(it, "")
+    ensure_dirs()
+    if reply_id and not claim_id(reply_id):
+        log(f"dropped repeat of reply {reply_id[:60]} from {source}")
+        return 0
     cfg = load_config()
     try:
         limit = int(cfg.get("max_sentences", 4))
@@ -329,8 +392,10 @@ def cmd_say(args):
     text = clean(sys.stdin.read(), limit)
     if not text:
         return 0
-    ensure_dirs()
     with Locked(STATE_LOCK):
+        if recent_duplicate(text, source):
+            log(f"dropped the same text again from {source}")
+            return 0
         write_atomic(LAST_JSON, json.dumps({"text": text, "voice": voice, "source": source}))
     if is_muted():
         write_state()

@@ -120,5 +120,13 @@ except Exception: pass' 2>/dev/null)
 [ -n "$cwd" ] || cwd=$PWD
 source="claude-code: $(basename "$cwd")"
 
-printf '%s' "$text" | speak say --voice claude --source "$source" >/dev/null 2>&1 &
+# The session id plus a hash of the reply names this reply, so `speak say` drops it if the hook
+# fires again for the same turn.
+session=$(printf '%s' "$input" | python3 -I -c 'import json,sys
+try: print(json.load(sys.stdin).get("session_id") or "")
+except Exception: pass' 2>/dev/null)
+hash=$(printf '%s' "$text" | sha1sum | cut -c1-16)
+id="claude:${session:-nosession}:$hash"
+
+printf '%s' "$text" | speak say --voice claude --source "$source" --id "$id" >/dev/null 2>&1 &
 exit 0

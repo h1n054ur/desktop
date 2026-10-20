@@ -23,7 +23,9 @@ speak mute | unmute | toggle | stop | replay
 speak status --json
 ```
 
-`say` cleans the text first. Code blocks, tables, paths, commands, links and emoji are dropped, and bullets become sentences. Only the first `max_sentences` sentences are read, followed by "Rest is on screen." when more was cut. `say` returns at once and replies queue up in order.
+`say` cleans the text first. Code blocks, tables, emoji and lines that are only paths, commands or links are dropped, and bullets become sentences. A path, command or link inside a sentence becomes "the file", "the command" or "the link", so the sentence still reads well. Only the first `max_sentences` sentences are read, followed by "Rest is on screen." when more was cut. `say` returns at once and replies queue up in order.
+
+`say` never says the same reply twice. With `--id <reply id>` it drops a reply whose id it already saw in the last day, also when several processes call it at once (one marker per id under `ids/`). It also drops the same text from the same source within 30 seconds.
 
 `stop` ends the current reply and clears the queue. `mute` also stops. `replay` reads the last reply again, even while muted.
 
@@ -58,12 +60,15 @@ kitty window is the focused window.
   set, when the last prompt did not come from a person (plugin prompts such as the auto "update",
   task notifications, slash commands), when the prompt is just "update", and when the window is
   not focused. Otherwise it sends `last_assistant_message` to
-  `speak say --voice claude --source "claude-code: <folder>"`. Subagents fire `SubagentStop`, so
+  `speak say --voice claude --source "claude-code: <folder>" --id claude:<session>:<hash>`. Subagents fire `SubagentStop`, so
   they never speak. It prints nothing and always exits 0.
 - `opencode/speak.ts` is an OpenCode plugin (V2 API). When a top-level session finishes a run
   that answered a typed prompt (not "update"), it checks focus, picks the voice with
-  `speak voice-for <provider>/<model>` and calls `speak say --voice <voice> --source "opencode: <folder>"`.
-  Child sessions and interrupted or failed runs stay quiet.
+  `speak voice-for <provider>/<model>` and calls
+  `speak say --voice <voice> --source "opencode: <folder>" --id opencode:<message id>`.
+  Child sessions and interrupted or failed runs stay quiet. OpenCode runs the plugin setup once
+  per open folder and each copy sees every event, so the copies share one dedupe state in the
+  process and the `--id` covers the rest.
 
 Claude Code settings (`~/.claude/settings.json`):
 

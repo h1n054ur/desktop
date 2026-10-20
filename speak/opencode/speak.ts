@@ -8,6 +8,12 @@
 //     KITTY_WINDOW_ID from the OpenCode process environment)
 // The voice comes from `speak voice-for <provider>/<model>`. Errors never leave the handler.
 //
+// Never twice: OpenCode runs setup once per location (each directory or workspace the server has
+// open), and each of those event streams carries every location's events. It also re-imports the
+// file as a fresh module when it changes. So the dedupe state lives on globalThis, shared by every
+// setup in the process, and `speak say --id <message id>` drops a reply already said by any process.
+// Only session.execution.succeeded is used: OpenCode 2 publishes it once per finished run.
+//
 // No runtime imports besides node builtins, so the file works when linked from anywhere.
 // The types below are the small part of the plugin context this file uses.
 
@@ -39,7 +45,25 @@ export interface SpeakContext {
 
 export type Run = (cmd: string, args: string[], stdin?: string) => Promise<{ code: number; stdout: string }>
 
-const FINISH_EVENTS = new Set(["session.execution.succeeded", "session.idle"])
+const FINISH_EVENT = "session.execution.succeeded"
+
+// Dedupe state shared by every setup and every copy of this module in one process.
+export type Shared = { busy: Set<string>; spoken: Set<string> }
+const SHARED_KEY = Symbol.for("hani.speak.shared")
+const SPOKEN_LIMIT = 500
+
+export function shared(): Shared {
+  const g = globalThis as { [SHARED_KEY]?: Shared }
+  return (g[SHARED_KEY] ??= { busy: new Set(), spoken: new Set() })
+}
+
+function remember(state: Shared, id: string) {
+  state.spoken.add(id)
+  if (state.spoken.size > SPOKEN_LIMIT) {
+    const oldest = state.spoken.values().next().value
+    if (oldest !== undefined) state.spoken.delete(oldest)
+  }
+}
 
 // Runs a command with a time limit and resolves with its exit code and stdout. Never rejects.
 export const run: Run = (cmd, args, stdin) =>
@@ -97,33 +121,35 @@ export function pickReply(messages: readonly Message[]) {
   return undefined
 }
 
-export function createHandler(ctx: SpeakContext, exec: Run = run) {
-  const busy = new Set<string>()
-  const spoken = new Map<string, string>()
-
+export function createHandler(ctx: SpeakContext, exec: Run = run, state: Shared = shared()) {
   return async function handle(event: ServerEvent) {
     const sessionID = event.data?.sessionID
-    if (!FINISH_EVENTS.has(event.type) || !sessionID || busy.has(sessionID)) return
-    busy.add(sessionID)
+    if (event.type !== FINISH_EVENT || !sessionID || state.busy.has(sessionID)) return
+    // Claimed before the first await, so a copy of the same event from another setup stops here.
+    state.busy.add(sessionID)
     try {
       const session = await ctx.session.get({ sessionID })
       if (session.parentID) return
       if (session.outcome && session.outcome !== "succeeded") return
 
       const reply = pickReply(await ctx.session.context({ sessionID }))
-      if (!reply || spoken.get(sessionID) === reply.id) return
-      spoken.set(sessionID, reply.id)
+      if (!reply || state.spoken.has(reply.id)) return
+      remember(state, reply.id)
 
       if ((await exec("speak-focused", [])).code !== 0) return
 
       const found = await exec("speak", ["voice-for", `${reply.model.providerID}/${reply.model.id}`])
       const voice = (found.code === 0 && found.stdout.trim()) || "default"
       const dir = session.location?.directory ?? event.location?.directory ?? ctx.location.directory
-      await exec("speak", ["say", "--voice", voice, "--source", `opencode: ${basename(dir)}`], reply.text)
+      await exec(
+        "speak",
+        ["say", "--voice", voice, "--source", `opencode: ${basename(dir)}`, "--id", `opencode:${reply.id}`],
+        reply.text,
+      )
     } catch {
       // Reading aloud is best effort: never disturb the session.
     } finally {
-      busy.delete(sessionID)
+      state.busy.delete(sessionID)
     }
   }
 }
