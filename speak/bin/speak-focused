@@ -1,0 +1,38 @@
+#!/bin/sh
+# speak-focused: exit 0 when the kitty window this process runs in is the focused window right now.
+#
+# Uses KITTY_PID and KITTY_WINDOW_ID from the environment (agents and their hooks inherit them).
+# Focused means all of these hold:
+#   - kitty reports the OS window as focused, its tab as active and the window as active and focused
+#   - under Hyprland, the compositor's active window belongs to that kitty process
+# Anything missing or unreachable (no env, remote control off, no jq) counts as not focused.
+# Needs kitty remote control on a socket: listen_on unix:@kitty-{kitty_pid}.
+
+kpid=${KITTY_PID:-}
+wid=${KITTY_WINDOW_ID:-}
+case $kpid in '' | *[!0-9]*) exit 1 ;; esac
+case $wid in '' | *[!0-9]*) exit 1 ;; esac
+command -v jq >/dev/null 2>&1 || exit 1
+
+# kitten is the fast Go client (about 30 ms), kitty @ starts Python (about 90 ms).
+if command -v kitten >/dev/null 2>&1; then
+  rc="kitten @"
+elif command -v kitty >/dev/null 2>&1; then
+  rc="kitty @"
+else
+  exit 1
+fi
+
+# shellcheck disable=SC2086 # $rc is two words on purpose
+json=$(timeout 0.5 $rc --to "unix:@kitty-$kpid" ls --match "id:$wid" 2>/dev/null) || exit 1
+
+printf '%s' "$json" | jq -e --argjson w "$wid" '
+  any(.[]; .is_focused == true and any(.tabs[]; .is_active == true
+    and any(.windows[]; .id == $w and .is_active == true and .is_focused == true)))
+' >/dev/null 2>&1 || exit 1
+
+if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ]; then
+  apid=$(timeout 0.5 hyprctl activewindow -j 2>/dev/null | jq -r '.pid // empty' 2>/dev/null)
+  [ "$apid" = "$kpid" ] || exit 1
+fi
+exit 0
