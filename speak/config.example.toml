@@ -1,0 +1,22 @@
+# speak config. Copy to ~/.config/speak/config.toml (install.sh does this once).
+
+server = "http://127.0.0.1:8777"
+max_sentences = 4
+
+# Voice name -> a built-in Pocket TTS voice (alba, marius, javert, jean, cosette,
+# anna, vera, fantine, charles, paul, eponine, azelma, george, mary, jane),
+# an hf:// or https:// voice URL, or an absolute path to a local .wav or
+# .safetensors voice (kept in ~/.local/share/speak/voices, never in git).
+[voices]
+claude = "marius"
+codex = "jean"
+muse = "cosette"
+default = "alba"
+
+# OpenCode "provider/model" glob -> voice name. First match wins.
+[models]
+"anthropic/*" = "claude"
+"openai/*" = "codex"
+"*codex*" = "codex"
+"meta/*" = "muse"
+"*muse*" = "muse"
