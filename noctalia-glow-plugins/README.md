@@ -1,6 +1,6 @@
 # Glow plugins for Noctalia
 
-Four bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) built around one set of glow icons: system stats that warm up as the machine gets busy, weather with a full forecast panel, volume and network, and a window title that follows each screen on its own.
+Five bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) built around one set of glow icons: system stats that warm up as the machine gets busy, weather with a full forecast panel, volume and network, a window title that follows each screen on its own, and a button for spoken agent replies.
 
 ![Both bars: left screen (main) with workspaces 1-5, time, weather, title, stats and system; right screen with workspaces 6-10, Claude, title and tray](docs/bars.png)
 
@@ -10,6 +10,7 @@ Four bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) built 
 | glow-weather | `hani/glow-weather` | Temperature on the bar, with a forecast panel on click |
 | glow-panel | `hani/glow-panel` | Volume (`volume`) and network (`network`) widgets |
 | glow-window | `hani/glow-window` | The window on this screen's workspace, per bar, on Hyprland |
+| glow-speak | `hani/glow-speak` | Whether coding-agent replies are read aloud (`speak`), with mute, stop and replay |
 
 ## glow-stats
 
@@ -56,6 +57,18 @@ Each bar shows the window that is focused on its own screen's visible workspace,
 
 This is what makes it useful with two screens. A plain window-title widget follows keyboard focus, so both bars would show the same title. Here the left bar shows what is on the left screen (workspaces 1 to 5) and the right bar what is on the right one (6 to 10), whichever you are typing in. On the main screen I use a shorter copy (`max_width = 340`) so the title and the music pill fit in the middle together.
 
+## glow-speak
+
+A bar button for `speak`, the small CLI in the `speak/` folder of [h1n054ur/desktop](https://github.com/h1n054ur/desktop) that reads coding-agent replies aloud. The speaker icon is dim while nothing plays, lights up and pulses while a reply is spoken, and shows the red mute mark when speech is muted. Hover for the state, the voice and where the last reply came from.
+
+| Click | Runs | |
+|---|---|---|
+| Left | `speak toggle` | Mute or unmute |
+| Right | `speak stop` | Stop the current reply and clear the queue |
+| Middle | `speak replay` | Say the last reply again, even while muted |
+
+The widget stats `speak`'s state file once a second and only runs `speak status --json` when the file or the mute flag changes, while a reply plays, and every 30 seconds. Without `speak` on the `PATH` it stays dim and quiet.
+
 ## Icons
 
 ![Icon states: stats heat levels, volume and network](docs/icon-states.png)
@@ -81,6 +94,11 @@ flowchart LR
     PA["pactl subscribe, wpctl"] --> GV["volume"]
     SYS["/sys/class/net, nmcli"] --> GN["network"]
   end
+  subgraph speak["glow-speak"]
+    ST["speak state file<br/>and mute flag"] -->|changed| SC["speak status --json"]
+    SC --> SB["speaker button"]
+    SB -->|click| SA["speak toggle, stop, replay"]
+  end
 ```
 
 ## Install
@@ -93,6 +111,7 @@ noctalia msg plugins enable hani/glow-stats
 noctalia msg plugins enable hani/glow-weather
 noctalia msg plugins enable hani/glow-panel
 noctalia msg plugins enable hani/glow-window
+noctalia msg plugins enable hani/glow-speak
 ```
 
 Then define widgets in `~/.config/noctalia/config.toml` and place them on a bar:
@@ -114,13 +133,16 @@ type = "hani/glow-panel:network"
 [widget.title]
 type = "hani/glow-window:title"
 
+[widget.speak]
+type = "hani/glow-speak:speak"
+
 [bar.default]
 start = [ "weather", "cpu" ]
 center = [ "title" ]
-end = [ "volume", "network" ]
+end = [ "speak", "volume", "network" ]
 ```
 
-glow-panel needs `pactl` and `wpctl` (PipeWire), glow-window needs `hyprctl` and `python3`.
+glow-panel needs `pactl` and `wpctl` (PipeWire), glow-window needs `hyprctl` and `python3`, glow-speak needs `speak` on the `PATH`.
 
 ## Part of h1n054ur/desktop
 
