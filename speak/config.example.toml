@@ -20,3 +20,11 @@ default = "alba"
 "*codex*" = "codex"
 "meta/*" = "muse"
 "*muse*" = "muse"
+
+# A reply that starts with a name label such as "**Ada:**" or "Ada:" speaks in that name's
+# voice when the name is a key in [voices], and the label is not read out. A reply without a
+# label uses the name saved for its session in state_dir/<tool>-<session>.json, a file of the
+# form {"persona": "ada"}, where tool is claude or opencode. Leave state_dir empty for no fallback.
+[labels]
+enabled = true
+state_dir = ""

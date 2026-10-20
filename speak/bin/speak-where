@@ -2,7 +2,7 @@
 # speak-where: print the intro for a reply, or nothing when the reply's window is focused.
 #
 #   speak-where [--kitty-pid PID] [--kitty-window ID] --agent claude|opencode
-#               [--voice NAME] [--model PROVIDER/MODEL] [--project DIR]
+#               [--voice NAME] [--model PROVIDER/MODEL] [--name NAME] [--project DIR]
 #
 # Focused (kitty reports the OS window focused, its tab active and the window active and focused,
 # and under Hyprland the active window belongs to that kitty): prints nothing.
@@ -14,7 +14,7 @@
 # its active window) picks the Hyprland client among those owned by the kitty pid.
 # Needs jq and kitty remote control on a socket: listen_on unix:@kitty-{kitty_pid}.
 
-kpid="" wid="" agent="" voice="" model="" project=""
+kpid="" wid="" agent="" voice="" model="" name="" project=""
 while [ $# -gt 1 ]; do
   case $1 in
     --kitty-pid) kpid=$2 ;;
@@ -22,14 +22,20 @@ while [ $# -gt 1 ]; do
     --agent) agent=$2 ;;
     --voice) voice=$2 ;;
     --model) model=$2 ;;
+    --name) name=$2 ;;
     --project) project=$2 ;;
     *) shift; continue ;;
   esac
   shift 2
 done
 
-# Who is talking. The one place that names the speaker.
+# Who is talking. The one place that names the speaker: the name from the reply's label or the
+# session's saved persona (--name, see `speak voice-from-reply`), else the agent.
 label() {
+  if [ -n "$name" ]; then
+    printf '%s\n' "$name"
+    return
+  fi
   case $agent in
     claude) echo Claude ;;
     *)
@@ -49,10 +55,10 @@ label() {
   esac
 }
 
-name=$(label)
-[ -n "$name" ] || name=OpenCode
+who=$(label)
+[ -n "$who" ] || who=OpenCode
 folder=$(basename "${project:-$PWD}")
-tail="$name in $folder."
+tail="$who in $folder."
 
 say_unknown() {
   printf '%s\n' "$tail"

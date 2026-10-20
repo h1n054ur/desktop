@@ -2,21 +2,29 @@
 # Claude Code Stop hook: read the finished reply aloud through `speak`.
 #
 # Speaks every reply that answers a prompt a person typed, focused or not. Stays quiet when:
+#   - SPEAK_OFF=1 is set in the environment
+#   - the session is not interactive: `claude -p` and SDK runs. Claude Code sets the entrypoint
+#     to "sdk-cli" (or "sdk-ts", "sdk-py") for those and writes it on every transcript entry and in
+#     CLAUDE_CODE_ENTRYPOINT. Only "cli" (the interactive CLI) or no entrypoint at all is spoken.
 #   - the turn was continued by a stop hook (stop_hook_active is true)
 #   - the prompt did not come from a person: a plugin prompt such as the auto "update", a task
 #     notification, a slash command, or the literal text "update"
 # Subagents fire SubagentStop, not Stop, so registering this on Stop only keeps them quiet.
-# When this session's kitty window is not focused, speak-where adds an intro such as
-# "Workspace 3, Claude in desktop." before the reply.
+# A reply that starts with a name label ("**Name:**") naming a voice in the speak config speaks in
+# that voice, without the label (see `speak voice-from-reply`). When this session's kitty window
+# is not focused, speak-where adds an intro such as "Workspace 3, Claude in desktop." before the
+# reply, with the label's name in place of "Claude".
 #
 # It never blocks Claude: it prints nothing, always exits 0 and hands the text to `speak say`
 # in the background. Env SPEAK_WHERE overrides the speak-where command (tests).
+
+[ "${SPEAK_OFF:-}" = 1 ] && exit 0
 
 input=$(cat)
 
 # Prints the reply text to speak, or nothing when the turn should stay quiet.
 text=$(printf '%s' "$input" | python3 -I -c '
-import json, sys
+import json, os, sys
 
 try:
     hook = json.load(sys.stdin)
@@ -103,6 +111,12 @@ entry, ptext, assistant_after = turn
 if not typed_by_person(entry, ptext):
     sys.exit(0)
 
+# Print mode and SDK runs are not someone at the keyboard. The prompt entry says how this turn
+# was started, the environment covers transcripts without the field.
+entrypoint = entry.get("entrypoint") or os.environ.get("CLAUDE_CODE_ENTRYPOINT") or ""
+if entrypoint and entrypoint != "cli":
+    sys.exit(0)
+
 reply = hook.get("last_assistant_message")
 if not isinstance(reply, str) or not reply.strip():
     # Fallback for versions without the field: the last assistant text of this turn.
@@ -127,8 +141,14 @@ except Exception: pass' 2>/dev/null)
 hash=$(printf '%s' "$text" | sha1sum | cut -c1-16)
 id="claude:${session:-nosession}:$hash"
 
-intro=$(${SPEAK_WHERE:-speak-where} --kitty-pid "${KITTY_PID:-}" --kitty-window "${KITTY_WINDOW_ID:-}" \
-  --agent claude --project "$cwd" 2>/dev/null)
+# Voice and name from the reply's label or the session's saved persona, else the claude voice.
+picked=$(printf '%s' "$text" | speak voice-from-reply --tool claude --session "$session" 2>/dev/null)
+voice=$(printf '%s' "$picked" | jq -r '.voice // empty' 2>/dev/null)
+name=$(printf '%s' "$picked" | jq -r '.name // empty' 2>/dev/null)
 
-printf '%s' "$text" | speak say --voice claude --source "$source" --id "$id" --intro "$intro" >/dev/null 2>&1 &
+intro=$(${SPEAK_WHERE:-speak-where} --kitty-pid "${KITTY_PID:-}" --kitty-window "${KITTY_WINDOW_ID:-}" \
+  --agent claude --name "$name" --project "$cwd" 2>/dev/null)
+
+printf '%s' "$text" | speak say --voice "${voice:-claude}" --source "$source" --id "$id" --intro "$intro" \
+  --strip-label >/dev/null 2>&1 &
 exit 0
