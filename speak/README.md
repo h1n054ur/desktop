@@ -2,7 +2,7 @@
 
 Reads coding agent replies aloud on the desktop. It runs [Pocket TTS](https://github.com/kyutai-labs/pocket-tts) locally on the CPU, so nothing leaves the machine.
 
-A reply is spoken only when it answers a prompt you typed and that agent's terminal window has focus. Each model gets its own voice. Speech starts about a fifth of a second after the reply ends and streams as it is made.
+Every reply to a prompt you typed is spoken, whether its window has focus or not. A reply from a window you are not looking at starts with where it came from, such as "Workspace 3, Codex in desktop." Each model gets its own voice. Speech starts about a fifth of a second after the reply ends and streams as it is made.
 
 ## Install
 
@@ -17,13 +17,15 @@ systemctl --user enable --now speak-tts
 ## Use
 
 ```sh
-echo "All tests pass." | speak say --voice claude --source "claude-code: desktop"
+echo "All tests pass." | speak say --voice claude --source "claude-code: desktop" --intro "Workspace 3, Claude in desktop."
 speak voice-for anthropic/claude-opus    # prints claude
 speak mute | unmute | toggle | stop | replay
 speak status --json
 ```
 
 `say` cleans the text first. Code blocks, tables, emoji and lines that are only paths, commands or links are dropped, and bullets become sentences. A path, command or link inside a sentence becomes "the file", "the command" or "the link", so the sentence still reads well. Only the first `max_sentences` sentences are read, followed by "Rest is on screen." when more was cut. `say` returns at once and replies queue up in order.
+
+`--intro` is read before the reply as it is, without cleaning. The bar and `replay` keep only the reply.
 
 `say` never says the same reply twice. With `--id <reply id>` it drops a reply whose id it already saw in the last day, also when several processes call it at once (one marker per id under `ids/`). It also drops the same text from the same source within 30 seconds.
 
@@ -49,26 +51,38 @@ Left click mutes or unmutes, right click stops the current reply, middle click r
 
 ## Hooks
 
-Agent replies are read aloud only when the turn answered a prompt you typed and that session's
-kitty window is the focused window.
+Every reply that answers a prompt you typed is read aloud. The auto "update" prompts and other prompts that did not come from a person stay quiet, and so do subagents and child sessions. When the reply's window is not the focused one, an intro goes first: "Workspace 3, Claude in desktop." The label is "Claude" for Claude Code. For OpenCode it is the voice name, or the short model name when the model has the default voice. The last part is the project folder. When the workspace cannot be found the intro is just "Claude in desktop."
 
-- `bin/speak-focused` exits 0 when the kitty window named by `KITTY_PID` and `KITTY_WINDOW_ID` is
-  focused: kitty reports its OS window focused, its tab active and the window active, and under
-  Hyprland the active window belongs to that kitty. It needs kitty remote control on
-  `listen_on unix:@kitty-{kitty_pid}`, plus `jq`. It takes about 40 ms.
+- `bin/speak-where` prints the intro, or nothing when the window is focused, and always exits 0.
+  It takes `--kitty-pid`, `--kitty-window`, `--agent claude|opencode`, `--voice`, `--model` and
+  `--project`. Focused means kitty reports the OS window focused, its tab active and the window
+  active and focused, and under Hyprland the active window belongs to that kitty. One kitty
+  process can own several OS windows, so it finds the OS window that holds the kitty window with
+  `kitten @ ls`, then the Hyprland client of that kitty whose title matches, and reads its
+  workspace. A named workspace is read by its name. It needs kitty remote control on
+  `listen_on unix:@kitty-{kitty_pid}`, plus `jq`, and takes about 40 ms.
 - `hooks/claude-stop.sh` is a Claude Code `Stop` hook. It stays quiet when `stop_hook_active` is
   set, when the last prompt did not come from a person (plugin prompts such as the auto "update",
-  task notifications, slash commands), when the prompt is just "update", and when the window is
-  not focused. Otherwise it sends `last_assistant_message` to
-  `speak say --voice claude --source "claude-code: <folder>" --id claude:<session>:<hash>`. Subagents fire `SubagentStop`, so
-  they never speak. It prints nothing and always exits 0.
+  task notifications, slash commands) and when the prompt is just "update". Otherwise it asks
+  `speak-where` with the session's `KITTY_PID` and `KITTY_WINDOW_ID` and sends
+  `last_assistant_message` to `speak say --voice claude --source "claude-code: <folder>"
+  --id claude:<session>:<hash> --intro <intro>`. Subagents fire `SubagentStop`, so they never
+  speak. It prints nothing and always exits 0.
 - `opencode/speak.ts` is an OpenCode plugin (V2 API). When a top-level session finishes a run
-  that answered a typed prompt (not "update"), it checks focus, picks the voice with
-  `speak voice-for <provider>/<model>` and calls
-  `speak say --voice <voice> --source "opencode: <folder>" --id opencode:<message id>`.
+  that answered a typed prompt (not "update"), it picks the voice with
+  `speak voice-for <provider>/<model>`, asks `speak-where` and calls
+  `speak say --voice <voice> --source "opencode: <folder>" --id opencode:<message id> --intro <intro>`.
   Child sessions and interrupted or failed runs stay quiet. OpenCode runs the plugin setup once
   per open folder and each copy sees every event, so the copies share one dedupe state in the
   process and the `--id` covers the rest.
+- The plugin runs inside the background `opencode serve --service` process, so its own kitty
+  variables belong to whatever started the service. It looks for the TUI that shows the session
+  instead: every `opencode` process that is not another command, read from `/proc` (only
+  `KITTY_PID`, `KITTY_WINDOW_ID` and `HYPRLAND_INSTANCE_SIGNATURE` are read from its
+  environment). A TUI started with `--session <id>` for this session wins, else the one TUI whose
+  working folder is the session's folder. OpenCode 2.0.26 gives plugins no way to ask which
+  session a TUI has open, so two TUIs in the same folder count as unknown: the reply gets the
+  intro without the workspace.
 
 Claude Code settings (`~/.claude/settings.json`):
 

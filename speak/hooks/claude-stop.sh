@@ -1,15 +1,16 @@
 #!/bin/sh
 # Claude Code Stop hook: read the finished reply aloud through `speak`.
 #
-# Speaks only when all of these hold:
-#   - the turn was not continued by a stop hook (stop_hook_active is false)
-#   - the turn answered a prompt a person typed: not a plugin prompt such as the auto "update",
-#     not a task notification, not a slash command, and not the literal text "update"
-#   - this session's kitty window is focused (speak-focused)
+# Speaks every reply that answers a prompt a person typed, focused or not. Stays quiet when:
+#   - the turn was continued by a stop hook (stop_hook_active is true)
+#   - the prompt did not come from a person: a plugin prompt such as the auto "update", a task
+#     notification, a slash command, or the literal text "update"
 # Subagents fire SubagentStop, not Stop, so registering this on Stop only keeps them quiet.
+# When this session's kitty window is not focused, speak-where adds an intro such as
+# "Workspace 3, Claude in desktop." before the reply.
 #
 # It never blocks Claude: it prints nothing, always exits 0 and hands the text to `speak say`
-# in the background. Env SPEAK_FOCUSED overrides the focus command (tests).
+# in the background. Env SPEAK_WHERE overrides the speak-where command (tests).
 
 input=$(cat)
 
@@ -112,8 +113,6 @@ if reply.strip():
 
 [ -n "$text" ] || exit 0
 
-${SPEAK_FOCUSED:-speak-focused} >/dev/null 2>&1 || exit 0
-
 cwd=$(printf '%s' "$input" | python3 -I -c 'import json,sys
 try: print(json.load(sys.stdin).get("cwd") or "")
 except Exception: pass' 2>/dev/null)
@@ -128,5 +127,8 @@ except Exception: pass' 2>/dev/null)
 hash=$(printf '%s' "$text" | sha1sum | cut -c1-16)
 id="claude:${session:-nosession}:$hash"
 
-printf '%s' "$text" | speak say --voice claude --source "$source" --id "$id" >/dev/null 2>&1 &
+intro=$(${SPEAK_WHERE:-speak-where} --kitty-pid "${KITTY_PID:-}" --kitty-window "${KITTY_WINDOW_ID:-}" \
+  --agent claude --project "$cwd" 2>/dev/null)
+
+printf '%s' "$text" | speak say --voice claude --source "$source" --id "$id" --intro "$intro" >/dev/null 2>&1 &
 exit 0
