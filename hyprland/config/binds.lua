@@ -210,6 +210,10 @@ hl.bind(mainMod .. " + SHIFT + V", hl.dsp.exec_cmd(noctCall .. "panel-toggle cli
 hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center notifications"))
 hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(noctCall .. "notification-dnd-toggle")) -- do not disturb on/off
 
+-- Spoken agent replies (speak/): mute on/off, stop the current reply
+hl.bind(mainMod .. " + ALT + M", hl.dsp.exec_cmd("speak toggle"))
+hl.bind(mainMod .. " + ALT + X", hl.dsp.exec_cmd("speak stop"))
+
 -- Bar on/off (presentations, screen shares)
 hl.bind(mainMod .. " + SHIFT + H", hl.dsp.exec_cmd(noctCall .. "bar-toggle"))
 
