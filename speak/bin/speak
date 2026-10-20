@@ -1,0 +1,450 @@
+#!/usr/bin/env python3
+"""speak: read coding agent replies aloud through a local Pocket TTS server.
+
+Usage:
+  speak say --voice NAME --source LABEL   (text on stdin)
+  speak voice-for PROVIDER/MODEL
+  speak mute | unmute | toggle | stop | replay
+  speak status [--json]
+
+Stdlib only. Playback runs in a detached worker that holds a flock and drains
+a FIFO queue directory, so `say` returns at once.
+"""
+
+import fcntl
+import fnmatch
+import json
+import os
+import shlex
+import signal
+import subprocess
+import sys
+import time
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(0, os.path.join(HERE, "..", "lib"))
+
+from clean import clean  # noqa: E402
+
+DEFAULT_CONFIG = {
+    "server": "http://127.0.0.1:8777",
+    "max_sentences": 4,
+    "voices": {"claude": "marius", "codex": "jean", "muse": "cosette", "default": "alba"},
+    "models": {
+        "anthropic/*": "claude",
+        "openai/*": "codex",
+        "*codex*": "codex",
+        "meta/*": "muse",
+        "*muse*": "muse",
+    },
+}
+
+STATE_DIR = os.path.join(
+    os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state"), "speak"
+)
+CONFIG_PATH = os.path.join(
+    os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "speak", "config.toml"
+)
+QUEUE_DIR = os.path.join(STATE_DIR, "queue")
+MUTED = os.path.join(STATE_DIR, "muted")
+STATE_JSON = os.path.join(STATE_DIR, "state.json")
+LAST_JSON = os.path.join(STATE_DIR, "last.json")
+PLAYING = os.path.join(STATE_DIR, "playing.json")
+STOPPED_AT = os.path.join(STATE_DIR, "stopped_at")
+WORKER_LOCK = os.path.join(STATE_DIR, "worker.lock")
+STATE_LOCK = os.path.join(STATE_DIR, "state.lock")
+LOG = os.path.join(STATE_DIR, "speak.log")
+
+CONNECT_TIMEOUT = 3
+MAX_TIME = 600
+
+
+# ---------- small helpers ----------
+
+def ensure_dirs():
+    os.makedirs(QUEUE_DIR, exist_ok=True)
+
+
+def log(msg):
+    try:
+        ensure_dirs()
+        with open(LOG, "a") as fh:
+            fh.write(time.strftime("%Y-%m-%d %H:%M:%S ") + msg + "\n")
+        # Keep the log small.
+        if os.path.getsize(LOG) > 256 * 1024:
+            with open(LOG) as fh:
+                tail = fh.readlines()[-500:]
+            write_atomic(LOG, "".join(tail))
+    except OSError:
+        pass
+
+
+def write_atomic(path, data):
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w") as fh:
+        fh.write(data)
+    os.replace(tmp, path)
+
+
+def read_json(path, default):
+    try:
+        with open(path) as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return default
+
+
+def load_config():
+    cfg = json.loads(json.dumps(DEFAULT_CONFIG))
+    try:
+        import tomllib
+
+        with open(CONFIG_PATH, "rb") as fh:
+            user = tomllib.load(fh)
+    except FileNotFoundError:
+        user = {}
+    except Exception as exc:  # bad TOML: keep defaults, say why in the log
+        log(f"config error, using defaults: {exc}")
+        user = {}
+    for key in ("server", "max_sentences"):
+        if key in user:
+            cfg[key] = user[key]
+    if isinstance(user.get("voices"), dict):
+        cfg["voices"].update(user["voices"])
+    if isinstance(user.get("models"), dict):
+        cfg["models"] = dict(user["models"])
+    if os.environ.get("SPEAK_SERVER"):
+        cfg["server"] = os.environ["SPEAK_SERVER"]
+    cfg["server"] = str(cfg["server"]).rstrip("/")
+    return cfg
+
+
+class Locked:
+    """flock on a lock file, used for every state.json read-modify-write."""
+
+    def __init__(self, path):
+        self.path = path
+
+    def __enter__(self):
+        ensure_dirs()
+        self.fh = open(self.path, "a")
+        fcntl.flock(self.fh, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *exc):
+        fcntl.flock(self.fh, fcntl.LOCK_UN)
+        self.fh.close()
+
+
+def is_muted():
+    return os.path.exists(MUTED)
+
+
+def write_state():
+    """Rebuild state.json from the files that hold the truth."""
+    with Locked(STATE_LOCK):
+        last = read_json(LAST_JSON, {})
+        playing = read_json(PLAYING, None)
+        if playing and not pid_alive(playing.get("pid")):
+            playing = None
+        if not playing:
+            # A queued job counts as speaking, so the bar does not flash idle
+            # in the moment before the worker picks it up.
+            jobs = queued_jobs()
+            if jobs:
+                playing = read_json(os.path.join(QUEUE_DIR, jobs[0]), None)
+        if playing:
+            state, voice, source = "speaking", playing.get("voice"), playing.get("source")
+        else:
+            state = "muted" if is_muted() else "idle"
+            voice, source = last.get("voice"), last.get("source")
+        data = {
+            "state": state,
+            "voice": voice or "",
+            "source": source or "",
+            "last_text": last.get("text", ""),
+            "updated": int(time.time()),
+        }
+        write_atomic(STATE_JSON, json.dumps(data) + "\n")
+        return data
+
+
+def pid_alive(pid):
+    if not pid:
+        return False
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except (OSError, ValueError):
+        return False
+
+
+# ---------- voices ----------
+
+def voice_for(model, cfg):
+    for pattern, voice in cfg["models"].items():
+        if fnmatch.fnmatchcase(model.lower(), str(pattern).lower()):
+            return voice
+    return "default"
+
+
+def voice_fields(name, cfg):
+    """curl form arguments that pick the voice for a configured voice name.
+
+    The server accepts voice_url only as a built-in name or an http(s)://
+    or hf:// URL, never a local path. Local .wav and .safetensors files go up
+    as the voice_wav upload. The server keeps the upload's file suffix, so a
+    .safetensors upload loads as a ready voice state and skips the audio
+    encoding a .wav needs on every request.
+    """
+    voices = cfg["voices"]
+    value = voices.get(name) or voices.get("default") or ""
+    value = os.path.expanduser(str(value))
+    if not value:
+        return []
+    if value.startswith("/"):
+        if not os.path.isfile(value):
+            log(f"voice file missing for {name}: {value}, using the server default")
+            return []
+        if not value.endswith((".wav", ".safetensors")):
+            log(f"voice file for {name} is not .wav or .safetensors, using the server default")
+            return []
+        return ["-F", f"voice_wav=@{value};filename={os.path.basename(value)}"]
+    return ["--form-string", f"voice_url={value}"]
+
+
+# ---------- queue and worker ----------
+
+def enqueue(text, voice, source):
+    ensure_dirs()
+    job = {"text": text, "voice": voice, "source": source, "queued": time.time_ns()}
+    name = f"{job['queued']:020d}-{os.getpid()}.json"
+    write_atomic(os.path.join(QUEUE_DIR, name + ".part"), json.dumps(job))
+    os.replace(os.path.join(QUEUE_DIR, name + ".part"), os.path.join(QUEUE_DIR, name))
+
+
+def queued_jobs():
+    try:
+        return sorted(n for n in os.listdir(QUEUE_DIR) if n.endswith(".json"))
+    except OSError:
+        return []
+
+
+def start_worker():
+    subprocess.Popen(
+        [sys.executable, os.path.realpath(__file__), "_worker"],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+        close_fds=True,
+    )
+
+
+def stopped_at():
+    try:
+        with open(STOPPED_AT) as fh:
+            return int(fh.read().strip() or 0)
+    except (OSError, ValueError):
+        return 0
+
+
+def play(job, cfg):
+    """Stream one job from the server into the player. Returns when done."""
+    text_file = os.path.join(STATE_DIR, "current.txt")
+    write_atomic(text_file, job["text"])
+    curl = [
+        "curl", "-sS", "-N", "--fail",
+        "--connect-timeout", str(CONNECT_TIMEOUT), "--max-time", str(MAX_TIME),
+        "-F", f"text=<{text_file}",
+        *voice_fields(job.get("voice") or "default", cfg),
+        f"{cfg['server']}/tts",
+    ]
+    player = os.environ.get("SPEAK_PLAYER") or "pw-play -"
+    cmd = "set -o pipefail\n" + " ".join(shlex.quote(a) for a in curl) + " | " + player
+    with open(LOG, "a") as errlog:
+        proc = subprocess.Popen(
+            ["bash", "-c", cmd],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=errlog,
+            start_new_session=True,
+        )
+    write_atomic(PLAYING, json.dumps({
+        "pid": proc.pid, "voice": job.get("voice"), "source": job.get("source"),
+    }))
+    write_state()
+    rc = proc.wait()
+    try:
+        os.unlink(PLAYING)
+    except OSError:
+        pass
+    if rc not in (0, -signal.SIGTERM, 128 + signal.SIGTERM):
+        log(f"playback failed (exit {rc}) for {job.get('source')}: server {cfg['server']}")
+
+
+def worker():
+    ensure_dirs()
+    cfg = load_config()
+    while True:
+        with open(WORKER_LOCK, "a") as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                return  # another worker drains the queue
+            while True:
+                jobs = queued_jobs()
+                if not jobs:
+                    break
+                path = os.path.join(QUEUE_DIR, jobs[0])
+                job = read_json(path, None)
+                try:
+                    os.unlink(path)
+                except OSError:
+                    continue
+                if not job or job.get("queued", 0) <= stopped_at():
+                    continue
+                play(job, cfg)
+            write_state()
+        # A job queued just as the lock went away still gets played.
+        if not queued_jobs():
+            return
+
+
+# ---------- commands ----------
+
+def cmd_say(args):
+    voice, source = "default", ""
+    it = iter(args)
+    for a in it:
+        if a == "--voice":
+            voice = next(it, "default")
+        elif a == "--source":
+            source = next(it, "")
+    cfg = load_config()
+    try:
+        limit = int(cfg.get("max_sentences", 4))
+    except (TypeError, ValueError):
+        limit = 4
+    text = clean(sys.stdin.read(), limit)
+    if not text:
+        return 0
+    ensure_dirs()
+    with Locked(STATE_LOCK):
+        write_atomic(LAST_JSON, json.dumps({"text": text, "voice": voice, "source": source}))
+    if is_muted():
+        write_state()
+        return 0
+    enqueue(text, voice, source)
+    write_state()
+    start_worker()
+    return 0
+
+
+def cmd_stop():
+    ensure_dirs()
+    write_atomic(STOPPED_AT, str(time.time_ns()))
+    for name in queued_jobs():
+        try:
+            os.unlink(os.path.join(QUEUE_DIR, name))
+        except OSError:
+            pass
+    playing = read_json(PLAYING, None)
+    if playing and playing.get("pid"):
+        try:
+            os.killpg(int(playing["pid"]), signal.SIGTERM)
+        except (OSError, ValueError):
+            pass
+        for _ in range(20):
+            if not pid_alive(playing["pid"]):
+                break
+            time.sleep(0.05)
+    try:
+        os.unlink(PLAYING)
+    except OSError:
+        pass
+    write_state()
+    return 0
+
+
+def cmd_mute():
+    ensure_dirs()
+    open(MUTED, "a").close()
+    cmd_stop()
+    return 0
+
+
+def cmd_unmute():
+    try:
+        os.unlink(MUTED)
+    except OSError:
+        pass
+    write_state()
+    return 0
+
+
+def cmd_replay():
+    last = read_json(LAST_JSON, {})
+    if not last.get("text"):
+        return 0
+    # Replay is a user action, so it plays even while muted.
+    enqueue(last["text"], last.get("voice") or "default", last.get("source") or "")
+    write_state()
+    start_worker()
+    return 0
+
+
+def cmd_status(args):
+    data = write_state() if os.path.isdir(STATE_DIR) else {
+        "state": "muted" if is_muted() else "idle",
+        "voice": "", "source": "", "last_text": "", "updated": int(time.time()),
+    }
+    if "--json" in args:
+        print(json.dumps(data))
+    else:
+        line = data["state"]
+        if data["voice"]:
+            line += f" ({data['voice']}"
+            line += f", {data['source']})" if data["source"] else ")"
+        print(line)
+    return 0
+
+
+def main(argv):
+    if not argv:
+        print(__doc__.strip(), file=sys.stderr)
+        return 2
+    cmd, args = argv[0], argv[1:]
+    try:
+        if cmd == "say":
+            return cmd_say(args)
+        if cmd == "voice-for":
+            if not args:
+                print("usage: speak voice-for PROVIDER/MODEL", file=sys.stderr)
+                return 2
+            print(voice_for(args[0], load_config()))
+            return 0
+        if cmd == "mute":
+            return cmd_mute()
+        if cmd == "unmute":
+            return cmd_unmute()
+        if cmd == "toggle":
+            return cmd_unmute() if is_muted() else cmd_mute()
+        if cmd == "stop":
+            return cmd_stop()
+        if cmd == "replay":
+            return cmd_replay()
+        if cmd == "status":
+            return cmd_status(args)
+        if cmd == "_worker":
+            worker()
+            return 0
+    except Exception as exc:  # never break the caller (hooks, bar)
+        log(f"{cmd} failed: {exc!r}")
+        return 0 if cmd in ("say", "_worker") else 1
+    print(__doc__.strip(), file=sys.stderr)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv[1:]))
