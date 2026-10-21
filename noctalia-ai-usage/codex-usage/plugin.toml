@@ -43,6 +43,13 @@ min = 0
 max = 720
 
 [[setting]]
+key = "providers"
+type = "string"
+label_key = "settings.providers.label"
+description_key = "settings.providers.description"
+default = "^openai$"
+
+[[setting]]
 key = "bar_style"
 type = "select"
 label_key = "settings.bar_style.label"

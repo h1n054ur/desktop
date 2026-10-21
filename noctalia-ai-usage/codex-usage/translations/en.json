@@ -43,6 +43,10 @@
       "description": "Desktop notification when a session starts waiting for input or a permission.",
       "label": "Notify when a session needs you"
     },
+    "providers": {
+      "description": "Regex for the OpenCode provider ids whose sessions show here. Empty shows every session.",
+      "label": "OpenCode providers"
+    },
     "warn_color": {
       "description": "Colour of a limit from 70% used. Yellow by default.",
       "label": "Warning colour"
