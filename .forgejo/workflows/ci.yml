@@ -38,7 +38,7 @@ jobs:
         run: python3 tools/check_keybinds.py
       - name: ShellCheck
         working-directory: repo
-        run: shellcheck -x install.sh setup/install.sh setup/lib/ui.sh tools/split.sh quickshell/greeter/*.sh quickshell/shell/tests/nested.sh kitty/install.sh setup/bin/start-to-tray noctalia-ai-usage/codex-usage/limits.sh noctalia-ai-usage/codex-usage/sessions.sh noctalia-ai-usage/codex-usage/focus.sh
+        run: shellcheck -x install.sh setup/install.sh setup/lib/ui.sh tools/split.sh quickshell/greeter/*.sh quickshell/shell/tests/nested.sh kitty/install.sh setup/bin/start-to-tray noctalia-ai-usage/codex-usage/limits.sh noctalia-ai-usage/codex-usage/sessions.sh noctalia-ai-usage/codex-usage/focus.sh noctalia-ai-usage/muse-usage/limits.sh noctalia-ai-usage/muse-usage/sessions.sh
 
   split:
     needs: checks
