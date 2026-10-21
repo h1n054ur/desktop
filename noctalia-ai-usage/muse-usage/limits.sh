@@ -1,0 +1,62 @@
+#!/bin/sh
+# limits.sh fetch: print Muse Code plan limits as [{label, percent, resets_at}] by asking a
+# short-lived `muse serve` session host (MSP v1, newline-delimited JSON-RPC over stdio) for
+# `usage/read`. The host is started with memory-only sessions, no shell and no workspace writes,
+# never starts a session or a turn, and exits as soon as its stdin closes, so this makes no
+# model request and costs no plan usage. It runs under `timeout`, which kills it if it hangs.
+# `usage/read` only returns what that host has observed itself, and a fresh host observes
+# nothing until it talks to the model: so this usually prints [] (with a note on stderr) and the
+# panel shows "no usage yet". Muse keeps no usage on disk that we could read instead.
+# Sign-in comes from Muse itself (`account/read`, state loggedOut), never from auth.json values.
+# limits.sh plan: print the plan tier from the same answer (empty when nothing was observed).
+mode="${1:-fetch}"
+command -v jq >/dev/null || { echo "jq not found" >&2; exit 1; }
+command -v muse >/dev/null || { echo "muse not installed" >&2; exit 2; }
+auth="${MUSE_AUTH_PATH:-${XDG_CONFIG_HOME:-$HOME/.config}/muse/auth.json}"
+[ -e "$auth" ] || { echo "no Muse sign-in at $auth; run: muse login" >&2; exit 2; }
+# The host answers every request, then exits on end of input. account/read needs the
+# experimental surface; usage/read is stable. MUSE_NO_AUTO_UPDATE stops the launcher from
+# starting a background update check on every poll.
+err=$(mktemp) || exit 1
+trap 'rm -f "$err"' EXIT
+out=$(cd / && printf '%s\n' \
+  '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"clientInfo":{"name":"muse_usage_noctalia","version":"1"},"capabilities":{"experimentalApi":true,"userInputDialogs":false}}}' \
+  '{"jsonrpc":"2.0","method":"initialized"}' \
+  '{"jsonrpc":"2.0","id":2,"method":"account/read"}' \
+  '{"jsonrpc":"2.0","id":3,"method":"usage/read"}' \
+  | MUSE_NO_AUTO_UPDATE=1 timeout -k 2 15 muse serve --no-session-log --disable-shell --disable-write 2>"$err")
+rc=$?
+if [ "$rc" -ne 0 ]; then
+  # Muse's own message can quote the auth file, so it is classified here, never printed.
+  if grep -q 'auth file' "$err"; then echo "Muse could not read its sign-in; run: muse login" >&2; exit 2; fi
+  echo "muse serve failed (exit $rc)" >&2
+  exit 1
+fi
+reply() { printf '%s\n' "$out" | jq -c --argjson id "$1" 'select(.id == $id)' 2>/dev/null; }
+account=$(reply 2)
+usage=$(reply 3)
+[ -n "$usage" ] || { echo "muse serve gave no usage/read answer" >&2; exit 1; }
+if printf '%s' "$usage" | jq -e '.error' >/dev/null; then
+  echo "usage/read failed: $(printf '%s' "$usage" | jq -r '.error.message')" >&2
+  exit 1
+fi
+state=$(printf '%s' "$account" | jq -r '.result.state // empty')
+[ "$state" != loggedOut ] || { echo "Muse is signed out; run: muse login" >&2; exit 2; }
+usage=$(printf '%s' "$usage" | jq -c '.result.usage // empty')
+if [ -z "$usage" ]; then
+  echo "Muse has not reported usage yet (it only does with a model request)" >&2
+  [ "$mode" = plan ] || echo '[]'
+  exit 0
+fi
+if [ "$mode" = plan ]; then
+  # The tier id is verbatim from the provider; show it as words (everyday -> Everyday).
+  printf '%s' "$usage" | jq -r '.tier | gsub("[_-]"; " ") | ascii_downcase
+    | split(" ") | map(select(. != "") | (.[:1] | ascii_upcase) + .[1:]) | join(" ")'
+  exit 0
+fi
+printf '%s' "$usage" | jq -c '
+  # Window length decides the label: 5h for the usual block, hours, days or minutes otherwise.
+  def span: if . % 1440 == 0 then "\(. / 1440)d" elif . % 60 == 0 then "\(. / 60)h" else "\(.)m" end;
+  def reset: if (.resetsAtMs // 0) > 0 then (.resetsAtMs / 1000 | floor | todate) else null end;
+  [ (.window | {label: (.windowDurationMins | span), percent: .usedPercent, resets_at: reset}),
+    (.weekly | {label: "7d", percent: .usedPercent, resets_at: reset}) ]'
