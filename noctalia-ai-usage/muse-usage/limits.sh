@@ -20,7 +20,9 @@ command -v jq >/dev/null || { echo "jq not found" >&2; exit 1; }
 emit() {
   if [ "$mode" = plan ]; then
     # The tier id is verbatim from the provider; show it as words (everyday -> Everyday).
-    printf '%s' "$1" | jq -r '(.tier // "") | gsub("[_-]"; " ") | ascii_downcase
+    # An all-digit tier is an opaque id, not a name, so print nothing and the panel says "Muse Code".
+    printf '%s' "$1" | jq -r '(.tier // "" | tostring) | if test("^[0-9]+$") then "" else . end
+      | gsub("[_-]"; " ") | ascii_downcase
       | split(" ") | map(select(. != "") | (.[:1] | ascii_upcase) + .[1:]) | join(" ")'
     return
   fi
