@@ -6,14 +6,18 @@
 --
 -- OpenCode sessions come from sessions.sh (the OpenCode background service's own API, read-only), every
 -- few seconds; with no service running it prints [] at once. Published as state "sessions" =
--- [{ id, title, cwd, status = busy|waiting|idle, since, waitingFor, tool, pid, terminal }], sorted
--- waiting > busy > idle, newest first. Notifications use the same settings as the Claude widget.
+-- [{ id, title, cwd, status = busy|waiting|idle, since, waitingFor, tool, pid, terminal, provider, model }],
+-- sorted waiting > busy > idle, newest first. Notifications use the same settings as the Claude widget.
+-- Only sessions whose model provider matches the "providers" setting (a regex, default ^openai$) show
+-- here, so another widget (Muse) can take the rest. Sessions whose provider cannot be told at all stay
+-- on this widget (--keep-unknown); see sessions.sh.
 local PLUGIN = noctalia.pluginDir()
 local FRESH_MS = 5 * 60000 -- min gap between API calls (failures included, so a broken sign-in backs off too)
 local MANUAL_MS = 30000 -- min gap for a manual refresh (right-click on the bar)
 local KINDS = { [2] = "not_signed_in", [3] = "expired" }
 local SESSIONS_MS = 3000 -- sessions.sh poll interval
 local RANK = { waiting = 0, busy = 1, idle = 2 }
+local PROVIDERS = "^openai$" -- default of the "providers" setting
 
 local api = { windows = nil, at = 0, lastTry = -math.huge, pending = false, plan = nil, error = nil }
 
@@ -129,7 +133,8 @@ end
 local function pollSessions()
   if sess.pending then return end
   sess.pending = true
-  local started = noctalia.runAsync({ PLUGIN .. "/sessions.sh" }, function(r)
+  local providers = noctalia.string.trim(tostring(cfg("providers", PROVIDERS)))
+  local started = noctalia.runAsync({ PLUGIN .. "/sessions.sh", "--keep-unknown", providers }, function(r)
     sess.pending = false
     local list = r.exitCode == 0 and noctalia.json.decode(r.stdout or "") or nil
     if type(list) ~= "table" then

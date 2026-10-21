@@ -78,9 +78,9 @@ local function sessionCard(s)
   elseif s.status == "busy" and tool then
     body[#body + 1] = iconLine(TOOL_GLYPH[string.lower(tool)] or "tool", tool .. (toolArg and ("  " .. toolArg) or ""), shared.accent(), 12)
   end
-  body[#body + 1] = ui.row({ gap = 4, align = "center" }, {
-    chip("terminal", s.terminal or "no terminal open"),
-  })
+  local chips = { chip("terminal", s.terminal or "no terminal open") }
+  if (s.model or "") ~= "" then chips[#chips + 1] = chip("cpu", s.model) end
+  body[#body + 1] = ui.row({ gap = 4, align = "center" }, chips)
   return ui.column({
     key = "session:" .. s.id, gap = 4, padding = 10, radius = 10,
     opacity = s.status == "idle" and 0.7 or 1,
