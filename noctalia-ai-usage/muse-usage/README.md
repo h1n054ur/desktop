@@ -1,6 +1,6 @@
 # Muse Usage for Noctalia
 
-Your Muse Code plan limits in the [Noctalia](https://github.com/noctalia-dev/noctalia) bar: how much of the 5-hour and weekly windows you have used, and when each one resets. Your open [OpenCode](https://opencode.ai) sessions that run on a Muse model show on it too. It sits next to [Claude Sessions](../claude-sessions/README.md) and [Codex Usage](../codex-usage/README.md) and looks the same, with the Meta icon in cyan.
+Your Muse Code plan limits in the [Noctalia](https://github.com/noctalia-dev/noctalia) bar: how much of the 5-hour and weekly windows you have used, and when each one resets. Your open [OpenCode](https://opencode.ai) sessions that run on a Muse model show on it too. It sits next to [Claude Sessions](../claude-sessions/README.md) and [Codex Usage](../codex-usage/README.md) and looks the same, with the Meta icon in Facebook blue.
 
 ## What it shows
 
@@ -46,7 +46,7 @@ start = [ "workspaces", "claude", "codex", "muse" ]
 | Bar style | One dot per session | Dots, or counts (`waiting` and `working/open`). More than 8 sessions always show as counts |
 | Bar limits | 5-hour window | Which windows the bar shows: 5-hour, 7-day, both, all, or hidden (icon only) |
 | Bar limits style | Linear bar | A small bar or a ring for each window |
-| Accent colour | `#00E5FF` | Colour of the icon, working dots, limit bars and panel highlights (cyan). Empty uses the theme's primary colour |
+| Accent colour | `#1877F2` | Colour of the icon, working dots, limit bars and panel highlights (Facebook blue). Empty uses the theme's primary colour |
 | Warning colour | `#FFC53D` | Colour of a limit from 70% used (yellow) |
 | Critical colour | `#FF4D4F` | Colour of a limit from 90% used (red). Empty uses the theme's error colour |
 
