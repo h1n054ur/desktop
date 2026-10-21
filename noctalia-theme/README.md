@@ -11,7 +11,7 @@ I run two 1080p screens side by side, and they do different jobs:
 | | Left screen (main) | Right screen |
 |---|---|---|
 | Workspaces | 1 to 5 | 6 to 10 |
-| Bar, start | workspaces, search, clock (date on hover), weather | workspaces, Claude sessions |
+| Bar, start | workspaces, search, clock (date on hover), weather | workspaces, Claude sessions, Codex limits, Muse limits |
 | Bar, centre | window title, music (only while playing) | window title |
 | Bar, end | CPU, CPU temp, GPU temp, RAM; volume, network, power | tray |
 
@@ -41,7 +41,7 @@ Noctalia's launcher uses compact rows in the same font (this setup uses [fuzzel]
 
 ## Install
 
-1. Install the plugins the bar uses: [noctalia-glow-plugins](https://github.com/h1n054ur/noctalia-glow-plugins) and, for the Claude and Codex widgets, [noctalia-ai-usage](https://github.com/h1n054ur/noctalia-ai-usage).
+1. Install the plugins the bar uses: [noctalia-glow-plugins](https://github.com/h1n054ur/noctalia-glow-plugins) and, for the Claude, Codex and Muse widgets, [noctalia-ai-usage](https://github.com/h1n054ur/noctalia-ai-usage).
 2. Clone this repo and link the palette and icons:
 
 ```sh
@@ -63,7 +63,7 @@ files = [ "~/noctalia-h1n054ur/noctalia/h1n054ur.toml" ]
 ```toml
 [bar.default.monitor.right]
 match = "SERIAL-OF-YOUR-RIGHT-SCREEN"
-start = [ "workspaces", "claude", "codex" ]
+start = [ "workspaces", "claude", "codex", "muse" ]
 center = [ "gw_title" ]
 end = [ "tray" ]
 ```
