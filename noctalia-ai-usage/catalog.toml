@@ -1,5 +1,5 @@
 # Noctalia plugins catalog for the AI usage widgets: one [[plugin]] row per plugin subdirectory
-# (claude-sessions, codex-usage). Each plugin's own plugin.toml stays authoritative.
+# (claude-sessions, codex-usage, muse-usage). Each plugin's own plugin.toml stays authoritative.
 
 [[plugin]]
 id = "hani/claude-sessions"
@@ -17,12 +17,25 @@ tags = ["bar", "panel", "launcher", "service", "ai", "development", "productivit
 [[plugin]]
 id = "hani/codex-usage"
 name = "Codex Usage"
-version = "0.1.0"
-updated_at = 1792397361
+version = "0.3.0"
+updated_at = 1792574233
 added_at = 1792397361
 author = "hani"
 license = "MIT"
 icon = "brand-openai"
-description = "ChatGPT plan limits for Codex (5-hour and weekly windows) on the bar, with reset countdowns in a panel."
+description = "ChatGPT plan limits for Codex (5-hour and weekly windows) and live OpenCode sessions on the bar, with a panel to jump to each session."
+plugin_api = 24
+tags = ["bar", "panel", "service", "ai", "development", "productivity"]
+
+[[plugin]]
+id = "hani/muse-usage"
+name = "Muse Usage"
+version = "0.1.0"
+updated_at = 1792574233
+added_at = 1792574233
+author = "hani"
+license = "MIT"
+icon = "brand-meta"
+description = "Muse Code plan limits (5-hour and weekly windows) and live OpenCode sessions on Muse models on the bar, with a panel to jump to each session."
 plugin_api = 24
 tags = ["bar", "panel", "service", "ai", "development", "productivity"]

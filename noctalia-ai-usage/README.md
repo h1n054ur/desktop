@@ -1,13 +1,16 @@
 # AI usage widgets for the Noctalia bar
 
-Two bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) that show how much of your AI plans you have used, side by side:
+Three bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) that show how much of your AI plans you have used, side by side:
 
 | Plugin | ID | What it shows |
 |---|---|---|
 | [Claude Sessions](claude-sessions/README.md) | `hani/claude-sessions` | Every [Claude Code](https://claude.com/claude-code) session: which ones are working, which are waiting for you, what each is doing, and your Claude plan limits. A fork of [lfdominguez/claude-sessions](https://github.com/noctalia-dev/community-plugins/tree/main/claude-sessions) 1.5.2. |
-| [Codex Usage](codex-usage/README.md) | `hani/codex-usage` | Your ChatGPT plan limits for Codex (5-hour and weekly windows) with reset countdowns, read through OpenCode's ChatGPT sign-in. |
+| [Codex Usage](codex-usage/README.md) | `hani/codex-usage` | Your ChatGPT plan limits for Codex (5-hour and weekly windows) with reset countdowns, read through OpenCode's ChatGPT sign-in, and your open [OpenCode](https://opencode.ai) sessions on OpenAI models. |
+| [Muse Usage](muse-usage/README.md) | `hani/muse-usage` | Your Muse Code plan limits (5-hour and weekly windows) with reset countdowns, and your open OpenCode sessions on Muse models. |
 
-Both look the same on the bar: an icon, then a small meter per plan window. A click opens a floating panel.
+All three look the same on the bar: an icon, then a small meter per plan window. A click opens a floating panel.
+
+OpenCode sessions show on the pill of their model's provider. Each widget has a `providers` setting, a pattern matched against the session's provider ID: `^openai$` for Codex Usage and `^muse$` for Muse Usage.
 
 ![The bar widget: workspaces, then one dot per session and the 5-hour plan usage](docs/bar.png)
 
@@ -15,12 +18,13 @@ Both look the same on the bar: an icon, then a small meter per plan window. A cl
 
 ## Install
 
-Add this repo as a plugin source and enable both plugins:
+Add this repo as a plugin source and enable the plugins you want:
 
 ```sh
 noctalia msg plugins source add ai-usage git https://github.com/h1n054ur/noctalia-ai-usage
 noctalia msg plugins enable hani/claude-sessions
 noctalia msg plugins enable hani/codex-usage
+noctalia msg plugins enable hani/muse-usage
 ```
 
 Then put the widgets on a bar in `~/.config/noctalia/config.toml`:
@@ -32,11 +36,14 @@ type = "hani/claude-sessions:bar"
 [widget.codex]
 type = "hani/codex-usage:bar"
 
+[widget.muse]
+type = "hani/muse-usage:bar"
+
 [bar.default]
-start = [ "workspaces", "claude", "codex" ]
+start = [ "workspaces", "claude", "codex", "muse" ]
 ```
 
-You can enable just one of them. If you used the community Claude plugin before, disable it with `noctalia msg plugins disable lfdominguez/claude-sessions`.
+You can enable any of them on its own. If you used the community Claude plugin before, disable it with `noctalia msg plugins disable lfdominguez/claude-sessions`.
 
 For a local copy you can edit, clone the repo and link the plugin folders into `~/.local/share/noctalia/plugins/`, where Noctalia picks them up as local plugins:
 
@@ -44,9 +51,12 @@ For a local copy you can edit, clone the repo and link the plugin folders into `
 git clone https://github.com/h1n054ur/noctalia-ai-usage
 ln -s "$PWD/noctalia-ai-usage/claude-sessions" ~/.local/share/noctalia/plugins/claude-sessions
 ln -s "$PWD/noctalia-ai-usage/codex-usage" ~/.local/share/noctalia/plugins/codex-usage
+ln -s "$PWD/noctalia-ai-usage/muse-usage" ~/.local/share/noctalia/plugins/muse-usage
 ```
 
 Codex Usage needs OpenCode signed in to ChatGPT with the Codex browser method (`opencode auth login openai --method chatgpt-browser`), plus `sqlite3`, `jq` and `curl`. Its [README](codex-usage/README.md) explains why the default sign-in is not enough.
+
+Muse Usage needs a Muse Code subscription, the `muse` CLI signed in with `muse login`, and OpenCode with the [open-muse](https://github.com/jaylamping/open-muse) plugin, which adds Muse as the OpenCode provider `muse`. Its [README](muse-usage/README.md) has the details, including why the limits often stay empty until Muse reports usage.
 
 ## Claude Sessions
 
@@ -98,4 +108,4 @@ The full guide is in [claude-sessions/README.md](claude-sessions/README.md): bar
 
 ## Credits and licence
 
-Claude Sessions was written by [lfdominguez](https://github.com/lfdominguez) and published in [noctalia-dev/community-plugins](https://github.com/noctalia-dev/community-plugins) under the MIT licence. This fork keeps that licence and the credit. Codex Usage is new work under the same MIT licence. See [LICENSE](LICENSE). The screenshots in `claude-sessions/images` are from the original plugin.
+Claude Sessions was written by [lfdominguez](https://github.com/lfdominguez) and published in [noctalia-dev/community-plugins](https://github.com/noctalia-dev/community-plugins) under the MIT licence. This fork keeps that licence and the credit. Codex Usage and Muse Usage are new work under the same MIT licence. See [LICENSE](LICENSE). The screenshots in `claude-sessions/images` are from the original plugin.

@@ -26,7 +26,7 @@ The installer shows a checklist of components, everything ticked: untick what yo
 | `hyprland` | the Hyprland config: workspaces 1-5 left and 6-10 right, keybinds, the gradient border |
 | `theme` | the Noctalia look: floating pills, floating panels, palette, glow icons, and the right screen's own bar |
 | `plugins` | the glow bar plugins: stats, weather, volume, network, per-screen window titles |
-| `claude` | Claude Code sessions and plan limits, plus Codex plan limits, in the right screen's bar |
+| `claude` | Claude Code sessions and plan limits, plus Codex and Muse plan limits and OpenCode sessions, in the right screen's bar |
 | `lock` | the lock screen and session menu (Super+L, Super+Alt+C) |
 | `login` | the login screen for greetd (sudo; `sudo quickshell/greeter/install.sh revert` undoes it) |
 | `terminal` | the welcome banner, fastfetch panel and starship prompt |
@@ -37,7 +37,7 @@ It's built for **two screens**, and works on one: then all ten workspaces share 
 
 ## Two screens
 
-I use two 1080p screens side by side, and the whole setup is built around that split. The left screen is the main one: workspaces 1 to 5, the full bar (search, clock, weather, system stats, volume, network, power) and the sign-in panel. The right screen holds workspaces 6 to 10, a slim bar (Claude sessions, Codex limits, tray) and the clock at login. Screens are matched by serial number, so the roles stay put whatever port each cable is in. On a laptop alone everything shares one screen.
+I use two 1080p screens side by side, and the whole setup is built around that split. The left screen is the main one: workspaces 1 to 5, the full bar (search, clock, weather, system stats, volume, network, power) and the sign-in panel. The right screen holds workspaces 6 to 10, a slim bar (Claude sessions, Codex and Muse limits, tray) and the clock at login. Screens are matched by serial number, so the roles stay put whatever port each cable is in. On a laptop alone everything shares one screen.
 
 ![Both bars, zoomed](docs/bars.png)
 
@@ -49,7 +49,7 @@ I use two 1080p screens side by side, and the whole setup is built around that s
 | [`kitty/`](kitty) | [kitty-config](https://github.com/h1n054ur/kitty-config) | kitty with splits and smart paste, yazi with previews, rmpc music with cava (Arch, Debian/WSL, macOS) |
 | [`noctalia-theme/`](noctalia-theme) | [noctalia-h1n054ur](https://github.com/h1n054ur/noctalia-h1n054ur) | the bar with floating pills, floating panels, the palette and the glow icons |
 | [`noctalia-glow-plugins/`](noctalia-glow-plugins) | [noctalia-glow-plugins](https://github.com/h1n054ur/noctalia-glow-plugins) | Noctalia plugins: stats that heat up, weather with a forecast panel, volume, network, a per-screen window title |
-| [`noctalia-ai-usage/`](noctalia-ai-usage) | [noctalia-ai-usage](https://github.com/h1n054ur/noctalia-ai-usage) | AI usage in the bar: Claude Code sessions and plan limits (a fork of lfdominguez's plugin with a floating panel) and ChatGPT plan limits for Codex |
+| [`noctalia-ai-usage/`](noctalia-ai-usage) | [noctalia-ai-usage](https://github.com/h1n054ur/noctalia-ai-usage) | AI usage in the bar: Claude Code sessions and plan limits (a fork of lfdominguez's plugin with a floating panel), ChatGPT plan limits for Codex, Muse Code plan limits, and OpenCode sessions on the pill of their provider (Codex for `^openai$`, Muse for `^muse$`, which needs the open-muse OpenCode plugin) |
 | [`claude-code/`](claude-code) | [claude-code-h1n054ur](https://github.com/h1n054ur/claude-code-h1n054ur) | Claude Code in the h1n054ur palette: a theme, a starship-style status line, a task sidebar and a tab bar for running agents |
 | [`quickshell/`](quickshell) | [quickshell-h1n054ur](https://github.com/h1n054ur/quickshell-h1n054ur) | login screen for greetd, lock screen and session menu, built with Quickshell |
 | [`hyprland/`](hyprland) | [hyprland-h1n054ur](https://github.com/h1n054ur/hyprland-h1n054ur) | the Hyprland Lua config: screens, workspaces, keybinds, window rules |
@@ -65,7 +65,7 @@ flowchart TB
     HY["hyprland-h1n054ur<br/>screens, workspaces, keybinds"]
     NT["noctalia-h1n054ur<br/>bar, panels, palette, icons"]
     GP["noctalia-glow-plugins<br/>stats, weather, volume, network, title"]
-    CS["noctalia-ai-usage<br/>Claude and Codex usage in the bar"]
+    CS["noctalia-ai-usage<br/>Claude, Codex and Muse usage in the bar"]
     LK["quickshell-h1n054ur<br/>lock screen, session menu"]
   end
   subgraph term["Terminal"]
