@@ -22,7 +22,7 @@ function M.resetsIn(ms)
   return left >= 1440 and `{left // 1440}d {left % 1440 // 60}h` or `{left // 60}h {left % 60}m`
 end
 
--- The widget's accent: the accent_color setting (cyan by default), or the theme primary when empty.
+-- The widget's accent: the accent_color setting (Facebook blue by default), or the theme primary when empty.
 local accentSetting = noctalia.string.trim(tostring(noctalia.getConfig("accent_color") or ""))
 local ACCENT = accentSetting ~= "" and accentSetting or "primary"
 

@@ -1,7 +1,7 @@
 {
   "settings": {
     "accent_color": {
-      "description": "Colour for the icon, working dots, limit bars and panel highlights. Cyan by default. Empty uses the theme's primary colour. Limits near full switch to the warning and critical colours below.",
+      "description": "Colour for the icon, working dots, limit bars and panel highlights. Facebook blue by default. Empty uses the theme's primary colour. Limits near full switch to the warning and critical colours below.",
       "label": "Accent colour"
     },
     "bar_limits": {

@@ -89,7 +89,7 @@ key = "accent_color"
 type = "color"
 label_key = "settings.accent_color.label"
 description_key = "settings.accent_color.description"
-default = "#00E5FF"
+default = "#1877F2"
 
 [[setting]]
 key = "warn_color"
