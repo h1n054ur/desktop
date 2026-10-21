@@ -63,8 +63,9 @@ function M.errorText(err)
   return text
 end
 
--- Muse only reports usage after it has talked to the model, so a fetch can succeed with no windows.
-M.NO_USAGE = "No usage yet: Muse reports it after a request"
+-- Usage arrives with the first Muse request in OpenCode (open-muse's usage file), so a fetch can
+-- succeed with no windows before that.
+M.NO_USAGE = "No usage yet: it shows after your first Muse request in OpenCode"
 function M.noUsage(limits)
   return limits.updated ~= nil and limits.error == nil and #(limits.windows or {}) == 0
 end
