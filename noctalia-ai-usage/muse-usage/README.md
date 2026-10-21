@@ -13,7 +13,9 @@ Desktop notifications ("Muse needs you", "Muse finished") fire when a session st
 
 ## The usage caveat
 
-Muse keeps no usage on disk, and it only learns your usage when it talks to the model. The widget asks a short-lived `muse serve` host, which makes no model request and so costs nothing, but that host has not seen any usage yet. Until Muse shares usage some other way, the panel will often say "No usage yet: Muse reports it after a request" and the bar shows a dim dash where the percentage would be. That is not an error. The sessions part works either way.
+Muse itself keeps no usage on disk. It only learns your usage when it talks to the model. The open-muse plugin saves what each Muse request reports to a small usage file, and the widget reads that. So the numbers appear after your first Muse request in OpenCode with a version of open-muse that writes this file. Before that, the panel says "No usage yet: it shows after your first Muse request in OpenCode" and the bar shows a dim dash where the percentage would be. That is not an error. The sessions part works either way.
+
+The file keeps the last numbers seen. If a window's reset time has passed since then, the widget shows it at 0% rather than the old figure, since that window has started over.
 
 ## Requirements
 
@@ -54,7 +56,7 @@ Sessions whose provider can't be told at all (a new session with no model and no
 
 ## What it reads and sends
 
-For limits, `limits.sh` starts `muse serve` with memory-only sessions, no shell and no file writes, asks it for the account state and `usage/read`, and lets it exit. It never starts a session or a turn. Muse handles its own sign-in, and the widget never reads the values in Muse's auth file. This runs at most every 5 minutes, or on a right-click.
+For limits, `limits.sh` first reads open-muse's usage file at `${XDG_STATE_HOME:-~/.local/state}/open-muse/usage.json`: the plan tier, the 5-hour window and the weekly window with their used percentage and reset time. Reading it starts nothing. Only when that file is missing or can't be read does `limits.sh` start `muse serve` with memory-only sessions, no shell and no file writes, ask it for the account state and `usage/read`, and let it exit. It never starts a session or a turn, and a fresh host has usually seen no usage yet. Muse handles its own sign-in, and the widget never reads the values in Muse's auth file. This runs at most every 5 minutes, or on a right-click.
 
 ```sh
 ./limits.sh fetch   # [{"label":"5h","percent":42,"resets_at":"..."}, ...] or [] before any usage
