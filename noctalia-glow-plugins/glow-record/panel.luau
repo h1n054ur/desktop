@@ -5,6 +5,9 @@
 -- through `recorder-player` (mpv over IPC).
 local lib = require("./lib/library.luau")
 local C = lib.COLORS
+-- Noctalia patches a re-rendered node in place and treats a nil prop as "unchanged", so a prop
+-- that switches off must be set to an explicit value: CLEAR for fills, "regular" for weights.
+local CLEAR = "#00000000"
 
 local PAGE = 40
 local RELOAD_EVERY_MS = 10000
@@ -212,9 +215,9 @@ local function label(text, size, color, weight, extra)
   return ui.label(p)
 end
 
-local function dot(color, size)
-  size = size or 10
-  return ui.box({ width = size, height = size, radius = size / 2, fill = color, softness = 1 })
+-- The glass dot from the bar button (icons/rec-*.png) instead of a flat circle.
+local function glassDot(name, size)
+  return ui.image({ path = "icons/rec-" .. name .. ".png", width = size, height = size })
 end
 
 local function iconButton(glyph, tooltip, fn, color)
@@ -231,13 +234,14 @@ local function textButton(glyph, text, fn, color, filled)
   })
 end
 
--- The transcript chip: 96 x 24, doubles as the action for its state.
+-- The transcript chip: 112 x 24, wide enough for "Transcribe" with its glyph at 12 px, doubles as
+-- the action for its state.
 local function chip(row)
   local state, pct = lib.chip(row, worker)
   local id = row.id
   local function base(color, fillA, kids, fn, tooltip, borderColor)
-    return ui.row({ width = 96, height = 24, radius = 12, gap = 5, paddingH = 8, align = "center", justify = "center",
-      fill = fillA and lib.tint(color, fillA) or nil, border = borderColor or lib.tint(color, 0.55), borderWidth = 1,
+    return ui.row({ width = lib.CHIP_WIDTH, height = 24, radius = 12, gap = 5, paddingH = 7, align = "center", justify = "center",
+      fill = fillA and lib.tint(color, fillA) or CLEAR, border = borderColor or lib.tint(color, 0.55), borderWidth = 1,
       onClick = fn, tooltip = tooltip }, kids)
   end
   if state == "queued" then
@@ -430,10 +434,10 @@ local function actionsRow(row)
     iconButton("trash", "Delete", function() confirmDelete = row.id render() end, C.red),
     ui.spacer({ flexGrow = 1 }),
   }
-  if state ~= "queued" and state ~= "running" then
-    local redo = state == "done" or state == "nospeech" or state == "failed"
-    kids[#kids + 1] = textButton("refresh", redo and "Transcribe again" or "Transcribe",
-      function() act({ "transcribe", id }) end)
+  -- The chip already queues a first transcript and retries a failed one. The big button is only
+  -- for redoing a finished transcript (the No speech chip has no action of its own).
+  if lib.canRetranscribe(state) then
+    kids[#kids + 1] = textButton("refresh", "Transcribe again", function() act({ "transcribe", id }) end)
   end
   if state == "done" then
     kids[#kids + 1] = textButton("notebook", "Send to Notes", function()
@@ -457,7 +461,7 @@ local function recordingRow(row)
     ui.glyph({ name = (playing and not play.paused) and "player-pause-filled" or "player-play-filled", size = 13,
       color = playing and C.surface or C.text }),
   })
-  local line = ui.row({ gap = 10, align = "center", minHeight = 54, paddingH = 12, paddingV = 8,
+  local line = ui.row({ gap = 8, align = "center", minHeight = 54, paddingH = 12, paddingV = 8,
     onClick = function() openRow(row.id) end }, {
     playBtn,
     titleCell(row, p),
@@ -475,7 +479,7 @@ local function recordingRow(row)
     kids[#kids + 1] = ui.column({ gap = 10, paddingH = 12, paddingV = 10 }, body)
   end
   return ui.column({ key = "row:" .. row.id, gap = 0,
-    fill = (playing or isOpenRow) and C.hover or nil }, kids)
+    fill = (playing or isOpenRow) and C.hover or CLEAR }, kids)
 end
 
 -- ── Sections ────────────────────────────────────────────────────────────────
@@ -513,14 +517,14 @@ end
 local function header()
   local sub = totals.count > 0 and (lib.plural(totals.count, "recording") .. ", " .. lib.size(totals.size)) or ""
   local st = recState.state or "idle"
-  local btnText, dotColor = "Record", C.red
+  local btnText = "Record"
   if st == "recording" then
     btnText = "Stop " .. lib.dur(recState.elapsed_s)
   elseif st == "paused" then
-    btnText, dotColor = "Stop " .. lib.dur(recState.elapsed_s), C.amber
+    btnText = "Stop " .. lib.dur(recState.elapsed_s)
   end
   return ui.row({ gap = 10, align = "center", height = 32 }, {
-    dot(lib.tint(C.green, st == "idle" and 0.35 or 0.8), 20),
+    glassDot(st == "recording" and "live" or st == "paused" and "paused" or "idle", 22),
     label("Recordings", 17, C.text, "bold"),
     label(sub, 12, C.faint, nil, { flexGrow = 1 }),
     ui.row({ gap = 7, height = 27, paddingH = 10, radius = 8, align = "center",
@@ -529,7 +533,7 @@ local function header()
       onClick = function()
         noctalia.runAsync({ "recorder", "toggle" }, function() lastKey = nil end, 15000)
       end }, {
-      dot(dotColor, 10),
+      glassDot(st == "paused" and "paused" or "live", 12),
       label(btnText, 13, C.green),
     }),
   })
@@ -564,14 +568,14 @@ local function emptyState()
   local what = settings.default_source == "mic" and "your mic" or settings.default_source == "both"
     and "system sound and mic as two tracks" or "system sound"
   return ui.column({ gap = 12, align = "center", justify = "center", paddingV = 60, paddingH = 30, flexGrow = 1 }, {
-    dot(lib.tint(C.green, 0.3), 46),
+    glassDot("idle", 46),
     label("No recordings yet", 14, C.text, "bold"),
     label("Press Super+Alt+R or click the dot on the bar. It records " .. what ..
       " (default: " .. src .. ").", 13, C.text2, nil, { maxLines = 3, textAlign = "center", maxWidth = 380 }),
     ui.row({ gap = 7, height = 30, paddingH = 12, radius = 8, align = "center",
       fill = lib.tint(C.green, 0.08), border = lib.tint(C.green, 0.5), borderWidth = 1,
       onClick = function() noctalia.runAsync({ "recorder", "toggle" }, function() lastKey = nil end, 15000) end }, {
-      dot(C.red, 10),
+      glassDot("live", 12),
       label("Start recording", 13, C.green),
     }),
   })
@@ -582,8 +586,8 @@ local function segment()
   for _, s in ipairs({ "system", "mic", "both" }) do
     local on = settings.default_source == s
     kids[#kids + 1] = ui.row({ key = "src:" .. s, height = 27, paddingH = 12, radius = 6, align = "center",
-      fill = on and C.green or nil, onClick = function() setSetting("default_source", s) end }, {
-      label(lib.SOURCE_LABEL[s], 12.5, on and C.surface or C.text2, on and "bold" or nil),
+      fill = on and C.green or CLEAR, onClick = function() setSetting("default_source", s) end }, {
+      label(lib.SOURCE_LABEL[s], 12.5, on and C.surface or C.text2, on and "bold" or "regular"),
     })
   end
   return ui.row({ gap = 0, radius = 8, fill = C.variant, border = C.outline, borderWidth = 1, padding = 1 }, kids)
