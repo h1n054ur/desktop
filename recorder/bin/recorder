@@ -172,10 +172,13 @@ def row_dict(r):
     return d
 
 
-def get_row(con, rid, include_deleted=False):
+def get_row(con, rid):
+    """The row for one recording. Exits with code 1 when there is none and 4 when it was deleted."""
     r = con.execute("SELECT * FROM recordings WHERE id=?", (rid,)).fetchone()
-    if r is None or (r["deleted"] and not include_deleted):
+    if r is None:
         die(f"no recording {rid}")
+    if r["deleted"]:
+        die(f"recording {rid} is deleted", 4)
     return r
 
 
@@ -795,7 +798,7 @@ def cmd_stats(args):
 
 def cmd_show(args):
     con = connect()
-    print(json.dumps(row_dict(get_row(con, args.id, include_deleted=True))))
+    print(json.dumps(row_dict(get_row(con, args.id))))
 
 
 def cmd_rename(args):

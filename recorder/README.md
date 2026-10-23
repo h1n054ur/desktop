@@ -55,6 +55,8 @@ Each row has `peaks`, 30 values from 0 to 1 for the library's waveform. They are
 
 `to-notes` writes `~/Notes/Recordings/<start>-<title>.md` with the title, date, length, source, tags, audio paths and model at the top, then the transcript. It exits with code 3 when the recording has no transcript yet.
 
+`show`, `rename`, `tag`, `untag`, `delete`, `transcribe` and `to-notes` exit with code 1 when there is no such recording and code 4 when it was deleted, and then change nothing. So a saved card whose recording was deleted since does nothing when you press Transcribe.
+
 With `auto_transcribe_mic` on, recordings that include the mic are queued for transcription as soon as they stop.
 
 ## Files

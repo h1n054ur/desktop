@@ -217,10 +217,56 @@ class FileTests(Env):
         self.assertEqual(out["files"], [trashed])
         self.assertFalse(os.path.exists(f))
         self.assertTrue(os.path.exists(trashed))
-        shown = self.json_cli("show", "--json", str(rid))
-        self.assertTrue(shown["deleted"])
+        con = self.mod.connect()
+        self.assertEqual(con.execute("SELECT deleted FROM recordings WHERE id=?", (rid,)).fetchone()[0], 1)
+        con.close()
         self.assertEqual(self.json_cli("list", "--json"), [])
-        self.assertNotEqual(self.run_cli("rename", str(rid), "x", check=False).returncode, 0)
+
+    def test_deleted_rows_are_refused(self):
+        rid = self.add_row(title="Gone", tags=["keep"], transcript="Words.\n")
+        self.json_cli("delete", str(rid))
+        con = self.mod.connect()
+        before = dict(con.execute("SELECT * FROM recordings WHERE id=?", (rid,)).fetchone())
+        con.close()
+        for args in (("show", "--json", str(rid)), ("rename", str(rid), "x"), ("tag", str(rid), "new"),
+                     ("untag", str(rid), "keep"), ("delete", str(rid)), ("transcribe", str(rid)),
+                     ("to-notes", str(rid))):
+            r = self.run_cli(*args, check=False)
+            self.assertEqual(r.returncode, 4, args)
+            self.assertIn(f"recording {rid} is deleted", r.stderr)
+            self.assertEqual(r.stdout, "")
+        con = self.mod.connect()
+        after = dict(con.execute("SELECT * FROM recordings WHERE id=?", (rid,)).fetchone())
+        con.close()
+        self.assertEqual(after, before)
+        self.assertFalse(os.path.exists(os.path.join(self.tmp, "Notes", "Recordings")))
+
+    def test_missing_row_exits_1(self):
+        for args in (("show", "--json", "99"), ("transcribe", "99"), ("rename", "99", "x")):
+            r = self.run_cli(*args, check=False)
+            self.assertEqual(r.returncode, 1, args)
+            self.assertIn("no recording 99", r.stderr)
+
+    def test_saved_card_transcribe_on_deleted_row_does_nothing(self):
+        rid = self.add_row(title="Gone")
+        self.json_cli("delete", str(rid))
+        fake = os.path.join(self.tmp, "fakebin")
+        os.makedirs(fake)
+        with open(os.path.join(fake, "notify-send"), "w") as fh:
+            fh.write("#!/bin/sh\necho transcribe\n")
+        os.chmod(os.path.join(fake, "notify-send"), 0o755)
+        poked = os.path.join(self.tmp, "poked")
+        env = dict(self.env, PATH=fake + os.pathsep + self.env.get("PATH", ""),
+                   RECORDER_WORKER_START_CMD=f"touch {poked}")
+        env.pop("RECORDER_NO_WORKER", None)
+        r = subprocess.run([sys.executable, BIN, "_notify", str(rid), "2.0"], env=env,
+                           capture_output=True, text=True, timeout=60)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        con = self.mod.connect()
+        self.assertEqual(con.execute("SELECT transcript_status FROM recordings WHERE id=?",
+                                     (rid,)).fetchone()[0], "none")
+        con.close()
+        self.assertFalse(os.path.exists(poked))
 
     def test_to_notes_refuses_without_transcript(self):
         rid = self.add_row(title="No words yet")

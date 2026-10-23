@@ -204,3 +204,6 @@ type = "hani/codex-usage:bar"
 
 [widget.muse]
 type = "hani/muse-usage:bar"
+
+[widget.record]
+type = "hani/glow-record:record"
