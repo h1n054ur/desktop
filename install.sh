@@ -162,8 +162,8 @@ if want theme; then
     act "include the theme from $cfg" bash -c 'mkdir -p "$(dirname "$1")"; { printf "[include]\n%s\n\n" "$2"; cat "$1" 2>/dev/null; } > "$1.new" && mv "$1.new" "$1"' _ "$cfg" "$inc"
   fi
   if [ -n "$SIDE_DESC" ] && ! grep -q 'h1n054ur right screen' "$cfg" 2>/dev/null; then
-    right_end='[ "tray" ]'; right_start='[ "workspaces" ]'; want claude && right_start='[ "workspaces", "claude", "codex", "muse" ]'
-    act "give the right screen its own bar" bash -c 'printf "\n# h1n054ur right screen: workspaces 6-10, Claude sessions, Codex and Muse limits, window title, tray\n[bar.default.monitor.right]\nmatch = \"%s\"\nstart = %s\ncenter = [ \"gw_title\" ]\nend = %s\n" "$2" "$3" "$4" >> "$1"' _ "$cfg" "$SIDE_DESC" "$right_start" "$right_end"
+    right_end='[ "record", "tray" ]'; right_start='[ "workspaces" ]'; want claude && right_start='[ "workspaces", "claude", "codex", "muse" ]'
+    act "give the right screen its own bar" bash -c 'printf "\n# h1n054ur right screen: workspaces 6-10, Claude sessions, Codex and Muse limits, window title, recorder, tray\n[bar.default.monitor.right]\nmatch = \"%s\"\nstart = %s\ncenter = [ \"gw_title\" ]\nend = %s\n" "$2" "$3" "$4" >> "$1"' _ "$cfg" "$SIDE_DESC" "$right_start" "$right_end"
   fi
 fi
 
