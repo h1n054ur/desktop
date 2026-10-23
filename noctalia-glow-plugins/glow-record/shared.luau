@@ -10,12 +10,16 @@ M.SOURCE_GLYPH = { system = "volume", mic = "microphone", both = "volume" }
 -- Palette from the design note: red live, amber paused, cyan model busy, green done.
 M.AMBER = "#f5d76e"
 
-function M.statePath()
+local function stateDir()
   local home = noctalia.getenv("HOME") or ""
   local stateHome = noctalia.getenv("XDG_STATE_HOME")
   if not stateHome or stateHome == "" then stateHome = home .. "/.local/state" end
-  return stateHome .. "/recorder/state.json"
+  return stateHome .. "/recorder"
 end
+
+function M.statePath() return stateDir() .. "/state.json" end
+-- The transcript worker's progress file: { id, progress 0..100, eta_s }, only while a transcript runs.
+function M.workerPath() return stateDir() .. "/worker.json" end
 
 -- 75 s -> "01:15", 3725 s -> "1:02:05".
 function M.fmtTime(s)

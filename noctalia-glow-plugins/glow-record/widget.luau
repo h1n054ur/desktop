@@ -1,11 +1,14 @@
 --!nonstrict
 -- Bar button for the `recorder` CLI. Idle and paused it only stats the state file once a second and parses it
 -- when the mtime moves. While recording it reads the small state file ten times a second for the level meter,
--- blinks the red dot every 500 ms and ticks the time. When idle it asks `recorder list` every 3 s whether a
--- transcript is running, to show its progress. Without `recorder` on the PATH it shows the dim dot and stays quiet.
+-- blinks the red dot every 500 ms and ticks the time. When idle it stats the transcript worker's progress file
+-- the same way, and only when that file is missing or stale asks `recorder list` every 3 s whether a transcript
+-- is running. Without `recorder` on the PATH it shows the dim dot and stays quiet.
 local shared = require("./shared.luau")
 
 local STATE_FILE = shared.statePath()
+local WORKER_FILE = shared.workerPath()
+local WORKER_STALE_S = 120   -- an older worker.json is left over from a run that ended
 local FAST_MS, SLOW_MS = 100, 1000
 local LIST_EVERY_MS = 3000
 local SETTINGS_EVERY_MS = 30000
@@ -20,7 +23,10 @@ local readAtMs = 0          -- when `st` was read, to tick the time between stat
 local lastMtime = nil
 local available = noctalia.commandExists("recorder")
 local checkedAtMs = 0
-local transcript = nil      -- { title, progress (0..1 or nil) } while a transcript runs
+local transcript = nil      -- { id, title, progress (0..1 or nil), eta_s } while a transcript runs
+local worker = nil          -- decoded worker.json while it is fresh
+local workerMtime = nil
+local titles = {}           -- recording id -> title, fetched once per id with `recorder show`
 local listPending, listAtMs = false, 0
 local settings = nil
 local settingsPending, settingsAtMs = false, 0
@@ -136,6 +142,8 @@ local function render()
     if transcript then
       rows[#rows + 1] = { "Transcript", transcript.title }
       if transcript.progress then rows[#rows + 1] = { "Progress", tostring(math.floor(transcript.progress * 100 + 0.5)) .. "%" } end
+      local eta = tonumber(transcript.eta_s)
+      if eta and eta >= 0 then rows[#rows + 1] = { "Time left", shared.fmtTime(eta) } end
     end
     if settings then
       rows[#rows + 1] = { "Source", shared.SOURCE_SHORT[settings.default_source] or tostring(settings.default_source) }
@@ -177,6 +185,42 @@ local function refreshList()
     render()
   end, 5000)
   if not started then listPending = false end
+end
+
+-- Fetches a recording's title once, for the tooltip while its transcript runs.
+local function fetchTitle(id)
+  if titles[id] ~= nil then return end
+  titles[id] = false
+  noctalia.runAsync({ "recorder", "show", "--json", tostring(id) }, function(res)
+    local r = res.exitCode == 0 and noctalia.json.decode(res.stdout or "") or nil
+    if type(r) == "table" then
+      titles[id] = (type(r.title) == "string" and r.title ~= "") and r.title or (shared.fileStem(r.started_at) or false)
+      if transcript and transcript.id == id and titles[id] then transcript.title = titles[id]; render() end
+    end
+  end, 5000)
+end
+
+-- Reads worker.json when its mtime moves. Returns true while a fresh worker file describes a running transcript.
+local function readWorker(t)
+  local info = noctalia.fileInfo(WORKER_FILE)
+  if not info then worker, workerMtime = nil, nil; return false end
+  if info.mtime ~= workerMtime then
+    workerMtime = info.mtime
+    local raw = noctalia.readFile(WORKER_FILE)
+    local data = raw and noctalia.json.decode(raw) or nil
+    worker = (type(data) == "table" and data.id ~= nil) and data or nil
+  end
+  if not worker or t / 1000 - info.mtime > WORKER_STALE_S then return false end
+  local id = worker.id
+  fetchTitle(id)
+  local p = tonumber(worker.progress)
+  transcript = {
+    id = id,
+    title = titles[id] or ("recording " .. tostring(id)),
+    progress = p and shared.clamp01(p / 100) or nil,
+    eta_s = worker.eta_s,
+  }
+  return true
 end
 
 local function refreshSettings()
@@ -243,7 +287,9 @@ function update()
   end
 
   if st.state == "idle" then
-    if t - listAtMs >= LIST_EVERY_MS then
+    if readWorker(t) then
+      listAtMs = 0
+    elseif t - listAtMs >= LIST_EVERY_MS then
       listAtMs = t
       refreshList()
     end

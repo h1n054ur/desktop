@@ -12,3 +12,7 @@ dependencies = ["speak"]
 [[widget]]
 id    = "speak"
 entry = "widget.luau"
+
+# Every widget's middle button opens its settings by default. Free it so middle-click replays.
+[widget.actions]
+middle = "none"

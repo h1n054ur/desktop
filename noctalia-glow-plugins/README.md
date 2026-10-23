@@ -80,7 +80,7 @@ A bar button for `recorder`, the CLI in the `recorder/` folder of [h1n054ur/desk
 | Middle | `recorder pause` or `recorder resume` | Pause or resume the recording |
 | Right | menu | Where to record from, long recording (Opus) and the library |
 
-The menu is a small floating panel (`hani/glow-record:menu`), since bar widgets have no context menu. The library panel is `hani/glow-record:panel`, which `recorder library` opens. Idle and paused, the widget stats `recorder`'s state file once a second and parses it only when it changes. While recording it reads it ten times a second for the meter. When idle it runs `recorder list --json --limit 5` every 3 seconds to see whether a transcript is running. Without `recorder` on the `PATH` it stays dim and quiet.
+The menu is a small floating panel (`hani/glow-record:menu`), since bar widgets have no context menu. The library panel is `hani/glow-record:panel`, which `recorder library` opens. Idle and paused, the widget stats `recorder`'s state file once a second and parses it only when it changes. While recording it reads it ten times a second for the meter. When idle it stats the transcript worker's progress file (`worker.json` next to the state file) the same way, for the percent and time left, and falls back to `recorder list --json --limit 5` every 3 seconds only when that file is missing or stale. Without `recorder` on the `PATH` it stays dim and quiet.
 
 ## Icons
 
@@ -114,7 +114,8 @@ flowchart LR
   end
   subgraph record["glow-record"]
     RS["recorder state file"] -->|changed, or 10/s live| RB["record button"]
-    RL["recorder list --json"] -->|every 3 s idle| RB
+    RW["worker progress file"] -->|changed| RB
+    RL["recorder list --json"] -->|no worker file, every 3 s| RB
     RB -->|click| RA["recorder toggle, pause, resume"]
     RB -->|right click| RM["menu panel"]
     RM --> RT["recorder set"]
