@@ -25,10 +25,11 @@ import time
 SCHEMA_VERSION = 1
 LEVEL_RATE = 8000          # Hz of the mono PCM copy used only for the level meter
 LEVEL_CHUNK = LEVEL_RATE // 10 * 2  # 100 ms of s16le mono
-SETTINGS_DEFAULTS = {"default_source": "system", "auto_transcribe_mic": "false"}
+SETTINGS_DEFAULTS = {"default_source": "system", "auto_transcribe_mic": "false", "transcribe_model": "small"}
 SETTINGS_ALLOWED = {
     "default_source": {"system", "mic", "both"},
     "auto_transcribe_mic": {"true", "false"},
+    "transcribe_model": {"tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"},
 }
 PANEL_ID = "hani/glow-record:panel"
 WORKER_UNIT = "recorder-worker.service"
@@ -736,9 +737,14 @@ def cmd_to_notes(args):
     lines = ["---", f"title: {json.dumps(title)}", f"recorded: {r['started_at']}",
              f"duration: {fmt_dur(r['duration_s'])}", f"source: {r['source']}",
              f"tags: {json.dumps(r['tags'])}"]
+    audio = [f.replace(home(), "~", 1) if f.startswith(home() + os.sep) else f for f in r["files"]]
+    lines.append(f"audio: {json.dumps(audio)}")
     if r.get("transcript_model"):
         lines.append(f"model: {json.dumps(r['transcript_model'])}")
-    lines += ["---", "", f"# {title}", "", r["transcript"].strip(), ""]
+    lines += ["---", "", f"# {title}", ""]
+    if audio:
+        lines += [f"Audio: `{a}`" for a in audio] + [""]
+    lines += ["## Transcript", "", r["transcript"].strip(), ""]
     with open(path, "w") as f:
         f.write("\n".join(lines))
     print(json.dumps({"ok": True, "path": path}))

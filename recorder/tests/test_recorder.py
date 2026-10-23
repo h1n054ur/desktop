@@ -144,10 +144,12 @@ class SchemaTests(Env):
         self.assertNotIn("transcript", rows[0])
 
     def test_settings(self):
-        self.assertEqual(self.json_cli("settings", "--json"), {"default_source": "system", "auto_transcribe_mic": False})
+        self.assertEqual(self.json_cli("settings", "--json"), {"default_source": "system", "auto_transcribe_mic": False,
+                                                            "transcribe_model": "small"})
         self.run_cli("set", "default_source", "both")
         self.run_cli("set", "auto_transcribe_mic", "true")
-        self.assertEqual(self.json_cli("settings", "--json"), {"default_source": "both", "auto_transcribe_mic": True})
+        self.assertEqual(self.json_cli("settings", "--json"), {"default_source": "both", "auto_transcribe_mic": True,
+                                                            "transcribe_model": "small"})
         self.assertNotEqual(self.run_cli("set", "default_source", "radio", check=False).returncode, 0)
         self.assertNotEqual(self.run_cli("set", "nope", "x", check=False).returncode, 0)
 

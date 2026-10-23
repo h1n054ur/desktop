@@ -1,0 +1,317 @@
+#!/usr/bin/env python3
+"""recorder-worker: transcribe queued recordings one at a time, then exit.
+
+Runs with the WhisperX venv's python (faster-whisper, torch). It re-executes itself there when started with
+another python. RECORDER_WORKER_PYTHON overrides that interpreter. RECORDER_FAKE_TRANSCRIBE=1 swaps the model
+for canned segments so the tests need no GPU and no venv.
+"""
+
+import fcntl
+import importlib.machinery
+import importlib.util
+import json
+import os
+import shutil
+import subprocess
+import sys
+import time
+
+HERE = os.path.dirname(os.path.realpath(__file__))
+RECORDER_BIN = os.path.join(HERE, "recorder")
+DEFAULT_PYTHON = os.path.expanduser("~/.local/share/uv/tools/whisperx/bin/python")
+SAMPLE_RATE = 16000
+TRACK_LABELS = {"system": "System", "mic": "Mic"}
+
+
+def fake():
+    return os.environ.get("RECORDER_FAKE_TRANSCRIBE") == "1"
+
+
+def ensure_python():
+    """Re-exec under the venv python unless already there (or faked)."""
+    if fake() or os.environ.get("RECORDER_WORKER_REEXEC") == "1":
+        return
+    target = os.environ.get("RECORDER_WORKER_PYTHON") or DEFAULT_PYTHON
+    if os.path.realpath(sys.prefix) == os.path.realpath(os.path.dirname(os.path.dirname(target))):
+        return
+    if not os.access(target, os.X_OK):
+        print(f"recorder-worker: no python at {target} (set RECORDER_WORKER_PYTHON)", file=sys.stderr)
+        sys.exit(1)
+    os.environ["RECORDER_WORKER_REEXEC"] = "1"
+    os.execv(target, [target, os.path.realpath(__file__), *sys.argv[1:]])
+
+
+def load_recorder():
+    loader = importlib.machinery.SourceFileLoader("recorder_core", RECORDER_BIN)
+    spec = importlib.util.spec_from_loader("recorder_core", loader)
+    mod = importlib.util.module_from_spec(spec)
+    loader.exec_module(mod)
+    return mod
+
+
+# ---------- progress file ----------
+
+def progress_path(rec):
+    return os.path.join(rec.state_dir(), "worker.json")
+
+
+def write_progress(rec, rid, progress, eta_s):
+    os.makedirs(rec.state_dir(), exist_ok=True)
+    path = progress_path(rec)
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w") as f:
+        json.dump({"id": rid, "progress": int(progress), "eta_s": None if eta_s is None else round(eta_s, 1),
+                   "updated": time.time()}, f)
+    os.replace(tmp, path)
+
+
+def clear_progress(rec):
+    try:
+        os.unlink(progress_path(rec))
+    except FileNotFoundError:
+        pass
+
+
+# ---------- audio and model ----------
+
+def track_of(path, source):
+    name = os.path.splitext(os.path.basename(path))[0]
+    for t in ("system", "mic"):
+        if name.endswith("-" + t):
+            return t
+    return source if source in TRACK_LABELS else "system"
+
+
+def decode(path):
+    import numpy as np
+    r = subprocess.run(["ffmpeg", "-nostdin", "-v", "error", "-i", path, "-f", "f32le", "-ac", "1",
+                        "-ar", str(SAMPLE_RATE), "-"], capture_output=True)
+    if r.returncode != 0:
+        raise RuntimeError(f"ffmpeg could not decode {os.path.basename(path)}: "
+                           f"{r.stderr.decode(errors='replace').strip()[-300:]}")
+    return np.frombuffer(r.stdout, dtype=np.float32)
+
+
+class FakeModel:
+    """Canned segments, one set per track, so merge order can be checked."""
+    name = "fake"
+    CANNED = {
+        "system": [(0.0, 2.0, "Hello from the system track."), (5.0, 7.5, "Second system line.")],
+        "mic": [(1.0, 3.0, "Reply on the mic."), (65.0, 66.0, "Mic after a minute.")],
+    }
+
+    def transcribe(self, path, track, on_segment):
+        if not os.path.exists(path):
+            raise RuntimeError(f"missing audio file {os.path.basename(path)}")
+        delay = float(os.environ.get("RECORDER_FAKE_DELAY") or 0)
+        out = []
+        for seg in self.CANNED[track]:
+            if delay:
+                time.sleep(delay)
+            out.append(seg)
+            on_segment(seg[1])
+        return out, 70.0
+
+
+class WhisperModel:
+    def __init__(self, name):
+        import torch  # noqa: F401  (must load before ctranslate2, else libcublas fails)
+        from faster_whisper import WhisperModel as FW
+        self._FW = FW
+        self.size = name
+        self.device = None
+        self.model = None
+        try:
+            self._load("cuda")
+        except Exception as e:  # no GPU, driver trouble, out of memory
+            print(f"recorder-worker: cuda unavailable ({e}), using cpu", file=sys.stderr)
+            self._load("cpu")
+
+    def _load(self, device):
+        self.model = self._FW(self.size, device=device, compute_type="int8")
+        self.device = device
+
+    @property
+    def name(self):
+        return f"faster-whisper {self.size}"
+
+    def transcribe(self, path, track, on_segment):
+        audio = decode(path)
+        duration = len(audio) / SAMPLE_RATE
+        try:
+            return self._run(audio, on_segment), duration
+        except RuntimeError as e:
+            if self.device != "cuda":
+                raise
+            print(f"recorder-worker: cuda failed ({e}), retrying on cpu", file=sys.stderr)
+            self._load("cpu")
+            return self._run(audio, on_segment), duration
+
+    def _run(self, audio, on_segment):
+        segments, _info = self.model.transcribe(audio, language=None, vad_filter=True, beam_size=5)
+        out = []
+        for s in segments:
+            text = s.text.strip()
+            if text:
+                out.append((float(s.start), float(s.end), text))
+            on_segment(float(s.end))
+        return out
+
+
+# ---------- transcript text ----------
+
+def stamp(seconds):
+    s = int(seconds)
+    h, rem = divmod(s, 3600)
+    m, sec = divmod(rem, 60)
+    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m:02d}:{sec:02d}"
+
+
+def format_transcript(tracks):
+    """tracks: list of (track, [(start, end, text)]). Two or more tracks get a label per line."""
+    labelled = len(tracks) > 1
+    rows = []
+    for order, (track, segs) in enumerate(tracks):
+        for start, _end, text in segs:
+            rows.append((start, order, track, text))
+    rows.sort(key=lambda r: (r[0], r[1]))
+    lines = []
+    for start, _o, track, text in rows:
+        prefix = f"{TRACK_LABELS.get(track, track)}: " if labelled else ""
+        lines.append(f"[{stamp(start)}] {prefix}{text}")
+    return "\n".join(lines) + ("\n" if lines else "")
+
+
+# ---------- queue ----------
+
+def next_queued(con):
+    r = con.execute("SELECT * FROM recordings WHERE transcript_status='queued' AND deleted=0"
+                    " ORDER BY id LIMIT 1").fetchone()
+    return r
+
+
+def claim(rec, con, rid):
+    with con:
+        cur = con.execute("UPDATE recordings SET transcript_status='running', error=NULL, updated_at=?"
+                          " WHERE id=? AND transcript_status='queued'", (rec.now_iso(), rid))
+    return cur.rowcount == 1
+
+
+def finish(rec, con, rid, transcript=None, model=None, error=None):
+    with con:
+        if error is None:
+            con.execute("UPDATE recordings SET transcript_status='done', transcript=?, transcript_model=?,"
+                        " error=NULL, updated_at=? WHERE id=?", (transcript, model, rec.now_iso(), rid))
+        else:
+            con.execute("UPDATE recordings SET transcript_status='failed', error=?, updated_at=? WHERE id=?",
+                        (error, rec.now_iso(), rid))
+
+
+def process(rec, con, row, get_model):
+    rid = row["id"]
+    files = json.loads(row["files"] or "[]")
+    if not files:
+        raise RuntimeError("recording has no audio files")
+    known = float(row["duration_s"] or 0)
+    t0 = time.monotonic()
+    total = max(known, 0.001) * len(files)
+    done_before = 0.0
+    write_progress(rec, rid, 0, None)
+    model = get_model()
+    tracks = []
+    for path in files:
+        track = track_of(path, row["source"])
+
+        def on_segment(end, base=done_before):
+            frac = min((base + end) / total, 0.99)
+            elapsed = time.monotonic() - t0
+            eta = elapsed / frac * (1 - frac) if frac > 0.01 else None
+            write_progress(rec, rid, frac * 100, eta)
+
+        segs, dur = model.transcribe(path, track, on_segment)
+        done_before += known or dur
+        tracks.append((track, segs))
+    write_progress(rec, rid, 100, 0)
+    return format_transcript(tracks), model.name
+
+
+def notify(rid, ok, detail=""):
+    if os.environ.get("RECORDER_NO_NOTIFY") == "1" or not shutil.which("notify-send"):
+        return
+    subprocess.Popen([sys.executable, os.path.realpath(__file__), "_notify", str(rid), "1" if ok else "0", detail],
+                     start_new_session=True, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def cmd_notify(rid, ok, detail):
+    """Detached: shows the card and opens the library on Open."""
+    if ok == "1":
+        r = subprocess.run(["notify-send", "--app-name=Recorder", "--icon=document-edit", "--action=open=Open",
+                            "Transcript ready", detail or f"Recording {rid}"], capture_output=True, text=True)
+        if r.stdout.strip() == "open":
+            subprocess.run([RECORDER_BIN, "library"], stdout=subprocess.DEVNULL)
+    else:
+        subprocess.run(["notify-send", "--app-name=Recorder", "--icon=dialog-error",
+                        "Transcript failed", detail or f"Recording {rid}"], capture_output=True)
+
+
+def run():
+    rec = load_recorder()
+    os.makedirs(rec.state_dir(), exist_ok=True)
+    lock = open(os.path.join(rec.state_dir(), "worker.lock"), "w")
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        print("recorder-worker: another worker is running", file=sys.stderr)
+        return 0
+    con = rec.connect()
+    # A worker that died mid-row left it running. We hold the lock, so nothing else is working on it.
+    with con:
+        con.execute("UPDATE recordings SET transcript_status='queued' WHERE transcript_status='running'")
+    model_holder = {}
+
+    def get_model():
+        if "m" not in model_holder:
+            if fake():
+                model_holder["m"] = FakeModel()
+            else:
+                model_holder["m"] = WhisperModel(rec.get_setting(con, "transcribe_model"))
+        return model_holder["m"]
+
+    try:
+        while True:
+            row = next_queued(con)
+            if row is None:
+                break
+            rid = row["id"]
+            if not claim(rec, con, rid):
+                continue
+            t0 = time.monotonic()
+            try:
+                text, model = process(rec, con, row, get_model)
+            except Exception as e:  # report the row as failed and go on with the queue
+                msg = str(e) or e.__class__.__name__
+                finish(rec, con, rid, error=msg)
+                print(f"recorder-worker: {rid} failed: {msg}", file=sys.stderr)
+                notify(rid, False, msg[:200])
+            else:
+                finish(rec, con, rid, transcript=text, model=model)
+                print(f"recorder-worker: {rid} done in {time.monotonic() - t0:.1f}s with {model}")
+                notify(rid, True, row["title"] or "")
+    finally:
+        clear_progress(rec)
+        con.close()
+        lock.close()
+    return 0
+
+
+def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "_notify":
+        cmd_notify(*sys.argv[2:5])
+        return 0
+    ensure_python()
+    return run()
+
+
+if __name__ == "__main__":
+    sys.exit(main())
