@@ -1,0 +1,40 @@
+id          = "hani/glow-record"
+name        = "Glow Record"
+version     = "0.1.0"
+plugin_api  = 32
+author      = "hani"
+license     = "MIT"
+icon        = "player-record"
+description = "Glow-dot bar button for the recorder CLI: blinking red dot, time and level meter while recording, amber when paused, transcript progress after a recording. Click to start or stop, middle-click to pause, right-click for the source and options menu."
+tags        = ["bar", "panel", "audio", "recording"]
+dependencies = ["recorder", "recorder-player", "mpv"]
+
+[[widget]]
+id    = "record"
+entry = "widget.luau"
+
+# Every widget's middle button opens its settings by default. Free it for pause and resume.
+[widget.actions]
+middle = "none"
+
+# Right-click menu: Noctalia has no context menu for bar widgets, so it is a small floating panel.
+[[panel]]
+id = "menu"
+entry = "menu.luau"
+width = 300
+height = 270
+placement = "floating"
+position = "auto"
+open_near_click = true
+dismiss_on_outside_click = true
+
+# Library panel (`recorder library` toggles hani/glow-record:panel).
+[[panel]]
+id = "panel"
+entry = "panel.luau"
+width = 540
+height = 800
+placement = "floating"
+position = "auto"
+open_near_click = true
+dismiss_on_outside_click = true

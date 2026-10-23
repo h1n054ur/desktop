@@ -1,6 +1,6 @@
 # Glow plugins for Noctalia
 
-Five bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) built around one set of glow icons: system stats that warm up as the machine gets busy, weather with a full forecast panel, volume and network, a window title that follows each screen on its own, and a button for spoken agent replies.
+Six bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) built around one set of glow icons: system stats that warm up as the machine gets busy, weather with a full forecast panel, volume and network, a window title that follows each screen on its own, a button for spoken agent replies and a record button.
 
 ![Both bars: left screen (main) with workspaces 1-5, time, weather, title, stats and system; right screen with workspaces 6-10, Claude, title and tray](docs/bars.png)
 
@@ -11,6 +11,7 @@ Five bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) built 
 | glow-panel | `hani/glow-panel` | Volume (`volume`) and network (`network`) widgets |
 | glow-window | `hani/glow-window` | The window on this screen's workspace, per bar, on Hyprland |
 | glow-speak | `hani/glow-speak` | Whether coding-agent replies are read aloud (`speak`), with mute, stop and replay |
+| glow-record | `hani/glow-record` | Records system sound, the mic or both (`recorder`), with time, level meter and transcript progress |
 
 ## glow-stats
 
@@ -69,6 +70,18 @@ A bar button for `speak`, the small CLI in the `speak/` folder of [h1n054ur/desk
 
 The widget stats `speak`'s state file once a second and only runs `speak status --json` when the file or the mute flag changes, while a reply plays, and every 30 seconds. Without `speak` on the `PATH` it stays dim and quiet.
 
+## glow-record
+
+A bar button for `recorder`, the CLI in the `recorder/` folder of [h1n054ur/desktop](https://github.com/h1n054ur/desktop) that records system sound, the mic or both to FLAC (or Opus for long recordings) and transcribes them with a local model. Idle it is a dim dot. While recording the dot is red and blinks once a second, the time ticks and a five-box meter follows the level, one meter per track when it records both. Paused, the dot turns amber and the time stops. After a recording, a file glyph with a progress bar shows the transcript running. Hover for the time, source, format and file.
+
+| Click | Runs | |
+|---|---|---|
+| Left | `recorder toggle` | Start, or stop and save |
+| Middle | `recorder pause` or `recorder resume` | Pause or resume the recording |
+| Right | menu | Where to record from, long recording (Opus) and the library |
+
+The menu is a small floating panel (`hani/glow-record:menu`), since bar widgets have no context menu. The library panel is `hani/glow-record:panel`, which `recorder library` opens. Idle and paused, the widget stats `recorder`'s state file once a second and parses it only when it changes. While recording it reads it ten times a second for the meter. When idle it stats the transcript worker's progress file (`worker.json` next to the state file) the same way, for the percent and time left, and falls back to `recorder list --json --limit 5` every 3 seconds only when that file is missing or stale. Without `recorder` on the `PATH` it stays dim and quiet.
+
 ## Icons
 
 ![Icon states: stats heat levels, volume and network](docs/icon-states.png)
@@ -99,6 +112,14 @@ flowchart LR
     SC --> SB["speaker button"]
     SB -->|click| SA["speak toggle, stop, replay"]
   end
+  subgraph record["glow-record"]
+    RS["recorder state file"] -->|changed, or 10/s live| RB["record button"]
+    RW["worker progress file"] -->|changed| RB
+    RL["recorder list --json"] -->|no worker file, every 3 s| RB
+    RB -->|click| RA["recorder toggle, pause, resume"]
+    RB -->|right click| RM["menu panel"]
+    RM --> RT["recorder set"]
+  end
 ```
 
 ## Install
@@ -112,6 +133,7 @@ noctalia msg plugins enable hani/glow-weather
 noctalia msg plugins enable hani/glow-panel
 noctalia msg plugins enable hani/glow-window
 noctalia msg plugins enable hani/glow-speak
+noctalia msg plugins enable hani/glow-record
 ```
 
 Then define widgets in `~/.config/noctalia/config.toml` and place them on a bar:
@@ -136,13 +158,16 @@ type = "hani/glow-window:title"
 [widget.speak]
 type = "hani/glow-speak:speak"
 
+[widget.record]
+type = "hani/glow-record:record"
+
 [bar.default]
 start = [ "weather", "cpu" ]
 center = [ "title" ]
-end = [ "speak", "volume", "network" ]
+end = [ "record", "speak", "volume", "network" ]
 ```
 
-glow-panel needs `pactl` and `wpctl` (PipeWire), glow-window needs `hyprctl` and `python3`, glow-speak needs `speak` on the `PATH`.
+glow-panel needs `pactl` and `wpctl` (PipeWire), glow-window needs `hyprctl` and `python3`, glow-speak needs `speak` and glow-record needs `recorder` on the `PATH`.
 
 ## Part of h1n054ur/desktop
 

@@ -65,3 +65,16 @@ icon = "volume"
 description = "Glow-icon bar button for the speak CLI that reads coding-agent replies aloud: dim when idle, bright while speaking, red when muted. Click to mute, right-click to stop, middle-click to replay."
 plugin_api = 32
 tags = ["bar", "audio", "ai"]
+
+[[plugin]]
+id = "hani/glow-record"
+name = "Glow Record"
+version = "0.1.0"
+updated_at = 1792738724
+added_at = 1792738724
+author = "hani"
+license = "MIT"
+icon = "player-record"
+description = "Glow-dot bar button for the recorder CLI: blinking red dot, time and level meter while recording, amber when paused, transcript progress after a recording. Click to start or stop, middle-click to pause, right-click for the source and options menu."
+plugin_api = 32
+tags = ["bar", "panel", "audio", "recording"]
