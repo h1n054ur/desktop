@@ -269,4 +269,29 @@ M.SOURCE_GLYPH = { system = "volume", mic = "microphone", both = "speakerphone" 
 M.SOURCE_LABEL = { system = "System", mic = "Mic", both = "Both" }
 M.MODELS = { "tiny", "base", "small", "medium", "large-v3", "large-v3-turbo" }
 
+-- Options for the Mic select from `recorder devices --json` and the mic_device setting.
+-- Returns labels, the node name behind each label ("default" first) and the 0-based index of
+-- the current choice. A chosen mic that is not plugged in stays listed so it can be kept.
+function M.micOptions(devices, current)
+  current = current or "default"
+  local labels, names, idx = {}, { "default" }, 0
+  local defName = nil
+  for _, d in ipairs(devices or {}) do
+    if d.is_default then defName = d.description end
+  end
+  labels[1] = defName and ("System default (" .. defName .. ")") or "System default"
+  local found = current == "default"
+  for _, d in ipairs(devices or {}) do
+    labels[#labels + 1] = d.description or d.name
+    names[#names + 1] = d.name
+    if d.name == current then idx, found = #names - 1, true end
+  end
+  if not found then
+    labels[#labels + 1] = current .. " (not connected)"
+    names[#names + 1] = current
+    idx = #names - 1
+  end
+  return labels, names, idx
+end
+
 return M

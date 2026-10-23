@@ -110,7 +110,12 @@ local TRANSCRIPT = "[02:14] Mic: The build is green on main, so push it to stagi
 local listData = ALL
 local listOverride = nil -- function(args) -> rows
 local failCli = false
-local settingsData = { default_source = "system", auto_transcribe_mic = false, transcribe_model = "small" }
+local settingsData = { default_source = "system", auto_transcribe_mic = false, transcribe_model = "small",
+  mic_device = "default" }
+local DEVICES = {
+  { name = "alsa_input.cam", description = "Webcam Analog Stereo", is_default = true },
+  { name = "alsa_input.headset", description = "Headset Analog Stereo", is_default = false },
+}
 
 local function has(argv, flag)
   for k, a in ipairs(argv) do if a == flag then return argv[k + 1] or true end end
@@ -165,6 +170,7 @@ local function recorderReply(argv)
     end
     return "{}"
   elseif sub == "settings" then return enc(settingsData)
+  elseif sub == "devices" then return enc(DEVICES)
   elseif sub == "set" then settingsData[argv[3]] = argv[4] == "true" and true or argv[4] == "false" and false or argv[4]
   elseif sub == "to-notes" then return enc({ ok = true, path = HOME .. "/Notes/Recordings/x.md" }) end
   return enc({ ok = true })
@@ -512,6 +518,31 @@ files[DB].mtime = 10
 dofile(dir .. "/panel.lua")
 onOpen("")
 check("cli error shown", contains(texts(), "recorder: command not found"))
+
+-- Mic select: system default first, then each source, an unplugged choice stays listed.
+do
+  local lib = dofile(dir .. "/lib/library.lua")
+  local labels, names, idx = lib.micOptions(DEVICES, "default")
+  check("mic options default", labels[1] == "System default (Webcam Analog Stereo)" and #labels == 3 and idx == 0
+    and names[3] == "alsa_input.headset")
+  labels, names, idx = lib.micOptions(DEVICES, "alsa_input.headset")
+  check("mic options chosen", idx == 2)
+  labels, names, idx = lib.micOptions(DEVICES, "alsa_input.usb-ABC_MIC_TEST-00.analog-stereo")
+  check("mic options unplugged kept", idx == 3 and labels[4] == "alsa_input.usb-ABC_MIC_TEST-00.analog-stereo (not connected)")
+  labels = lib.micOptions({}, nil)
+  check("mic options no devices", #labels == 1 and labels[1] == "System default")
+end
+failCli = false
+onClose()
+listData = ALL
+files[DB].mtime = 11
+onOpen("")
+check("devices listed", anyCall("recorder devices --json"))
+local micSel = find(function(n) return n.type == "select" and n.props.options and n.props.options[1]
+  and n.props.options[1]:find("System default", 1, true) == 1 end)
+check("mic select shown", micSel ~= nil and micSel.props.selectedIndex == 0)
+if micSel then micSel.props.onChange("2") end
+check("mic set called", anyCall("recorder set mic_device alsa_input.headset"), lastCall())
 
 print(string.format("%d passed, %d failed", passed, failed))
 os.exit(failed == 0 and 0 or 1)

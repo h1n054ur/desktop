@@ -30,7 +30,8 @@ local totals = { count = 0, size = 0, days = {} }
 local query, pendingQuery, queryAt, searchRev = "", nil, 0, 0
 local openId, detail = nil, nil -- the open row and its `recorder show` JSON
 local renaming, tagging, confirmDelete = nil, nil, nil
-local settings = { default_source = "system", auto_transcribe_mic = false, transcribe_model = "small" }
+local settings = { default_source = "system", auto_transcribe_mic = false, transcribe_model = "small",
+  mic_device = "default" }
 local recState = { state = "idle" }
 local worker = nil
 local play = nil -- { id, token, pos, dur, paused }
@@ -149,6 +150,14 @@ function loadSettings()
       for k, v in pairs(data) do settings[k] = v end
       render()
     end
+  end)
+end
+
+-- Mic sources for the Mic select, from `recorder devices --json`.
+local mics = {}
+local function loadMics()
+  recorder({ "devices", "--json" }, function(data)
+    if type(data) == "table" then mics = data render() end
   end)
 end
 
@@ -593,6 +602,19 @@ local function segment()
   return ui.row({ gap = 0, radius = 8, fill = C.variant, border = C.outline, borderWidth = 1, padding = 1 }, kids)
 end
 
+local function micRow()
+  local labels, names, idx = lib.micOptions(mics, settings.mic_device)
+  return ui.row({ gap = 6, align = "center" }, {
+    ui.glyph({ name = "microphone", size = 13, color = C.faint }),
+    label("Mic", 12, C.faint, nil, { flexGrow = 1 }),
+    ui.select({ options = labels, selectedIndex = idx, controlSize = "sm", width = 260,
+      onChange = function(i)
+        local n = names[(tonumber(i) or 0) + 1]
+        if n and n ~= (settings.mic_device or "default") then setSetting("mic_device", n) end
+      end }),
+  })
+end
+
 local function settingsStrip()
   local model = settings.transcribe_model or "small"
   local idx = 2
@@ -621,6 +643,7 @@ local function settingsStrip()
           if m and m ~= settings.transcribe_model then setSetting("transcribe_model", m) end
         end }),
     }),
+    micRow(),
   })
 end
 
@@ -723,6 +746,7 @@ function onOpen(context)
   lastKey = nil
   panel.setWantsSecondTicks(true)
   loadSettings()
+  loadMics()
   poll()
   render()
 end

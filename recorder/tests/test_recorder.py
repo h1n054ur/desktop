@@ -175,16 +175,125 @@ class SchemaTests(Env):
     def test_settings(self):
         self.assertEqual(self.json_cli("settings", "--json"),
                          {"default_source": "system", "auto_transcribe_mic": False, "long": False,
-                          "transcribe_model": "small"})
+                          "transcribe_model": "small", "mic_device": "default", "sink_device": "default"})
         self.run_cli("set", "default_source", "both")
         self.run_cli("set", "auto_transcribe_mic", "true")
         self.run_cli("set", "long", "true")
         self.assertEqual(self.json_cli("settings", "--json"),
                          {"default_source": "both", "auto_transcribe_mic": True, "long": True,
-                          "transcribe_model": "small"})
+                          "transcribe_model": "small", "mic_device": "default", "sink_device": "default"})
         self.assertNotEqual(self.run_cli("set", "long", "maybe", check=False).returncode, 0)
         self.assertNotEqual(self.run_cli("set", "default_source", "radio", check=False).returncode, 0)
         self.assertNotEqual(self.run_cli("set", "nope", "x", check=False).returncode, 0)
+
+
+FAKE_PACTL = r"""
+import json, os, sys
+a = sys.argv[1:]
+fx = json.load(open(os.environ["FAKE_PACTL_FIXTURE"]))
+if a == ["get-default-source"]:
+    print(fx["default_source"])
+elif a == ["get-default-sink"]:
+    print(fx["default_sink"])
+elif a[-2:] == ["list", "sources"]:
+    print(json.dumps(fx["sources"]))
+elif a[-2:] == ["list", "sinks"]:
+    print(json.dumps(fx["sinks"]))
+else:
+    sys.exit(1)
+"""
+
+FIXTURE = {
+    "default_source": "alsa_input.usb-cam.analog-stereo",
+    "default_sink": "alsa_output.usb-headset.analog-stereo",
+    "sources": [
+        {"name": "alsa_input.usb-cam.analog-stereo", "description": "Webcam Analog Stereo",
+         "properties": {"device.class": "sound"}},
+        {"name": "alsa_output.usb-headset.analog-stereo.monitor", "description": "Monitor of Headset",
+         "properties": {"device.class": "monitor"}},
+        {"name": "alsa_input.usb-headset.analog-stereo", "description": "Headset Analog Stereo",
+         "properties": {"device.class": "sound"}},
+    ],
+    "sinks": [
+        {"name": "alsa_output.usb-headset.analog-stereo", "description": "Headset Analog Stereo"},
+        {"name": "bluez_output.speaker.1", "description": "Speaker"},
+    ],
+}
+
+
+class DeviceTests(Env):
+    def setUp(self):
+        super().setUp()
+        script = os.path.join(self.tmp, "fake_pactl.py")
+        with open(script, "w") as f:
+            f.write(FAKE_PACTL)
+        fixture = os.path.join(self.tmp, "fixture.json")
+        with open(fixture, "w") as f:
+            json.dump(FIXTURE, f)
+        extra = {"RECORDER_PACTL": f"{sys.executable} {script}", "FAKE_PACTL_FIXTURE": fixture}
+        self.env.update(extra)
+        os.environ.update(extra)
+        self._saved.update({k: None for k in extra})
+
+    def test_devices_json_skips_monitors(self):
+        self.assertEqual(self.json_cli("devices", "--json"), [
+            {"name": "alsa_input.usb-cam.analog-stereo", "description": "Webcam Analog Stereo", "is_default": True},
+            {"name": "alsa_input.usb-headset.analog-stereo", "description": "Headset Analog Stereo",
+             "is_default": False},
+        ])
+        sinks = self.json_cli("devices", "--json", "--sinks")
+        self.assertEqual([d["name"] for d in sinks if d["is_default"]], ["alsa_output.usb-headset.analog-stereo"])
+        self.assertEqual(len(sinks), 2)
+
+    def test_devices_without_pactl(self):
+        self.env["RECORDER_PACTL"] = os.path.join(self.tmp, "no-such-pactl")
+        self.assertEqual(self.json_cli("devices", "--json"), [])
+
+    def test_set_device_keeps_case_and_takes_unplugged_names(self):
+        self.run_cli("set", "mic_device", "alsa_input.usb-ABC_MIC_TEST-00.analog-stereo")
+        self.run_cli("set", "sink_device", "bluez_output.speaker.1")
+        s = self.json_cli("settings", "--json")
+        self.assertEqual(s["mic_device"], "alsa_input.usb-ABC_MIC_TEST-00.analog-stereo")
+        self.assertEqual(s["sink_device"], "bluez_output.speaker.1")
+        self.run_cli("set", "mic_device", "Default")
+        self.assertEqual(self.json_cli("settings", "--json")["mic_device"], "default")
+        self.assertNotEqual(self.run_cli("set", "mic_device", "two words", check=False).returncode, 0)
+        self.assertNotEqual(self.run_cli("set", "mic_device", " ", check=False).returncode, 0)
+
+    def test_resolve_follows_default(self):
+        devices, notes = self.mod.resolve_devices()
+        self.assertEqual(devices, {"mic": "alsa_input.usb-cam.analog-stereo",
+                                   "system": "alsa_output.usb-headset.analog-stereo.monitor"})
+        self.assertEqual(notes, [])
+
+    def test_resolve_uses_chosen_devices(self):
+        devices, notes = self.mod.resolve_devices("alsa_input.usb-headset.analog-stereo", "bluez_output.speaker.1")
+        self.assertEqual(devices, {"mic": "alsa_input.usb-headset.analog-stereo",
+                                   "system": "bluez_output.speaker.1.monitor"})
+        self.assertEqual(notes, [])
+
+    def test_resolve_falls_back_when_missing(self):
+        devices, notes = self.mod.resolve_devices("alsa_input.usb-ABC_MIC_TEST-00.analog-stereo", "gone.sink")
+        self.assertEqual(devices, {"mic": "alsa_input.usb-cam.analog-stereo",
+                                   "system": "alsa_output.usb-headset.analog-stereo.monitor"})
+        self.assertEqual(len(notes), 2)
+        self.assertIn("alsa_input.usb-ABC_MIC_TEST-00.analog-stereo not found", notes[0])
+
+    def test_missing_mic_is_noted_on_the_row(self):
+        self.run_cli("set", "mic_device", "alsa_input.usb-ABC_MIC_TEST-00.analog-stereo")
+        self.json_cli("start", "--source", "mic")
+        time.sleep(0.6)
+        rid = self.json_cli("stop")["id"]
+        row = self.json_cli("show", "--json", str(rid))
+        self.assertTrue(row["files"])
+        self.assertIn("mic device alsa_input.usb-ABC_MIC_TEST-00.analog-stereo not found", row["error"])
+
+    def test_present_mic_leaves_no_note(self):
+        self.run_cli("set", "mic_device", "alsa_input.usb-headset.analog-stereo")
+        self.json_cli("start", "--source", "mic")
+        time.sleep(0.6)
+        rid = self.json_cli("stop")["id"]
+        self.assertIsNone(self.json_cli("show", "--json", str(rid))["error"])
 
 
 class FileTests(Env):

@@ -27,7 +27,9 @@ PEAK_BARS = 30
 LEVEL_RATE = 8000          # Hz of the mono PCM copy used only for the level meter
 LEVEL_CHUNK = LEVEL_RATE // 10 * 2  # 100 ms of s16le mono
 SETTINGS_DEFAULTS = {"default_source": "system", "auto_transcribe_mic": "false", "long": "false",
-                     "transcribe_model": "small"}
+                     "transcribe_model": "small", "mic_device": "default", "sink_device": "default"}
+# Settings that take a PipeWire node name (case kept, not checked against what is plugged in now).
+DEVICE_SETTINGS = ("mic_device", "sink_device")
 SETTINGS_ALLOWED = {
     "default_source": {"system", "mic", "both"},
     "auto_transcribe_mic": {"true", "false"},
@@ -246,18 +248,66 @@ def lock_held():
 
 # ---------- capture ----------
 
+def pactl(*a):
+    """Runs pactl (RECORDER_PACTL replaces the command, tests). Returns stdout or ""."""
+    cmd = shlex.split(os.environ.get("RECORDER_PACTL", "pactl"))
+    try:
+        return subprocess.run([*cmd, *a], capture_output=True, text=True, timeout=3).stdout.strip()
+    except (OSError, subprocess.TimeoutExpired):
+        return ""
+
+
+def _pactl_json(kind):
+    try:
+        out = json.loads(pactl("-f", "json", "list", kind) or "[]")
+    except ValueError:
+        return []
+    return out if isinstance(out, list) else []
+
+
+def _is_monitor(src):
+    props = src.get("properties") or {}
+    return props.get("device.class") == "monitor" or str(src.get("name", "")).endswith(".monitor")
+
+
+def list_devices():
+    """Mic sources (no monitors) and sinks, each as {name, description, is_default}."""
+    dsrc, dsink = pactl("get-default-source"), pactl("get-default-sink")
+    mics = [{"name": s.get("name", ""), "description": s.get("description") or s.get("name", ""),
+             "is_default": s.get("name") == dsrc}
+            for s in _pactl_json("sources") if s.get("name") and not _is_monitor(s)]
+    sinks = [{"name": s.get("name", ""), "description": s.get("description") or s.get("name", ""),
+              "is_default": s.get("name") == dsink}
+             for s in _pactl_json("sinks") if s.get("name")]
+    return {"sources": mics, "sinks": sinks}
+
+
 def default_devices():
-    def pactl(*a):
-        try:
-            return subprocess.run(["pactl", *a], capture_output=True, text=True, timeout=3).stdout.strip()
-        except (OSError, subprocess.TimeoutExpired):
-            return ""
     sink = pactl("get-default-sink")
     src = pactl("get-default-source")
     return {
         "system": (sink + ".monitor") if sink else "@DEFAULT_MONITOR@",
         "mic": src or "@DEFAULT_SOURCE@",
     }
+
+
+def resolve_devices(mic_device="default", sink_device="default"):
+    """Capture devices for the chosen settings. A chosen device that is not there falls back
+    to the system default. Returns (devices, notes) where notes explain each fallback."""
+    devices, notes = default_devices(), []
+    if mic_device != "default" or sink_device != "default":
+        have = list_devices()
+        if mic_device != "default":
+            if any(d["name"] == mic_device for d in have["sources"]):
+                devices["mic"] = mic_device
+            else:
+                notes.append(f"mic device {mic_device} not found, used the system default")
+        if sink_device != "default":
+            if any(d["name"] == sink_device for d in have["sinks"]):
+                devices["system"] = sink_device + ".monitor"
+            else:
+                notes.append(f"sink device {sink_device} not found, used the system default")
+    return devices, notes
 
 
 def input_args(track, devices):
@@ -508,7 +558,12 @@ def run_daemon(source, long, lock_fd):
     ext = "opus" if long else "flac"
     pdir = os.path.join(parts_dir(), stamp)
     os.makedirs(pdir, exist_ok=True)
-    devices = {} if os.environ.get("RECORDER_CAPTURE_CMD") else default_devices()
+    devices, device_notes = {}, []
+    if not os.environ.get("RECORDER_CAPTURE_CMD") or os.environ.get("RECORDER_PACTL"):
+        con = connect()
+        devices, device_notes = resolve_devices(get_setting(con, "mic_device") if source != "system" else "default",
+                                                get_setting(con, "sink_device") if source != "mic" else "default")
+        con.close()
 
     tracks = [Track(t, os.path.join(pdir, f"{t}.{ext}"), long, devices) for t in finals]
     flags = {"stop": False, "pause": False, "resume": False}
@@ -580,7 +635,7 @@ def run_daemon(source, long, lock_fd):
     # Line the tracks up: a device that opened later gets that much silence at its start.
     firsts = [t.first_wall for t in tracks if t.first_wall is not None]
     earliest = min(firsts) if firsts else None
-    files, durations, errors = [], [], []
+    files, durations, errors = [], [], list(device_notes)
     for t in tracks:
         out = finals[t.name]
         lead = (t.first_wall - earliest) if (earliest is not None and t.first_wall is not None) else 0.0
@@ -965,16 +1020,32 @@ def cmd_settings(args):
         print(json.dumps(s))
     else:
         for k, v in s.items():
-            print(f"{k} = {str(v).lower()}")
+            print(f"{k} = {str(v).lower() if isinstance(v, bool) else v}")
+
+
+def cmd_devices(args):
+    d = list_devices()
+    if args.json:
+        print(json.dumps(d["sources"] if not args.sinks else d["sinks"]))
+        return
+    for dev in d["sinks" if args.sinks else "sources"]:
+        print(f"{'*' if dev['is_default'] else ' '} {dev['name']}  ({dev['description']})")
 
 
 def cmd_set(args):
-    allowed = SETTINGS_ALLOWED.get(args.key)
-    if allowed is None:
-        die(f"unknown setting {args.key} (known: {', '.join(SETTINGS_ALLOWED)})")
-    value = args.value.lower()
-    if value not in allowed:
-        die(f"{args.key} takes one of: {', '.join(sorted(allowed))}")
+    if args.key in DEVICE_SETTINGS:
+        value = args.value.strip()
+        if value.lower() == "default":
+            value = "default"
+        if not value or any(c.isspace() for c in value):
+            die(f"{args.key} takes default or a PipeWire node name (see recorder devices)")
+    else:
+        allowed = SETTINGS_ALLOWED.get(args.key)
+        if allowed is None:
+            die(f"unknown setting {args.key} (known: {', '.join([*SETTINGS_ALLOWED, *DEVICE_SETTINGS])})")
+        value = args.value.lower()
+        if value not in allowed:
+            die(f"{args.key} takes one of: {', '.join(sorted(allowed))}")
     con = connect()
     with con:
         con.execute("INSERT INTO settings(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
@@ -1023,6 +1094,9 @@ def main(argv=None):
     add("to-notes", cmd_to_notes).add_argument("id", type=int)
     add("library", cmd_library)
     add("settings", cmd_settings).add_argument("--json", action="store_true")
+    sp = add("devices", cmd_devices, help="list mic sources (--sinks: outputs) for mic_device and sink_device")
+    sp.add_argument("--json", action="store_true")
+    sp.add_argument("--sinks", action="store_true")
     sp = add("set", cmd_set)
     sp.add_argument("key")
     sp.add_argument("value")
