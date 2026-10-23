@@ -93,9 +93,15 @@ function M.dayName(p, today, yesterday, daysAgo)
 end
 
 -- Untitled rows show their date and time instead, marked so the panel draws them dimmer.
+-- The CLI's automatic title "Recording YYYY-MM-DD HH:MM[:SS]" shows as "Recording HH:MM": the day
+-- is already the group header.
 function M.title(row)
   local t = row.title
-  if t and t ~= "" then return t, false end
+  if t and t ~= "" then
+    local hm = string.match(t, "^Recording %d%d%d%d%-%d%d%-%d%d[ T_](%d%d[:%-]%d%d)[:%-]?%d?%d?$")
+    if hm then return "Recording " .. string.gsub(hm, "%-", ":"), false end
+    return t, false
+  end
   local p = M.parseTime(row.started_at)
   if not p then return "Recording " .. tostring(row.id), true end
   return M.shortDate(p) .. ", " .. M.clock(p), true
@@ -249,6 +255,14 @@ function M.snippetMarkdown(snip)
     pos = e + 1
   end
   return table.concat(parts)
+end
+
+M.CHIP_WIDTH = 112
+
+-- Whether the open row offers a big "Transcribe again" button: only once a transcript has run to
+-- the end. A first transcript and a retry after a failure go through the row's chip.
+function M.canRetranscribe(state)
+  return state == "done" or state == "nospeech"
 end
 
 M.SOURCE_GLYPH = { system = "volume", mic = "microphone", both = "speakerphone" }

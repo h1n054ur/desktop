@@ -103,7 +103,7 @@ local ALL = {
   rec(4, yesterday, "16:30", { title = "Call with client", source = "both", format = "opus", transcript_status = "done", has_transcript = true }),
   rec(5, older, "20:15", { title = "Intro, take 2", transcript_status = "done", has_transcript = false }),
   rec(6, older, "11:12", { title = "Mic check", source = "mic", transcript_status = "failed", error = "CUDA out of memory" }),
-  rec(7, older, "08:00", { title = "Not yet transcribed" }),
+  rec(7, older, "08:00", { title = "Recording " .. older .. " 08:00" }),
 }
 local TRANSCRIPT = "[02:14] Mic: The build is green on main, so push it to staging this afternoon.\n[02:31] Mic: If staging holds until Monday we tag the release."
 
@@ -171,6 +171,7 @@ local function recorderReply(argv)
     return "{}"
   elseif sub == "settings" then return enc(settingsData)
   elseif sub == "devices" then return enc(DEVICES)
+  elseif sub == "set" then settingsData[argv[3]] = argv[4] == "true" and true or argv[4] == "false" and false or argv[4]
   elseif sub == "to-notes" then return enc({ ok = true, path = HOME .. "/Notes/Recordings/x.md" }) end
   return enc({ ok = true })
 end
@@ -294,6 +295,8 @@ check("chip running percent from worker.json", contains(t, "38%"))
 check("chip done", contains(t, "Transcript"))
 check("chip no speech", contains(t, "No speech"))
 check("chip failed", contains(t, "Failed"))
+check("auto title shows the time only", contains(t, "Recording 08:00") and not contains(t, "Recording " .. older))
+check("named title kept", contains(t, "Call with client"))
 check("untitled shows date and time", t:find(", 09:41", 1, true) ~= nil)
 check("opus marker", contains(t, "Opus"))
 check("tag in meta", contains(t, "voice"))
@@ -429,9 +432,59 @@ onListScroll("900", "1000")
 check("scroll loads more", anyCall("--limit 80"))
 onListScroll("10", "1000")
 
+-- Open row without a transcript: the chip is the only Transcribe action.
+listData = ALL
+files[DB].mtime = 4
+update()
+local function rowTexts(id)
+  local out = {}
+  walk(find(function(n) return n.props.key == "row:" .. id end), function(n)
+    if n.type == "label" then out[#out + 1] = n.props.text end
+  end)
+  return out
+end
+local function countText(list, s) local k = 0 for _, x in ipairs(list) do if x == s then k = k + 1 end end return k end
+click("Recording 08:00")
+local r7 = rowTexts(7)
+check("single Transcribe action when no transcript", countText(r7, "Transcribe") == 1 and countText(r7, "Transcribe again") == 0,
+  table.concat(r7, "|"))
+check("no transcript yet shown", countText(r7, "No transcript yet.") == 1)
+click("Mic check")
+local r6 = rowTexts(6)
+check("failed row: chip retries, no big button", countText(r6, "Transcribe again") == 0 and countText(r6, "Transcribe") == 0,
+  table.concat(r6, "|"))
+click("Call with client")
+check("done row keeps Transcribe again", countText(rowTexts(4), "Transcribe again") == 1)
+click("Call with client")
+
+-- Chip width fits its longest label: glyph 13 + gap 5 + 10 chars of 12 px mono (7.2 px) + padding 14.
+local chipNode = find(function(n) return n.type == "row" and n.props.height == 24 and n.props.radius == 12 and n.props.width end)
+check("chip wide enough for Transcribe", chipNode and chipNode.props.width >= 13 + 5 + 72 + 14, chipNode and tostring(chipNode.props.width))
+
 -- Settings.
 listData = ALL
-click("Mic")
+local function segments()
+  local out = {}
+  walk(lastTree, function(n)
+    if n.props.key and n.props.key:sub(1, 4) == "src:" then
+      out[n.props.key:sub(5)] = { fill = n.props.fill, color = n.children[1].props.color, weight = n.children[1].props.fontWeight }
+    end
+  end)
+  return out
+end
+for _, pick in ipairs({ "System", "Mic", "Both", "Mic" }) do
+  find(function(n) return n.props.key == "src:" .. string.lower(pick) end).props.onClick()
+  local seg, greens = segments(), 0
+  for s, v in pairs(seg) do
+    if v.fill == "#39ff14" then greens = greens + 1 end
+    -- Every off segment sets its fill and weight explicitly, so an in-place re-render clears the old green.
+    if s ~= string.lower(pick) then
+      check("segment " .. s .. " off after " .. pick, v.fill == "#00000000" and v.weight == "regular" and v.color ~= "#06090a",
+        tostring(v.fill) .. " " .. tostring(v.weight))
+    end
+  end
+  check("only " .. pick .. " green", greens == 1 and seg[string.lower(pick)].fill == "#39ff14", tostring(greens))
+end
 check("default source set", anyCall("recorder set default_source mic"))
 find(function(n) return n.type == "toggle" end).props.onChange("true")
 check("auto transcribe set", anyCall("recorder set auto_transcribe_mic true"))
