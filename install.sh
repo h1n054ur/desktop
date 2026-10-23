@@ -169,7 +169,7 @@ fi
 
 if want plugins; then
   step "plugins"
-  for p in glow-panel glow-stats glow-weather glow-window glow-speak; do
+  for p in glow-panel glow-stats glow-weather glow-window glow-speak glow-record; do
     link "$HERE/noctalia-glow-plugins/$p" "$HOME/.local/share/noctalia/plugins/$p"
     act "enable hani/$p" bash -c 'noctalia msg plugins enable "hani/$1" || true' _ "$p"
   done
