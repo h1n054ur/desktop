@@ -45,7 +45,14 @@ recorder set default_source both
 recorder set auto_transcribe_mic true
 recorder set long true
 recorder set transcribe_model small   # tiny, base, small, medium, large-v3, large-v3-turbo
+recorder devices --json         # mic inputs: name, description, is_default
+recorder devices --json --sinks # outputs, for sink_device
+recorder set mic_device alsa_input.usb-ABC_MIC_TEST-00.analog-stereo
+recorder set mic_device default
+recorder set sink_device default
 ```
+
+`mic_device` picks the mic by its PipeWire node name, as `devices` shows it. `default` follows the system's default input, which is also what happens when the setting is unset. `sink_device` does the same for system sound, which is then taken from that output's monitor. A device can be chosen while it is unplugged. If the chosen device is not there when a recording starts, the recorder uses the system default and says so in the recording's `error` field, for example `mic device ... not found, used the system default`. `devices --json` leaves out monitor sources. The library panel's Mic select uses it.
 
 Each row has `peaks`, 30 values from 0 to 1 for the library's waveform. They are the loudest sample in each of 30 equal slices of the saved audio, taken from the louder track of a two track recording.
 
@@ -102,7 +109,7 @@ Two files, the system and mic tracks, play mixed together. Only one player runs 
 
 ## How capture works
 
-Each track is one `ffmpeg -f pulse` process. System sound comes from the default output's monitor and the mic from the default input, both looked up with `pactl` when the recording starts. The same ffmpeg also writes a small 8 kHz mono copy to a pipe, which the recorder reads to work out the level, so there is no second capture.
+Each track is one `ffmpeg -f pulse` process. System sound comes from the default output's monitor (or the `sink_device` output's) and the mic from the default input (or `mic_device`), both looked up with `pactl` when the recording starts. The same ffmpeg also writes a small 8 kHz mono copy to a pipe, which the recorder reads to work out the level, so there is no second capture.
 
 The captures keep running through a pause, so the devices are never closed and opened again. The recorder notes where each pause starts and ends in every track, counted in samples from the level copy, which runs on the same clock as the file. On stop it cuts those spans out of each track with ffmpeg. FLAC is decoded and encoded again for the cut, which stays lossless, and Opus is encoded once more. A recording without pauses is only moved into place. A device that started later than the other gets that much silence at its start, so both tracks of a two track recording share one timeline. ffmpeg finishes each file on SIGINT, so a stopped file is always complete. If a capture dies, what it wrote is still saved.
 
@@ -114,4 +121,4 @@ The captures keep running through a pause, so the devices are never closed and o
 python3 -m unittest discover -s tests
 ```
 
-The tests use a temporary home folder and replace the capture with a sine tone from ffmpeg (`RECORDER_CAPTURE_CMD` holds the ffmpeg input arguments, and `{track}` in it becomes `system` or `mic`). `RECORDER_NO_NOTIFY=1` skips the cards and `RECORDER_NO_WORKER=1` skips waking the transcription worker. The worker tests set `RECORDER_FAKE_TRANSCRIBE=1`, which swaps the model for canned segments, so they need no GPU or venv. `RECORDER_FAKE_DELAY` slows each segment down to watch the progress file, `RECORDER_FAKE_FINAL_PAUSE=before:S` or `inside:S` holds the worker in its final check, and `RECORDER_WORKER_START_CMD` replaces the systemctl call.
+The tests use a temporary home folder and replace the capture with a sine tone from ffmpeg (`RECORDER_CAPTURE_CMD` holds the ffmpeg input arguments, and `{track}` in it becomes `system` or `mic`). `RECORDER_PACTL` replaces the `pactl` command, which the device tests point at a small script with canned output. `RECORDER_NO_NOTIFY=1` skips the cards and `RECORDER_NO_WORKER=1` skips waking the transcription worker. The worker tests set `RECORDER_FAKE_TRANSCRIBE=1`, which swaps the model for canned segments, so they need no GPU or venv. `RECORDER_FAKE_DELAY` slows each segment down to watch the progress file, `RECORDER_FAKE_FINAL_PAUSE=before:S` or `inside:S` holds the worker in its final check, and `RECORDER_WORKER_START_CMD` replaces the systemctl call.
