@@ -25,6 +25,7 @@ link() {
 
 # CLI
 link "$here/bin/recorder" "$bin_dir/recorder"
+link "$here/bin/recorder-player" "$bin_dir/recorder-player"
 
 # Folders
 for d in "$HOME/Recordings" "$HOME/Recordings/.trash" "$data_dir" "$state_dir"; do
