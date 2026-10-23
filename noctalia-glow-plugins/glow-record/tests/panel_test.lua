@@ -295,7 +295,8 @@ check("chip running percent from worker.json", contains(t, "38%"))
 check("chip done", contains(t, "Transcript"))
 check("chip no speech", contains(t, "No speech"))
 check("chip failed", contains(t, "Failed"))
-check("auto title shows the time only", contains(t, "Recording 08:00") and not contains(t, "Recording " .. older))
+check("auto title shows just Recording", find(function(n) return n.type == "label" and n.props.text == "Recording" end) ~= nil
+  and not contains(t, "Recording 08:00") and not contains(t, "Recording " .. older))
 check("named title kept", contains(t, "Call with client"))
 check("untitled shows date and time", t:find(", 09:41", 1, true) ~= nil)
 check("opus marker", contains(t, "Opus"))
@@ -444,7 +445,7 @@ local function rowTexts(id)
   return out
 end
 local function countText(list, s) local k = 0 for _, x in ipairs(list) do if x == s then k = k + 1 end end return k end
-click("Recording 08:00")
+click("Recording")
 local r7 = rowTexts(7)
 check("single Transcribe action when no transcript", countText(r7, "Transcribe") == 1 and countText(r7, "Transcribe again") == 0,
   table.concat(r7, "|"))
@@ -531,6 +532,9 @@ do
   check("mic options unplugged kept", idx == 3 and labels[4] == "alsa_input.usb-ABC_MIC_TEST-00.analog-stereo (not connected)")
   labels = lib.micOptions({}, nil)
   check("mic options no devices", #labels == 1 and labels[1] == "System default")
+  check("auto title with seconds", lib.title({ title = "Recording 2026-10-23 12:22:05" }) == "Recording")
+  check("named title starting with Recording kept",
+    lib.title({ title = "Recording for the podcast" }) == "Recording for the podcast")
 end
 failCli = false
 onClose()

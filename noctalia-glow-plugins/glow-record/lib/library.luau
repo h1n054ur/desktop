@@ -93,13 +93,12 @@ function M.dayName(p, today, yesterday, daysAgo)
 end
 
 -- Untitled rows show their date and time instead, marked so the panel draws them dimmer.
--- The CLI's automatic title "Recording YYYY-MM-DD HH:MM[:SS]" shows as "Recording HH:MM": the day
--- is already the group header.
+-- The CLI's automatic title "Recording YYYY-MM-DD HH:MM[:SS]" shows as just "Recording": the time
+-- is on the meta line and the day is the group header.
 function M.title(row)
   local t = row.title
   if t and t ~= "" then
-    local hm = string.match(t, "^Recording %d%d%d%d%-%d%d%-%d%d[ T_](%d%d[:%-]%d%d)[:%-]?%d?%d?$")
-    if hm then return "Recording " .. string.gsub(hm, "%-", ":"), false end
+    if string.match(t, "^Recording %d%d%d%d%-%d%d%-%d%d[ T_]%d%d[:%-]%d%d[:%-]?%d?%d?$") then return "Recording", false end
     return t, false
   end
   local p = M.parseTime(row.started_at)
