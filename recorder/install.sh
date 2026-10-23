@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install recorder: link the CLI and the worker, link the worker's user unit, create the folders.
+# Install recorder: link the CLI, the worker and the player, link the worker's user unit, create the folders.
 # Safe to run again. It never starts anything.
 set -euo pipefail
 
@@ -23,9 +23,10 @@ link() {
   echo "linked  $dst"
 }
 
-# CLI and transcription worker
+# CLI, transcription worker and the library panel's player
 link "$here/bin/recorder" "$bin_dir/recorder"
 link "$here/bin/recorder-worker" "$bin_dir/recorder-worker"
+link "$here/bin/recorder-player" "$bin_dir/recorder-player"
 
 # Worker user unit. Linked and loaded, never enabled or started: `recorder transcribe` starts it.
 link "$here/systemd/recorder-worker.service" "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/recorder-worker.service"
