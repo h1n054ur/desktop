@@ -26,11 +26,13 @@ SCHEMA_VERSION = 2
 PEAK_BARS = 30
 LEVEL_RATE = 8000          # Hz of the mono PCM copy used only for the level meter
 LEVEL_CHUNK = LEVEL_RATE // 10 * 2  # 100 ms of s16le mono
-SETTINGS_DEFAULTS = {"default_source": "system", "auto_transcribe_mic": "false", "long": "false"}
+SETTINGS_DEFAULTS = {"default_source": "system", "auto_transcribe_mic": "false", "long": "false",
+                     "transcribe_model": "small"}
 SETTINGS_ALLOWED = {
     "default_source": {"system", "mic", "both"},
     "auto_transcribe_mic": {"true", "false"},
     "long": {"true", "false"},
+    "transcribe_model": {"tiny", "base", "small", "medium", "large-v3", "large-v3-turbo"},
 }
 PANEL_ID = "hani/glow-record:panel"
 WORKER_UNIT = "recorder-worker.service"
@@ -845,24 +847,63 @@ def cmd_delete(args):
     print(json.dumps({"ok": True, "files": moved}))
 
 
+def worker_lock_path():
+    return os.path.join(state_dir(), "worker.lock")
+
+
+def queue_lock_path():
+    return os.path.join(state_dir(), "queue.lock")
+
+
+def worker_in_loop():
+    """True while a worker holds worker.lock, which it keeps until its last empty check under queue.lock."""
+    try:
+        fd = os.open(worker_lock_path(), os.O_RDONLY)
+    except FileNotFoundError:
+        return False
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        return False
+    except BlockingIOError:
+        return True
+    finally:
+        os.close(fd)
+
+
 def queue_transcription(rid):
-    con = connect()
-    with con:
-        con.execute("UPDATE recordings SET transcript_status='queued', error=NULL, updated_at=? WHERE id=?",
-                    (now_iso(), rid))
-    con.close()
-    poke_worker()
+    # Queue under queue.lock, which the worker also holds for its final empty check before it lets go of
+    # worker.lock. So either the worker still sees this row, or it has left its loop and we start a new run.
+    os.makedirs(state_dir(), exist_ok=True)
+    with open(queue_lock_path(), "w") as ql:
+        fcntl.flock(ql, fcntl.LOCK_EX)
+        con = connect()
+        with con:
+            con.execute("UPDATE recordings SET transcript_status='queued', error=NULL, updated_at=? WHERE id=?",
+                        (now_iso(), rid))
+        con.close()
+        running = worker_in_loop()
+    if not running:
+        poke_worker()
 
 
 def poke_worker():
-    """Wake the transcription worker if its user unit is installed. Never fails."""
+    """Start the transcription worker. Never fails.
+
+    Called only when no worker is in its loop. The unit may still be active with a worker that is past its
+    final check and only exiting, where `start` would be a no-op, so this uses `restart`.
+    RECORDER_WORKER_START_CMD (tests) runs that command detached instead of systemctl."""
+    cmd = os.environ.get("RECORDER_WORKER_START_CMD")
+    if cmd:
+        subprocess.Popen(shlex.split(cmd), start_new_session=True, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return
     if os.environ.get("RECORDER_NO_WORKER") == "1" or not shutil.which("systemctl"):
         return
     try:
         r = subprocess.run(["systemctl", "--user", "list-unit-files", WORKER_UNIT, "--no-legend"],
                            capture_output=True, text=True, timeout=5)
         if WORKER_UNIT in r.stdout:
-            subprocess.run(["systemctl", "--user", "start", "--no-block", WORKER_UNIT],
+            subprocess.run(["systemctl", "--user", "restart", "--no-block", WORKER_UNIT],
                            capture_output=True, timeout=5)
     except (OSError, subprocess.TimeoutExpired):
         pass
@@ -894,9 +935,14 @@ def cmd_to_notes(args):
     lines = ["---", f"title: {json.dumps(title)}", f"recorded: {r['started_at']}",
              f"duration: {fmt_dur(r['duration_s'])}", f"source: {r['source']}",
              f"tags: {json.dumps(r['tags'])}"]
+    audio = [f.replace(home(), "~", 1) if f.startswith(home() + os.sep) else f for f in r["files"]]
+    lines.append(f"audio: {json.dumps(audio)}")
     if r.get("transcript_model"):
         lines.append(f"model: {json.dumps(r['transcript_model'])}")
-    lines += ["---", "", f"# {title}", "", r["transcript"].strip(), ""]
+    lines += ["---", "", f"# {title}", ""]
+    if audio:
+        lines += [f"Audio: `{a}`" for a in audio] + [""]
+    lines += ["## Transcript", "", r["transcript"].strip(), ""]
     with open(path, "w") as f:
         f.write("\n".join(lines))
     print(json.dumps({"ok": True, "path": path}))

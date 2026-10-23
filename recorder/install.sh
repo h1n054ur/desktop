@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install recorder: link the CLI, create the recordings and data folders.
+# Install recorder: link the CLI and the worker, link the worker's user unit, create the folders.
 # Safe to run again. It never starts anything.
 set -euo pipefail
 
@@ -23,8 +23,16 @@ link() {
   echo "linked  $dst"
 }
 
-# CLI
+# CLI and transcription worker
 link "$here/bin/recorder" "$bin_dir/recorder"
+link "$here/bin/recorder-worker" "$bin_dir/recorder-worker"
+
+# Worker user unit. Linked and loaded, never enabled or started: `recorder transcribe` starts it.
+link "$here/systemd/recorder-worker.service" "${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user/recorder-worker.service"
+if command -v systemctl >/dev/null && systemctl --user show-environment >/dev/null 2>&1; then
+  systemctl --user daemon-reload
+  echo "reload  systemd --user"
+fi
 
 # Folders
 for d in "$HOME/Recordings" "$HOME/Recordings/.trash" "$data_dir" "$state_dir"; do

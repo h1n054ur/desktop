@@ -10,7 +10,7 @@ It needs Python 3 (standard library only), `ffmpeg`, `ffprobe` and `pactl` (Pipe
 ./install.sh
 ```
 
-`install.sh` links `recorder` into `~/.local/bin` and creates `~/Recordings`, its `.trash` folder and the data and state folders. It starts nothing. Run it again any time.
+`install.sh` links `recorder` and `recorder-worker` into `~/.local/bin`, links the worker's user unit into `~/.config/systemd/user` and reloads systemd, and creates `~/Recordings`, its `.trash` folder and the data and state folders. It never enables or starts anything. Run it again any time.
 
 ## Use
 
@@ -44,6 +44,7 @@ recorder settings --json
 recorder set default_source both
 recorder set auto_transcribe_mic true
 recorder set long true
+recorder set transcribe_model small   # tiny, base, small, medium, large-v3, large-v3-turbo
 ```
 
 Each row has `peaks`, 30 values from 0 to 1 for the library's waveform. They are the loudest sample in each of 30 equal slices of the saved audio, taken from the louder track of a two track recording.
@@ -52,7 +53,7 @@ Each row has `peaks`, 30 values from 0 to 1 for the library's waveform. They are
 
 `stats --json` gives `count`, `size_bytes`, `total_duration_s` and `days` (each with `day`, `count` and `duration_s`) for recordings that are not deleted.
 
-`to-notes` writes `~/Notes/Recordings/<start>-<title>.md` with the date, length, source and tags at the top. It exits with code 3 when the recording has no transcript yet.
+`to-notes` writes `~/Notes/Recordings/<start>-<title>.md` with the title, date, length, source, tags, audio paths and model at the top, then the transcript. It exits with code 3 when the recording has no transcript yet.
 
 With `auto_transcribe_mic` on, recordings that include the mic are queued for transcription as soon as they stop.
 
@@ -72,6 +73,18 @@ While recording it is written about ten times a second. `levels` has one value f
 
 - Log of the recording process: `~/.local/state/recorder/daemon.log`.
 
+## Transcription
+
+`recorder transcribe ID` marks the row `queued` and starts `recorder-worker.service` if the unit is installed. The worker takes queued rows in id order, one at a time, and exits when none are left. Only one worker runs at a time (it holds `~/.local/state/recorder/worker.lock`), and a row left `running` by a worker that died is queued again on the next start. Before it exits, the worker looks at the queue one last time under `queue.lock` and lets go of `worker.lock` while it still holds `queue.lock`. `transcribe` queues under the same lock, so a row queued at the last moment is either seen by that worker or finds no worker in its loop, and then `transcribe` runs `systemctl --user restart --no-block` (a plain `start` does nothing while the old run is still exiting).
+
+It runs with the WhisperX venv's python (`~/.local/share/uv/tools/whisperx/bin/python`, or `RECORDER_WORKER_PYTHON`) and re-executes itself there. Each file is decoded with ffmpeg to 16 kHz mono and transcribed with faster-whisper, the model from the `transcribe_model` setting (default `small`), on the GPU in int8 with the CPU as fallback. The language is detected and silence is skipped. A recording with no speech ends `done` with an empty transcript. Two-track recordings are transcribed track by track and merged by time, each line labelled `System` or `Mic`.
+
+The transcript is one line per segment, `[mm:ss] text` (or `[h:mm:ss]` past an hour). The row then gets `transcript_status` `done` and `transcript_model`, or `failed` with the reason in `error`. A card says "Transcript ready" with an Open button that opens the library.
+
+While a row runs, `~/.local/state/recorder/worker.json` holds `{"id": 3, "progress": 42, "eta_s": 18.5, "updated": ...}`, progress 0 to 100, replaced in one step. The file is gone when the worker is idle.
+
+The unit runs at low CPU and IO priority, with `MemoryMax=6G`, and never restarts on its own.
+
 ## How capture works
 
 Each track is one `ffmpeg -f pulse` process. System sound comes from the default output's monitor and the mic from the default input, both looked up with `pactl` when the recording starts. The same ffmpeg also writes a small 8 kHz mono copy to a pipe, which the recorder reads to work out the level, so there is no second capture.
@@ -86,4 +99,4 @@ The captures keep running through a pause, so the devices are never closed and o
 python3 -m unittest discover -s tests
 ```
 
-The tests use a temporary home folder and replace the capture with a sine tone from ffmpeg (`RECORDER_CAPTURE_CMD` holds the ffmpeg input arguments, and `{track}` in it becomes `system` or `mic`). `RECORDER_NO_NOTIFY=1` skips the card and `RECORDER_NO_WORKER=1` skips waking the transcription worker.
+The tests use a temporary home folder and replace the capture with a sine tone from ffmpeg (`RECORDER_CAPTURE_CMD` holds the ffmpeg input arguments, and `{track}` in it becomes `system` or `mic`). `RECORDER_NO_NOTIFY=1` skips the cards and `RECORDER_NO_WORKER=1` skips waking the transcription worker. The worker tests set `RECORDER_FAKE_TRANSCRIBE=1`, which swaps the model for canned segments, so they need no GPU or venv. `RECORDER_FAKE_DELAY` slows each segment down to watch the progress file, `RECORDER_FAKE_FINAL_PAUSE=before:S` or `inside:S` holds the worker in its final check, and `RECORDER_WORKER_START_CMD` replaces the systemctl call.

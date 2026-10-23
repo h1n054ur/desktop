@@ -1,0 +1,13 @@
+[Unit]
+Description=Recorder transcription worker (runs the queue, then exits)
+
+[Service]
+Type=oneshot
+ExecStart=%h/.local/bin/recorder-worker
+# A long queue can take a while, so no start timeout. It exits when the queue is empty.
+TimeoutStartSec=infinity
+Restart=no
+Nice=10
+IOSchedulingClass=idle
+MemoryHigh=5G
+MemoryMax=6G
