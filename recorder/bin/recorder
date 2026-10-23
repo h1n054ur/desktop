@@ -1,0 +1,996 @@
+#!/usr/bin/env python3
+"""recorder: record system sound and mic on the desktop, keep a searchable library.
+
+Python standard library only. Capture runs in a detached child process (`recorder _daemon`)
+that drives one ffmpeg per track. See README.md.
+"""
+
+import argparse
+import array
+import datetime as dt
+import fcntl
+import json
+import math
+import os
+import re
+import shlex
+import shutil
+import signal
+import sqlite3
+import subprocess
+import sys
+import threading
+import time
+
+SCHEMA_VERSION = 2
+PEAK_BARS = 30
+LEVEL_RATE = 8000          # Hz of the mono PCM copy used only for the level meter
+LEVEL_CHUNK = LEVEL_RATE // 10 * 2  # 100 ms of s16le mono
+SETTINGS_DEFAULTS = {"default_source": "system", "auto_transcribe_mic": "false", "long": "false"}
+SETTINGS_ALLOWED = {
+    "default_source": {"system", "mic", "both"},
+    "auto_transcribe_mic": {"true", "false"},
+    "long": {"true", "false"},
+}
+PANEL_ID = "hani/glow-record:panel"
+WORKER_UNIT = "recorder-worker.service"
+
+
+# ---------- paths ----------
+
+def home():
+    return os.path.expanduser("~")
+
+
+def rec_dir():
+    return os.environ.get("RECORDER_DIR") or os.path.join(home(), "Recordings")
+
+
+def trash_dir():
+    return os.path.join(rec_dir(), ".trash")
+
+
+def parts_dir():
+    return os.path.join(rec_dir(), ".parts")
+
+
+def data_dir():
+    base = os.environ.get("XDG_DATA_HOME") or os.path.join(home(), ".local", "share")
+    return os.path.join(base, "recorder")
+
+
+def state_dir():
+    base = os.environ.get("XDG_STATE_HOME") or os.path.join(home(), ".local", "state")
+    return os.path.join(base, "recorder")
+
+
+def notes_dir():
+    return os.environ.get("RECORDER_NOTES_DIR") or os.path.join(home(), "Notes", "Recordings")
+
+
+def db_path():
+    return os.path.join(data_dir(), "recordings.db")
+
+
+def state_path():
+    return os.path.join(state_dir(), "state.json")
+
+
+def lock_path():
+    return os.path.join(state_dir(), "recording.lock")
+
+
+def log_path():
+    return os.path.join(state_dir(), "daemon.log")
+
+
+def now_iso():
+    return dt.datetime.now().astimezone().isoformat(timespec="seconds")
+
+
+def die(msg, code=1):
+    print(f"recorder: {msg}", file=sys.stderr)
+    sys.exit(code)
+
+
+# ---------- database ----------
+
+MIGRATIONS = {
+    1: """
+    CREATE TABLE recordings (
+        id INTEGER PRIMARY KEY,
+        started_at TEXT NOT NULL,
+        ended_at TEXT,
+        duration_s REAL,
+        source TEXT NOT NULL,
+        format TEXT NOT NULL,
+        files TEXT NOT NULL DEFAULT '[]',
+        size_bytes INTEGER DEFAULT 0,
+        title TEXT,
+        tags TEXT NOT NULL DEFAULT '[]',
+        transcript_status TEXT NOT NULL DEFAULT 'none',
+        transcript TEXT,
+        transcript_model TEXT,
+        error TEXT,
+        deleted INTEGER NOT NULL DEFAULT 0,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    );
+    CREATE INDEX recordings_started ON recordings(started_at);
+    CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+    CREATE VIRTUAL TABLE recordings_fts USING fts5(
+        title, tags, transcript, content='recordings', content_rowid='id'
+    );
+    CREATE TRIGGER recordings_ai AFTER INSERT ON recordings BEGIN
+        INSERT INTO recordings_fts(rowid, title, tags, transcript)
+        VALUES (new.id, coalesce(new.title, ''), coalesce(new.tags, ''), coalesce(new.transcript, ''));
+    END;
+    CREATE TRIGGER recordings_ad AFTER DELETE ON recordings BEGIN
+        INSERT INTO recordings_fts(recordings_fts, rowid, title, tags, transcript)
+        VALUES ('delete', old.id, coalesce(old.title, ''), coalesce(old.tags, ''), coalesce(old.transcript, ''));
+    END;
+    CREATE TRIGGER recordings_au AFTER UPDATE OF title, tags, transcript ON recordings BEGIN
+        INSERT INTO recordings_fts(recordings_fts, rowid, title, tags, transcript)
+        VALUES ('delete', old.id, coalesce(old.title, ''), coalesce(old.tags, ''), coalesce(old.transcript, ''));
+        INSERT INTO recordings_fts(rowid, title, tags, transcript)
+        VALUES (new.id, coalesce(new.title, ''), coalesce(new.tags, ''), coalesce(new.transcript, ''));
+    END;
+    """,
+    2: """
+    ALTER TABLE recordings ADD COLUMN peaks TEXT;
+    """,
+}
+
+
+def connect():
+    os.makedirs(data_dir(), exist_ok=True)
+    con = sqlite3.connect(db_path(), timeout=10)
+    con.row_factory = sqlite3.Row
+    con.execute("PRAGMA journal_mode=WAL")
+    con.execute("PRAGMA busy_timeout=10000")
+    migrate(con)
+    return con
+
+
+def migrate(con):
+    version = con.execute("PRAGMA user_version").fetchone()[0]
+    for v in sorted(MIGRATIONS):
+        if v > version:
+            with con:
+                con.executescript("BEGIN;" + MIGRATIONS[v] + f"PRAGMA user_version={v};COMMIT;")
+    return con
+
+
+def row_dict(r):
+    d = dict(r)
+    d["files"] = json.loads(d.get("files") or "[]")
+    d["tags"] = json.loads(d.get("tags") or "[]")
+    d["peaks"] = json.loads(d.get("peaks") or "[]")
+    d["deleted"] = bool(d.get("deleted"))
+    return d
+
+
+def get_row(con, rid, include_deleted=False):
+    r = con.execute("SELECT * FROM recordings WHERE id=?", (rid,)).fetchone()
+    if r is None or (r["deleted"] and not include_deleted):
+        die(f"no recording {rid}")
+    return r
+
+
+def fts_query(q):
+    words = re.findall(r"\w+", q, flags=re.UNICODE)
+    return " AND ".join(f'"{w}"*' for w in words)
+
+
+def get_setting(con, key):
+    r = con.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+    return r["value"] if r else SETTINGS_DEFAULTS[key]
+
+
+def all_settings(con):
+    out = dict(SETTINGS_DEFAULTS)
+    for r in con.execute("SELECT key, value FROM settings"):
+        out[r["key"]] = r["value"]
+    for k in ("auto_transcribe_mic", "long"):
+        out[k] = out[k] == "true"
+    return out
+
+
+# ---------- state file ----------
+
+def write_state(st):
+    os.makedirs(state_dir(), exist_ok=True)
+    st = dict(st)
+    st["updated"] = time.time()
+    tmp = state_path() + f".{os.getpid()}.tmp"
+    with open(tmp, "w") as f:
+        json.dump(st, f)
+    os.replace(tmp, state_path())
+
+
+def idle_state(last_id=None):
+    return {"state": "idle", "id": last_id, "started_at": None, "elapsed_s": 0.0,
+            "source": None, "level": 0.0, "levels": {}, "long": False, "pid": None}
+
+
+def read_state():
+    try:
+        with open(state_path()) as f:
+            st = json.load(f)
+    except (OSError, ValueError):
+        return idle_state()
+    if st.get("state") in ("recording", "paused") and not lock_held():
+        st = idle_state(st.get("id"))
+    return st
+
+
+def lock_held():
+    """True when a recording daemon holds the lock."""
+    try:
+        fd = os.open(lock_path(), os.O_RDONLY)
+    except OSError:
+        return False
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        return True
+    finally:
+        os.close(fd)
+    return False
+
+
+# ---------- capture ----------
+
+def default_devices():
+    def pactl(*a):
+        try:
+            return subprocess.run(["pactl", *a], capture_output=True, text=True, timeout=3).stdout.strip()
+        except (OSError, subprocess.TimeoutExpired):
+            return ""
+    sink = pactl("get-default-sink")
+    src = pactl("get-default-source")
+    return {
+        "system": (sink + ".monitor") if sink else "@DEFAULT_MONITOR@",
+        "mic": src or "@DEFAULT_SOURCE@",
+    }
+
+
+def input_args(track, devices):
+    """ffmpeg input args for one track. RECORDER_CAPTURE_CMD replaces them (tests)."""
+    fake = os.environ.get("RECORDER_CAPTURE_CMD")
+    if fake:
+        return shlex.split(fake.replace("{track}", track))
+    return ["-f", "pulse", "-fragment_size", "1920", "-i", devices[track]]
+
+
+def encode_args(long):
+    if long:
+        return ["-c:a", "libopus", "-b:a", "64k", "-f", "ogg"]
+    return ["-c:a", "flac", "-f", "flac"]
+
+
+def compute_level(buf):
+    samples = array.array("h", buf[: len(buf) // 2 * 2])
+    if not samples:
+        return 0.0
+    if sys.byteorder != "little":
+        samples.byteswap()
+    rms = math.sqrt(sum(x * x for x in samples) / len(samples))
+    if rms <= 0:
+        return 0.0
+    db = 20 * math.log10(rms / 32768)
+    return round(max(0.0, min(1.0, (db + 60) / 60)), 3)
+
+
+class Track:
+    """One continuous ffmpeg capture. It keeps running through pauses so tracks never drift."""
+
+    def __init__(self, name, path, long, devices):
+        self.name = name
+        self.path = path
+        self.long = long
+        self.devices = devices
+        self.proc = None
+        self.level = 0.0
+        self.reader = None
+        self.level_bytes = 0      # bytes of 8 kHz s16 mono read so far: the file's clock
+        self.first_wall = None    # monotonic time of this track's first sample (estimate)
+        self.last_read = None
+        self.spans = []           # [start_s, end_s or None] paused spans in this track's own time
+
+    def start(self):
+        cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
+               *input_args(self.name, self.devices),
+               "-map", "0:a", *encode_args(self.long), self.path,
+               "-map", "0:a", "-ac", "1", "-ar", str(LEVEL_RATE), "-f", "s16le", "pipe:1"]
+        log = open(log_path(), "ab")
+        self.proc = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=log)
+        self.interrupted = False
+        log.close()
+        self.reader = threading.Thread(target=self._read_levels, args=(self.proc,), daemon=True)
+        self.reader.start()
+
+    def _read_levels(self, proc):
+        pending = b""
+        while True:
+            buf = proc.stdout.read1(65536)
+            if not buf:
+                break
+            now = time.monotonic()
+            self.level_bytes += len(buf)
+            self.last_read = now
+            # Audio cannot arrive before it was captured, so the smallest "now minus audio so far"
+            # seen over the whole run is the best estimate of when this track's first sample was taken.
+            start = now - self.level_bytes / 2 / LEVEL_RATE
+            if self.first_wall is None or start < self.first_wall:
+                self.first_wall = start
+            pending += buf
+            if len(pending) >= LEVEL_CHUNK:
+                self.level = compute_level(pending[-LEVEL_CHUNK:])
+                pending = b""
+        self.level = 0.0
+
+    def offset(self, at=None):
+        """Position in this track's file at monotonic time `at`: samples read so far, plus the
+        time since the last read (capped at 0.1 s) so a reader that woke late does not lag."""
+        pos = self.level_bytes / 2 / LEVEL_RATE
+        if at is not None and self.last_read is not None and self.alive():
+            pos += min(0.1, max(0.0, at - self.last_read))
+        return pos
+
+    def pause(self, at=None):
+        if not self.spans or self.spans[-1][1] is not None:
+            self.spans.append([self.offset(at), None])
+
+    def resume(self, at=None):
+        if self.spans and self.spans[-1][1] is None:
+            self.spans[-1][1] = self.offset(at)
+
+    def interrupt(self):
+        # Only once: a second SIGINT makes ffmpeg exit without finishing the file.
+        if self.proc is not None and self.proc.poll() is None and not self.interrupted:
+            self.interrupted = True
+            self.proc.send_signal(signal.SIGINT)
+
+    def stop(self):
+        if self.proc is None:
+            return
+        self.interrupt()
+        try:
+            self.proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            self.proc.kill()
+            self.proc.wait()
+        if self.reader:
+            self.reader.join(timeout=2)
+        self.proc = None
+
+    def alive(self):
+        return self.proc is not None and self.proc.poll() is None
+
+
+def keep_ranges(spans, duration=None):
+    """Turn paused spans into the ranges to keep. None as an end means to the end of the file."""
+    keep, pos = [], 0.0
+    for start, end in sorted(spans, key=lambda x: x[0]):
+        if start > pos:
+            keep.append((pos, start))
+        if end is None:
+            return [k for k in keep if k[1] - k[0] > 0.005]
+        pos = max(pos, end)
+    if duration is None or duration - pos > 0.005:
+        keep.append((pos, None))
+    return [k for k in keep if k[1] is None or k[1] - k[0] > 0.005]
+
+
+def finish_track(src, out, spans, lead_s, long):
+    """Cut the paused spans out of src, pad lead_s of silence at the start, write out.
+
+    FLAC is decoded and encoded again, which stays lossless. Opus is encoded once more.
+    With nothing to cut or pad, the file is only moved. Returns an error string or None.
+    """
+    if not os.path.exists(src) or os.path.getsize(src) == 0:
+        return "no audio captured"
+    if not spans and lead_s < 0.001:
+        os.replace(src, out)
+        return None
+    keep = keep_ranges(spans, probe_duration(src))
+    if not keep:
+        os.unlink(src)
+        return "no audio outside the paused time"
+    parts = []
+    n = len(keep)
+    graph = f"[0:a]asplit={n}" + "".join(f"[i{i}]" for i in range(n)) + ";" if n > 1 else ""
+    for i, (a, b) in enumerate(keep):
+        inp = f"[i{i}]" if n > 1 else "[0:a]"
+        trim = f"start={a:.6f}" + (f":end={b:.6f}" if b is not None else "")
+        graph += f"{inp}atrim={trim},asetpts=PTS-STARTPTS[k{i}];"
+        parts.append(f"[k{i}]")
+    if n > 1:
+        graph += "".join(parts) + f"concat=n={n}:v=0:a=1[c];"
+        last = "[c]"
+    else:
+        last = parts[0]
+    ms = int(round(lead_s * 1000))
+    graph += f"{last}adelay=delays={ms}:all=1[out]" if ms > 0 else f"{last}anull[out]"
+    r = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-i", src,
+                        "-filter_complex", graph, "-map", "[out]", *encode_args(long), out],
+                       stdin=subprocess.DEVNULL, capture_output=True)
+    if r.returncode != 0 or not os.path.exists(out) or os.path.getsize(out) == 0:
+        with open(log_path(), "ab") as f:
+            f.write(r.stderr)
+        # Keep the uncut capture rather than lose it.
+        os.replace(src, out)
+        return "could not cut the paused time, the file still holds it"
+    os.unlink(src)
+    return None
+
+
+def compute_peaks(path, bars=PEAK_BARS):
+    """About `bars` peak values from 0 to 1: the largest absolute sample in each equal slice."""
+    try:
+        p = subprocess.Popen(["ffmpeg", "-hide_banner", "-loglevel", "error", "-nostdin", "-i", path,
+                              "-ac", "1", "-ar", str(LEVEL_RATE), "-f", "s16le", "pipe:1"],
+                             stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    except OSError:
+        return []
+    block = LEVEL_RATE // 100 * 2   # 10 ms blocks
+    maxima, pending = [], b""
+    while True:
+        buf = p.stdout.read(65536)
+        if not buf:
+            break
+        pending += buf
+        cut = len(pending) // block * block
+        for i in range(0, cut, block):
+            a = array.array("h", pending[i:i + block])
+            if sys.byteorder != "little":
+                a.byteswap()
+            maxima.append(max(max(a), -min(a)))
+        pending = pending[cut:]
+    p.wait()
+    if pending:
+        a = array.array("h", pending[: len(pending) // 2 * 2])
+        if a:
+            maxima.append(max(max(a), -min(a)))
+    if not maxima:
+        return []
+    n = min(bars, len(maxima))
+    out = []
+    for i in range(n):
+        sl = maxima[i * len(maxima) // n:(i + 1) * len(maxima) // n]
+        out.append(round(min(1.0, max(sl) / 32768), 3))
+    return out
+
+
+def probe_duration(path):
+    try:
+        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                            "-of", "default=nw=1:nk=1", path], capture_output=True, text=True, timeout=20)
+        return float(r.stdout.strip())
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return None
+
+
+def fmt_dur(s):
+    s = int(round(s or 0))
+    h, rem = divmod(s, 3600)
+    m, sec = divmod(rem, 60)
+    return f"{h}:{m:02d}:{sec:02d}" if h else f"{m}:{sec:02d}"
+
+
+def file_names(stamp, source, long):
+    ext = "opus" if long else "flac"
+    tracks = ("system", "mic") if source == "both" else (source,)
+    base, n = stamp, 1
+    while True:
+        if source == "both":
+            names = {t: os.path.join(rec_dir(), f"{base}-{t}.{ext}") for t in tracks}
+        else:
+            names = {source: os.path.join(rec_dir(), f"{base}.{ext}")}
+        if not any(os.path.exists(p) for p in names.values()):
+            return names
+        n += 1
+        base = f"{stamp}_{n}"
+
+
+def run_daemon(source, long, lock_fd):
+    """Runs detached. Holds the lock fd for its whole life."""
+    started = dt.datetime.now().astimezone()
+    started_iso = started.isoformat(timespec="seconds")
+    stamp = started.strftime("%Y-%m-%d_%H-%M-%S")
+    finals = file_names(stamp, source, long)
+    ext = "opus" if long else "flac"
+    pdir = os.path.join(parts_dir(), stamp)
+    os.makedirs(pdir, exist_ok=True)
+    devices = {} if os.environ.get("RECORDER_CAPTURE_CMD") else default_devices()
+
+    tracks = [Track(t, os.path.join(pdir, f"{t}.{ext}"), long, devices) for t in finals]
+    flags = {"stop": False, "pause": False, "resume": False}
+
+    def on_stop(*_):
+        flags["stop"] = True
+
+    def on_pause(*_):
+        flags["pause"] = True
+
+    def on_resume(*_):
+        flags["resume"] = True
+
+    signal.signal(signal.SIGTERM, on_stop)
+    signal.signal(signal.SIGINT, on_stop)
+    signal.signal(signal.SIGUSR1, on_pause)
+    signal.signal(signal.SIGUSR2, on_resume)
+
+    elapsed = 0.0
+    seg_start = time.monotonic()
+    paused = False
+    for t in tracks:
+        t.start()
+
+    def state(levels=None):
+        e = elapsed + (0 if paused else time.monotonic() - seg_start)
+        levels = levels or {t.name: 0.0 for t in tracks}
+        return {"state": "paused" if paused else "recording", "id": None, "started_at": started_iso,
+                "elapsed_s": round(e, 1), "source": source, "level": max(levels.values()),
+                "levels": levels, "long": long, "pid": os.getpid()}
+
+    write_state(state())
+    while not flags["stop"]:
+        if flags["pause"]:
+            flags["pause"] = False
+            if not paused:
+                at = time.monotonic()
+                for t in tracks:
+                    t.pause(at)
+                elapsed += time.monotonic() - seg_start
+                paused = True
+                write_state(state())
+        if flags["resume"]:
+            flags["resume"] = False
+            if paused:
+                at = time.monotonic()
+                for t in tracks:
+                    t.resume(at)
+                seg_start = time.monotonic()
+                paused = False
+        if not any(t.alive() for t in tracks):
+            break  # every capture died: save what there is
+        if not paused:
+            write_state(state({t.name: t.level for t in tracks}))
+        time.sleep(0.1)
+
+    if not paused:
+        elapsed += time.monotonic() - seg_start
+        paused = True
+    # Everything after this moment is cut, so tracks end together even if one ffmpeg exits slower.
+    at = time.monotonic()
+    for t in tracks:
+        t.pause(at)
+    for t in tracks:
+        t.interrupt()
+    for t in tracks:
+        t.stop()
+
+    # Line the tracks up: a device that opened later gets that much silence at its start.
+    firsts = [t.first_wall for t in tracks if t.first_wall is not None]
+    earliest = min(firsts) if firsts else None
+    files, durations, errors = [], [], []
+    for t in tracks:
+        out = finals[t.name]
+        lead = (t.first_wall - earliest) if (earliest is not None and t.first_wall is not None) else 0.0
+        if lead < 0.01:
+            lead = 0.0
+        err = finish_track(t.path, out, t.spans, lead, long)
+        if err:
+            errors.append(f"{t.name}: {err}")
+        if os.path.exists(out):
+            files.append(out)
+            d = probe_duration(out)
+            if d is not None:
+                durations.append(d)
+    error = "; ".join(errors) or None
+    peaks = []
+    for f in files:
+        pk = compute_peaks(f)
+        if max(pk, default=0) > max(peaks, default=0):
+            peaks = pk
+        elif not peaks:
+            peaks = pk
+    for d in (pdir, parts_dir()):
+        try:
+            os.rmdir(d)
+        except OSError:
+            pass
+
+    rid = None
+    if files:
+        duration = max(durations) if durations else round(elapsed, 2)
+        size = sum(os.path.getsize(f) for f in files)
+        ts = now_iso()
+        con = connect()
+        with con:
+            cur = con.execute(
+                "INSERT INTO recordings(started_at, ended_at, duration_s, source, format, files, size_bytes,"
+                " title, tags, transcript_status, error, peaks, created_at, updated_at)"
+                " VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (started_iso, ts, duration, source, ext, json.dumps(files), size,
+                 "Recording " + started.strftime("%Y-%m-%d %H:%M"), "[]", "none", error,
+                 json.dumps(peaks), ts, ts))
+            rid = cur.lastrowid
+        auto = source in ("mic", "both") and get_setting(con, "auto_transcribe_mic") == "true"
+        con.close()
+        if auto:
+            queue_transcription(rid)
+        notify_saved(rid, duration)
+    write_state(idle_state(rid))
+    os.close(lock_fd)
+
+
+def notify_saved(rid, duration):
+    if os.environ.get("RECORDER_NO_NOTIFY") == "1" or not shutil.which("notify-send"):
+        return
+    subprocess.Popen([sys.executable, os.path.abspath(__file__), "_notify", str(rid), str(duration)],
+                     start_new_session=True, stdin=subprocess.DEVNULL,
+                     stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def cmd_notify(args):
+    """Detached: shows the saved card and acts on the chosen action."""
+    r = subprocess.run(["notify-send", "--app-name=Recorder", "--icon=audio-input-microphone",
+                        "--action=transcribe=Transcribe", "--action=open=Open",
+                        f"Saved, {fmt_dur(float(args.duration))}", "Recording saved to ~/Recordings"],
+                       capture_output=True, text=True)
+    choice = r.stdout.strip()
+    me = [sys.executable, os.path.abspath(__file__)]
+    if choice == "transcribe":
+        subprocess.run([*me, "transcribe", args.id], stdout=subprocess.DEVNULL)
+    elif choice == "open":
+        subprocess.run([*me, "library"], stdout=subprocess.DEVNULL)
+
+
+# ---------- commands ----------
+
+def cmd_start(args):
+    os.makedirs(state_dir(), exist_ok=True)
+    os.makedirs(rec_dir(), exist_ok=True)
+    fd = os.open(lock_path(), os.O_RDWR | os.O_CREAT, 0o600)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except OSError:
+        os.close(fd)
+        die("already recording", 2)
+    source, long = args.source, args.long
+    if source is None or long is None:
+        con = connect()
+        if source is None:
+            source = get_setting(con, "default_source")
+        if long is None:
+            long = get_setting(con, "long") == "true"
+        con.close()
+    cmd = [sys.executable, os.path.abspath(__file__), "_daemon", "--source", source, "--lock-fd", str(fd)]
+    if long:
+        cmd.append("--long")
+    log = open(log_path(), "ab")
+    p = subprocess.Popen(cmd, start_new_session=True, pass_fds=(fd,), stdin=subprocess.DEVNULL,
+                         stdout=log, stderr=log)
+    log.close()
+    os.close(fd)
+    # Show the recording state right away; the daemon overwrites it within 0.1 s.
+    write_state({"state": "recording", "id": None, "started_at": now_iso(), "elapsed_s": 0.0,
+                 "source": source, "level": 0.0, "long": long, "pid": p.pid})
+    print(json.dumps({"ok": True, "pid": p.pid, "source": source, "long": long}))
+
+
+def daemon_pid():
+    st = read_state()
+    if st.get("state") in ("recording", "paused") and st.get("pid"):
+        return int(st["pid"])
+    return None
+
+
+def cmd_stop(args):
+    pid = daemon_pid()
+    if not pid or not lock_held():
+        die("not recording", 2)
+    os.kill(pid, signal.SIGTERM)
+    deadline = time.monotonic() + 30
+    while lock_held() and time.monotonic() < deadline:
+        time.sleep(0.05)
+    st = read_state()
+    print(json.dumps({"ok": not lock_held(), "id": st.get("id")}))
+
+
+def cmd_toggle(args):
+    if lock_held():
+        cmd_stop(args)
+    else:
+        cmd_start(args)
+
+
+def _signal_daemon(sig, want):
+    pid = daemon_pid()
+    if not pid or not lock_held():
+        die("not recording", 2)
+    os.kill(pid, sig)
+    deadline = time.monotonic() + 5
+    while read_state().get("state") != want and time.monotonic() < deadline:
+        time.sleep(0.05)
+    print(json.dumps({"ok": read_state().get("state") == want, "state": read_state().get("state")}))
+
+
+def cmd_pause(args):
+    _signal_daemon(signal.SIGUSR1, "paused")
+
+
+def cmd_resume(args):
+    _signal_daemon(signal.SIGUSR2, "recording")
+
+
+def cmd_status(args):
+    st = read_state()
+    st.pop("pid", None)
+    if args.json:
+        print(json.dumps(st))
+    else:
+        if st["state"] == "idle":
+            print("idle")
+        else:
+            print(f"{st['state']} {fmt_dur(st.get('elapsed_s'))} {st.get('source')}")
+
+
+def cmd_list(args):
+    con = connect()
+    sql = "SELECT r.* FROM recordings r"
+    where, params = ["r.deleted=0"], []
+    if args.search:
+        sql = ("SELECT r.*, snippet(recordings_fts, 2, '**', '**', '...', 12) AS snippet"
+               " FROM recordings r")
+        q = fts_query(args.search)
+        if not q:
+            print("[]")
+            return
+        sql += " JOIN recordings_fts f ON f.rowid=r.id"
+        where.append("recordings_fts MATCH ?")
+        params.append(q)
+    if args.day:
+        where.append("substr(r.started_at,1,10)=?")
+        params.append(args.day)
+    sql += " WHERE " + " AND ".join(where) + " ORDER BY r.started_at DESC, r.id DESC"
+    if args.limit:
+        sql += " LIMIT ?"
+        params.append(args.limit)
+    rows = [row_dict(r) for r in con.execute(sql, params)]
+    if not args.json:
+        for r in rows:
+            r.pop("transcript", None)
+        for r in rows:
+            print(f"{r['id']:>4}  {r['started_at'][:16]}  {fmt_dur(r['duration_s']):>7}  {r['source']:<6} {r['title']}")
+        return
+    for r in rows:
+        t = r.pop("transcript", None)
+        r["has_transcript"] = bool(t)
+        if args.search:
+            # snippet() returns the start of the transcript even when only the title or tags matched.
+            if "**" not in (r.get("snippet") or ""):
+                r["snippet"] = ""
+    print(json.dumps(rows))
+
+
+def cmd_stats(args):
+    con = connect()
+    days = [{"day": r["day"], "count": r["n"], "duration_s": round(r["d"] or 0, 3), "size": r["size"] or 0}
+            for r in con.execute(
+                "SELECT substr(started_at,1,10) AS day, count(*) AS n, sum(duration_s) AS d,"
+                " sum(size_bytes) AS size FROM recordings WHERE deleted=0 GROUP BY day ORDER BY day DESC")]
+    out = {"count": sum(d["count"] for d in days), "size_bytes": sum(d.pop("size") for d in days),
+           "total_duration_s": round(sum(d["duration_s"] for d in days), 3), "days": days}
+    if args.json:
+        print(json.dumps(out))
+    else:
+        print(f"{out['count']} recordings, {fmt_dur(out['total_duration_s'])}, {out['size_bytes']} bytes")
+
+
+def cmd_show(args):
+    con = connect()
+    print(json.dumps(row_dict(get_row(con, args.id, include_deleted=True))))
+
+
+def cmd_rename(args):
+    con = connect()
+    get_row(con, args.id)
+    with con:
+        con.execute("UPDATE recordings SET title=?, updated_at=? WHERE id=?", (args.title, now_iso(), args.id))
+    print(json.dumps({"ok": True}))
+
+
+def _set_tags(con, rid, tags):
+    with con:
+        con.execute("UPDATE recordings SET tags=?, updated_at=? WHERE id=?", (json.dumps(tags), now_iso(), rid))
+
+
+def cmd_tag(args):
+    con = connect()
+    tags = json.loads(get_row(con, args.id)["tags"])
+    for t in args.tags:
+        t = t.strip()
+        if t and t not in tags:
+            tags.append(t)
+    _set_tags(con, args.id, tags)
+    print(json.dumps({"ok": True, "tags": tags}))
+
+
+def cmd_untag(args):
+    con = connect()
+    tags = [t for t in json.loads(get_row(con, args.id)["tags"]) if t != args.tag]
+    _set_tags(con, args.id, tags)
+    print(json.dumps({"ok": True, "tags": tags}))
+
+
+def cmd_delete(args):
+    con = connect()
+    r = get_row(con, args.id)
+    os.makedirs(trash_dir(), exist_ok=True)
+    moved = []
+    for f in json.loads(r["files"]):
+        if os.path.exists(f):
+            dest = os.path.join(trash_dir(), os.path.basename(f))
+            shutil.move(f, dest)
+            moved.append(dest)
+        else:
+            moved.append(f)
+    with con:
+        con.execute("UPDATE recordings SET deleted=1, files=?, updated_at=? WHERE id=?",
+                    (json.dumps(moved), now_iso(), args.id))
+    print(json.dumps({"ok": True, "files": moved}))
+
+
+def queue_transcription(rid):
+    con = connect()
+    with con:
+        con.execute("UPDATE recordings SET transcript_status='queued', error=NULL, updated_at=? WHERE id=?",
+                    (now_iso(), rid))
+    con.close()
+    poke_worker()
+
+
+def poke_worker():
+    """Wake the transcription worker if its user unit is installed. Never fails."""
+    if os.environ.get("RECORDER_NO_WORKER") == "1" or not shutil.which("systemctl"):
+        return
+    try:
+        r = subprocess.run(["systemctl", "--user", "list-unit-files", WORKER_UNIT, "--no-legend"],
+                           capture_output=True, text=True, timeout=5)
+        if WORKER_UNIT in r.stdout:
+            subprocess.run(["systemctl", "--user", "start", "--no-block", WORKER_UNIT],
+                           capture_output=True, timeout=5)
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+
+def cmd_transcribe(args):
+    con = connect()
+    get_row(con, args.id)
+    con.close()
+    queue_transcription(args.id)
+    print(json.dumps({"ok": True, "transcript_status": "queued"}))
+
+
+def slug(s):
+    s = re.sub(r"[^\w\s-]", "", s or "", flags=re.UNICODE).strip().lower()
+    s = re.sub(r"[\s_]+", "-", s)
+    return s[:60].strip("-") or "recording"
+
+
+def cmd_to_notes(args):
+    con = connect()
+    r = row_dict(get_row(con, args.id))
+    if not (r.get("transcript") or "").strip():
+        die(f"recording {args.id} has no transcript yet", 3)
+    start = dt.datetime.fromisoformat(r["started_at"])
+    os.makedirs(notes_dir(), exist_ok=True)
+    path = os.path.join(notes_dir(), f"{start.strftime('%Y-%m-%d_%H-%M-%S')}-{slug(r['title'])}.md")
+    title = r["title"] or "Recording"
+    lines = ["---", f"title: {json.dumps(title)}", f"recorded: {r['started_at']}",
+             f"duration: {fmt_dur(r['duration_s'])}", f"source: {r['source']}",
+             f"tags: {json.dumps(r['tags'])}"]
+    if r.get("transcript_model"):
+        lines.append(f"model: {json.dumps(r['transcript_model'])}")
+    lines += ["---", "", f"# {title}", "", r["transcript"].strip(), ""]
+    with open(path, "w") as f:
+        f.write("\n".join(lines))
+    print(json.dumps({"ok": True, "path": path}))
+
+
+def cmd_library(args):
+    try:
+        subprocess.run(["noctalia", "msg", "panel-toggle", PANEL_ID], timeout=5)
+    except (OSError, subprocess.TimeoutExpired) as e:
+        die(f"could not open the library panel: {e}")
+
+
+def cmd_settings(args):
+    con = connect()
+    s = all_settings(con)
+    if args.json:
+        print(json.dumps(s))
+    else:
+        for k, v in s.items():
+            print(f"{k} = {str(v).lower()}")
+
+
+def cmd_set(args):
+    allowed = SETTINGS_ALLOWED.get(args.key)
+    if allowed is None:
+        die(f"unknown setting {args.key} (known: {', '.join(SETTINGS_ALLOWED)})")
+    value = args.value.lower()
+    if value not in allowed:
+        die(f"{args.key} takes one of: {', '.join(sorted(allowed))}")
+    con = connect()
+    with con:
+        con.execute("INSERT INTO settings(key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                    (args.key, value))
+    print(json.dumps({"ok": True}))
+
+
+def main(argv=None):
+    p = argparse.ArgumentParser(prog="recorder", description="Record system sound and mic, keep a library.")
+    sub = p.add_subparsers(dest="cmd", required=True)
+
+    def add(name, fn, **kw):
+        sp = sub.add_parser(name, **kw)
+        sp.set_defaults(fn=fn)
+        return sp
+
+    for name, fn in (("start", cmd_start), ("toggle", cmd_toggle)):
+        sp = add(name, fn)
+        sp.add_argument("--source", choices=["system", "mic", "both"])
+        sp.add_argument("--long", action=argparse.BooleanOptionalAction, default=None,
+                        help="save Opus instead of FLAC (default: the long setting)")
+    add("stop", cmd_stop)
+    add("pause", cmd_pause)
+    add("resume", cmd_resume)
+    add("status", cmd_status).add_argument("--json", action="store_true")
+    sp = add("list", cmd_list)
+    sp.add_argument("--json", action="store_true")
+    sp.add_argument("--search")
+    sp.add_argument("--limit", type=int)
+    sp.add_argument("--day")
+    add("stats", cmd_stats).add_argument("--json", action="store_true")
+    sp = add("show", cmd_show)
+    sp.add_argument("--json", action="store_true")
+    sp.add_argument("id", type=int)
+    sp = add("rename", cmd_rename)
+    sp.add_argument("id", type=int)
+    sp.add_argument("title")
+    sp = add("tag", cmd_tag)
+    sp.add_argument("id", type=int)
+    sp.add_argument("tags", nargs="+")
+    sp = add("untag", cmd_untag)
+    sp.add_argument("id", type=int)
+    sp.add_argument("tag")
+    add("delete", cmd_delete).add_argument("id", type=int)
+    add("transcribe", cmd_transcribe).add_argument("id", type=int)
+    add("to-notes", cmd_to_notes).add_argument("id", type=int)
+    add("library", cmd_library)
+    add("settings", cmd_settings).add_argument("--json", action="store_true")
+    sp = add("set", cmd_set)
+    sp.add_argument("key")
+    sp.add_argument("value")
+    sp = add("_daemon", None, help=argparse.SUPPRESS)
+    sp.add_argument("--source", required=True)
+    sp.add_argument("--long", action="store_true")
+    sp.add_argument("--lock-fd", type=int, required=True)
+    sp = add("_notify", cmd_notify, help=argparse.SUPPRESS)
+    sp.add_argument("id")
+    sp.add_argument("duration")
+
+    args = p.parse_args(argv)
+    if args.cmd == "_daemon":
+        run_daemon(args.source, args.long, args.lock_fd)
+        return
+    args.fn(args)
+
+
+if __name__ == "__main__":
+    main()
