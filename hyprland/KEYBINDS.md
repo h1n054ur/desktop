@@ -104,6 +104,8 @@ Focus the window first (click it or hover it) before sending it anywhere.
 | `Super+Shift+N` | Do not disturb on / off |
 | `Super+Alt+M` | Spoken agent replies: mute on / off |
 | `Super+Alt+X` | Spoken agent replies: stop the current reply |
+| `Super+Alt+R` | Recorder: start / stop a recording |
+| `Super+Alt+L` | Recorder: open the recordings library |
 | `Super+Shift+H` | Hide / show the top bar |
 | `Super+X` | Control centre |
 | `Super+Z` | Noctalia settings |
