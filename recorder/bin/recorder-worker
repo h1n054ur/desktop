@@ -258,7 +258,7 @@ def cmd_notify(rid, ok, detail):
 def run():
     rec = load_recorder()
     os.makedirs(rec.state_dir(), exist_ok=True)
-    lock = open(os.path.join(rec.state_dir(), "worker.lock"), "w")
+    lock = open(rec.worker_lock_path(), "w")
     try:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError:
@@ -282,7 +282,9 @@ def run():
         while True:
             row = next_queued(con)
             if row is None:
-                break
+                row = final_check(rec, con, lock)
+                if row is None:
+                    break
             rid = row["id"]
             if not claim(rec, con, rid):
                 continue
@@ -301,8 +303,27 @@ def run():
     finally:
         clear_progress(rec)
         con.close()
-        lock.close()
+        if not lock.closed:
+            lock.close()
     return 0
+
+
+def final_check(rec, con, lock):
+    """Last look at the queue under queue.lock. Empty: let go of worker.lock while still holding queue.lock,
+    so a `recorder transcribe` after this point sees no worker in its loop and starts a new run."""
+    pause = os.environ.get("RECORDER_FAKE_FINAL_PAUSE", "") if fake() else ""
+    where, _, secs = pause.partition(":")
+    if where == "before":
+        time.sleep(float(secs))
+    with open(rec.queue_lock_path(), "w") as ql:
+        fcntl.flock(ql, fcntl.LOCK_EX)
+        if where == "inside":
+            time.sleep(float(secs))
+        row = next_queued(con)
+        if row is None:
+            clear_progress(rec)
+            lock.close()
+        return row
 
 
 def main():

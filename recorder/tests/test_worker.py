@@ -143,6 +143,39 @@ class WorkerTests(Env):
         self.assertIn("another worker", r.stderr)
         self.assertEqual(self.row(rid)["transcript_status"], "queued")
 
+    def race(self, where):
+        """Queue a second row while the worker sits in its final check, `before` or `inside` queue.lock."""
+        first = self.queued_row([self.audio("r1.flac")])
+        second = self.add_row(title="Late")
+        con = self.mod.connect()
+        with con:
+            con.execute("UPDATE recordings SET files=? WHERE id=?", (json.dumps([self.audio("r2.flac")]), second))
+        con.close()
+        env = dict(self.env, RECORDER_FAKE_FINAL_PAUSE=f"{where}:1.0")
+        env["RECORDER_WORKER_START_CMD"] = f"{sys.executable} {WORKER}"
+        env.pop("RECORDER_NO_WORKER")
+        self.env = env  # run_cli uses it, so `transcribe` may start a second worker
+        p = subprocess.Popen([sys.executable, WORKER], env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                             text=True)
+        try:
+            self.assertTrue(self.wait_for(lambda: self.row(first)["transcript_status"] == "done", timeout=10))
+            time.sleep(0.3)  # now in the final check pause
+            self.run_cli("transcribe", str(second))
+            self.assertTrue(self.wait_for(lambda: self.row(second)["transcript_status"] == "done", timeout=10))
+        finally:
+            out, _ = p.communicate(timeout=30)
+        self.assertTrue(self.wait_for(lambda: not self.mod.worker_in_loop(), timeout=10))
+        return [int(l.split()[1]) for l in out.splitlines()], first, second
+
+    def test_queued_before_final_check_is_taken_by_same_worker(self):
+        ids, first, second = self.race("before")
+        self.assertEqual(ids, [first, second])
+
+    def test_queued_during_final_check_starts_new_worker(self):
+        ids, first, second = self.race("inside")
+        self.assertEqual(ids, [first])  # the second row went to the worker that transcribe started
+        self.assertFalse(os.path.exists(self.progress_file()))
+
     def test_empty_queue_exits(self):
         t0 = time.monotonic()
         self.assertEqual(self.run_worker().returncode, 0)
