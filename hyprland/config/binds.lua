@@ -214,6 +214,10 @@ hl.bind(mainMod .. " + SHIFT + N", hl.dsp.exec_cmd(noctCall .. "notification-dnd
 hl.bind(mainMod .. " + ALT + M", hl.dsp.exec_cmd("speak toggle"))
 hl.bind(mainMod .. " + ALT + X", hl.dsp.exec_cmd("speak stop"))
 
+-- Recorder (recorder/): start/stop a recording, open the recordings library
+hl.bind(mainMod .. " + ALT + R", hl.dsp.exec_cmd("recorder toggle"))
+hl.bind(mainMod .. " + ALT + L", hl.dsp.exec_cmd("recorder library"))
+
 -- Bar on/off (presentations, screen shares)
 hl.bind(mainMod .. " + SHIFT + H", hl.dsp.exec_cmd(noctCall .. "bar-toggle"))
 
