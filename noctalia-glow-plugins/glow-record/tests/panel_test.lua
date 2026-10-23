@@ -124,7 +124,13 @@ local function recorderReply(argv)
     local q = has(argv, "--search")
     if q and not listOverride then
       local out = {}
-      for _, r in ipairs(rows) do if r.id == 2 or r.id == 4 then out[#out + 1] = r end end
+      for _, r in ipairs(rows) do
+        if r.id == 2 or r.id == 4 then
+          local c = {} for k, v in pairs(r) do c[k] = v end
+          c.snippet = r.id == 4 and "...so push it to **staging** this afternoon_ [ok]..." or ""
+          out[#out + 1] = c
+        end
+      end
       rows = out
     end
     local lim = tonumber(has(argv, "--limit"))
@@ -132,6 +138,21 @@ local function recorderReply(argv)
       local out = {} for k = 1, lim do out[k] = rows[k] end rows = out
     end
     return enc(rows)
+  elseif sub == "stats" then
+    -- What the CLI computes: totals over every row, days newest first.
+    local out, byDay = { count = 0, size_bytes = 0, total_duration_s = 0, days = {} }, {}
+    for _, r in ipairs(listData) do
+      out.count = out.count + 1
+      out.size_bytes = out.size_bytes + r.size_bytes
+      out.total_duration_s = out.total_duration_s + r.duration_s
+      local day = r.started_at:sub(1, 10)
+      local d = byDay[day]
+      if not d then d = { day = day, count = 0, duration_s = 0 } byDay[day] = d out.days[#out.days + 1] = d end
+      d.count = d.count + 1
+      d.duration_s = d.duration_s + r.duration_s
+    end
+    if #out.days == 0 then return '{"count":0,"size_bytes":0,"total_duration_s":0,"days":[]}' end
+    return enc(out)
   elseif sub == "show" then
     local id = tonumber(argv[4])
     for _, r in ipairs(ALL) do
@@ -255,6 +276,12 @@ check("header count and size", contains(t, "7 recordings, 2.1 GB"), t:sub(1, 200
 check("today header", contains(t, "Today"))
 check("yesterday header", contains(t, "Yesterday"))
 check("today totals", contains(t, "3 recordings, 5 min"))
+check("totals from stats", anyCall("recorder stats --json"))
+local unlimited = false
+for _, c in ipairs(calls) do
+  if c[1] == "recorder" and c[2] == "list" and not has(c, "--limit") then unlimited = true end
+end
+check("no unlimited list", not unlimited)
 check("chip none", contains(t, "Transcribe"))
 check("chip queued", contains(t, "Queued"))
 check("chip running percent from worker.json", contains(t, "38%"))
@@ -372,6 +399,11 @@ check("frame tick off", not frameTick)
 t = texts()
 check("match count line", contains(t, '2 recordings match "staging"'), t:sub(1, 300))
 check("only matches listed", contains(t, "Standup notes") and not contains(t, "Mic check"))
+check("snippet under the title", contains(t, "...so push it to **staging** this afternoon\\_ \\[ok\\]..."), t:sub(1, 400))
+local snippets = 0
+walk(lastTree, function(n) if n.type == "markdown" and contains(n.props.text, "afternoon") then snippets = snippets + 1 end end)
+check("empty snippet not drawn", snippets == 1, tostring(snippets))
+check("header totals unchanged by search", contains(t, "7 recordings, 2.1 GB"))
 click("Call with client")
 t = texts()
 check("search word bold in transcript", contains(t, "**staging**"))

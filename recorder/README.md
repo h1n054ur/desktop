@@ -2,7 +2,7 @@
 
 Records system sound, the mic, or both on the desktop, and keeps a library of what was recorded. Files are named by start time, a SQLite database indexes them, and titles, tags and transcripts can be searched. The bar button and library panel live in `noctalia-glow-plugins/glow-record`.
 
-It needs Python 3 (standard library only), `ffmpeg`, `ffprobe` and `pactl` (PipeWire with its Pulse layer), and `notify-send` for the saved card.
+It needs Python 3 (standard library only), `ffmpeg`, `ffprobe` and `pactl` (PipeWire with its Pulse layer), and `notify-send` for the saved card. The library panel plays recordings with `mpv`.
 
 ## Install
 
@@ -10,7 +10,7 @@ It needs Python 3 (standard library only), `ffmpeg`, `ffprobe` and `pactl` (Pipe
 ./install.sh
 ```
 
-`install.sh` links `recorder` and `recorder-worker` into `~/.local/bin`, links the worker's user unit into `~/.config/systemd/user` and reloads systemd, and creates `~/Recordings`, its `.trash` folder and the data and state folders. It never enables or starts anything. Run it again any time.
+`install.sh` links `recorder`, `recorder-worker` and `recorder-player` into `~/.local/bin`, links the worker's user unit into `~/.config/systemd/user` and reloads systemd, and creates `~/Recordings`, its `.trash` folder and the data and state folders. It never enables or starts anything. Run it again any time.
 
 ## Use
 
@@ -84,6 +84,19 @@ The transcript is one line per segment, `[mm:ss] text` (or `[h:mm:ss]` past an h
 While a row runs, `~/.local/state/recorder/worker.json` holds `{"id": 3, "progress": 42, "eta_s": 18.5, "updated": ...}`, progress 0 to 100, replaced in one step. The file is gone when the worker is idle.
 
 The unit runs at low CPU and IO priority, with `MemoryMax=6G`, and never restarts on its own.
+
+## Playback
+
+The library panel plays a recording in place through `recorder-player`, a small wrapper around `mpv --no-video` with an IPC socket.
+
+```sh
+recorder-player play FILE [FILE2]   # prints {"pos": 12.3, "dur": 48.0, "paused": false} per change, then {"end": true}
+recorder-player pause               # pause or resume
+recorder-player seek SECONDS
+recorder-player stop
+```
+
+Two files, the system and mic tracks, play mixed together. Only one player runs at a time, `play` stops any earlier one first.
 
 ## How capture works
 

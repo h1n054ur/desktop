@@ -115,13 +115,13 @@ function loadPage()
   end)
 end
 
--- Header and day totals cover every recording, so they come from an unlimited list.
+-- Header and day totals cover every recording, so they come from `recorder stats`, not the page.
 function loadTotals()
   if busy.totals then again.totals = true return end
   busy.totals = true
-  recorder({ "list", "--json" }, function(data)
+  recorder({ "stats", "--json" }, function(data)
     busy.totals = false
-    if type(data) == "table" then totals = lib.totals(data) end
+    if type(data) == "table" then totals = lib.fromStats(data) end
     if again.totals then again.totals = false loadTotals() end
     render()
   end)
@@ -340,7 +340,12 @@ local function titleCell(row, p)
   else
     top = label(title, 14, untitled and C.text2 or C.text, "semibold")
   end
-  return ui.column({ gap = 3, flexGrow = 1 }, { top, metaLine(row, p) })
+  local kids = { top }
+  if query ~= "" and (row.snippet or "") ~= "" then
+    kids[#kids + 1] = ui.markdown({ text = lib.snippetMarkdown(row.snippet) })
+  end
+  kids[#kids + 1] = metaLine(row, p)
+  return ui.column({ gap = 3, flexGrow = 1 }, kids)
 end
 
 local function lengthCell(row, playing)

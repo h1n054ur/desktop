@@ -117,17 +117,14 @@ function M.groupByDay(rows)
   return groups
 end
 
--- Totals over every recording: count, size, and per day count and duration.
-function M.totals(rows)
+-- `recorder stats --json` into header and day totals: count, size, and per day count and duration.
+function M.fromStats(stats)
   local out = { count = 0, size = 0, days = {} }
-  for _, r in ipairs(rows) do
-    out.count += 1
-    out.size += tonumber(r.size_bytes) or 0
-    local day = string.sub(r.started_at or "", 1, 10)
-    local d = out.days[day] or { count = 0, dur = 0 }
-    d.count += 1
-    d.dur += tonumber(r.duration_s) or 0
-    out.days[day] = d
+  if type(stats) ~= "table" then return out end
+  out.count = tonumber(stats.count) or 0
+  out.size = tonumber(stats.size_bytes) or 0
+  for _, d in ipairs(stats.days or {}) do
+    if d.day then out.days[d.day] = { count = tonumber(d.count) or 0, dur = tonumber(d.duration_s) or 0 } end
   end
   return out
 end
@@ -236,6 +233,22 @@ function M.transcriptMarkdown(text, words)
     end
   end
   return table.concat(out, "\n\n")
+end
+
+-- A search snippet from the CLI ("... the **match** here ...") as markdown: the text escaped,
+-- the CLI's ** markers kept as bold.
+function M.snippetMarkdown(snip)
+  if not snip or snip == "" then return "" end
+  local parts, pos, bold = {}, 1, false
+  while true do
+    local s, e = string.find(snip, "**", pos, true)
+    local piece = string.sub(snip, pos, s and s - 1 or #snip)
+    if piece ~= "" then parts[#parts + 1] = bold and ("**" .. M.mdEscape(piece) .. "**") or M.mdEscape(piece) end
+    if not s then break end
+    bold = not bold
+    pos = e + 1
+  end
+  return table.concat(parts)
 end
 
 M.SOURCE_GLYPH = { system = "volume", mic = "microphone", both = "speakerphone" }
