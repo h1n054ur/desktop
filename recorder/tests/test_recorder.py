@@ -143,11 +143,44 @@ class SchemaTests(Env):
         self.assertEqual(len(self.json_cli("list", "--json", "--limit", "1")), 1)
         self.assertNotIn("transcript", rows[0])
 
+    def test_snippet(self):
+        words = "one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen"
+        a = self.add_row(title="Weekly sync", transcript=words + " budget review " + words)
+        b = self.add_row(title="Budget planning", transcript="Nothing related in here at all.")
+        rows = {r["id"]: r for r in self.json_cli("list", "--json", "--search", "budg")}
+        self.assertEqual(set(rows), {a, b})
+        snip = rows[a]["snippet"]
+        self.assertIn("**budget**", snip)
+        self.assertLessEqual(len(snip.replace("...", "").split()), 12)
+        self.assertEqual(rows[b]["snippet"], "")
+        self.assertNotIn("snippet", self.json_cli("list", "--json")[0])
+
+    def test_stats(self):
+        self.assertEqual(self.json_cli("stats", "--json"),
+                         {"count": 0, "size_bytes": 0, "total_duration_s": 0, "days": []})
+        self.add_row(started="2026-10-22T09:00:00+05:00")
+        self.add_row(started="2026-10-23T09:00:00+05:00")
+        gone = self.add_row(started="2026-10-23T10:00:00+05:00")
+        self.add_row(started="2026-10-23T11:00:00+05:00")
+        con = self.mod.connect()
+        with con:
+            con.execute("UPDATE recordings SET size_bytes=100")
+        con.close()
+        self.json_cli("delete", str(gone))
+        self.assertEqual(self.json_cli("stats", "--json"), {
+            "count": 3, "size_bytes": 300, "total_duration_s": 36.0,
+            "days": [{"day": "2026-10-23", "count": 2, "duration_s": 24.0},
+                     {"day": "2026-10-22", "count": 1, "duration_s": 12.0}]})
+
     def test_settings(self):
-        self.assertEqual(self.json_cli("settings", "--json"), {"default_source": "system", "auto_transcribe_mic": False})
+        self.assertEqual(self.json_cli("settings", "--json"),
+                         {"default_source": "system", "auto_transcribe_mic": False, "long": False})
         self.run_cli("set", "default_source", "both")
         self.run_cli("set", "auto_transcribe_mic", "true")
-        self.assertEqual(self.json_cli("settings", "--json"), {"default_source": "both", "auto_transcribe_mic": True})
+        self.run_cli("set", "long", "true")
+        self.assertEqual(self.json_cli("settings", "--json"),
+                         {"default_source": "both", "auto_transcribe_mic": True, "long": True})
+        self.assertNotEqual(self.run_cli("set", "long", "maybe", check=False).returncode, 0)
         self.assertNotEqual(self.run_cli("set", "default_source", "radio", check=False).returncode, 0)
         self.assertNotEqual(self.run_cli("set", "nope", "x", check=False).returncode, 0)
 
@@ -210,6 +243,52 @@ class FileTests(Env):
         self.assertEqual(self.json_cli("transcribe", str(rid))["transcript_status"], "queued")
         self.assertEqual(self.json_cli("show", "--json", str(rid))["transcript_status"], "queued")
 
+    def test_keep_ranges(self):
+        kr = self.mod.keep_ranges
+        self.assertEqual(kr([]), [(0.0, None)])
+        self.assertEqual(kr([[1.0, 2.0]]), [(0.0, 1.0), (2.0, None)])
+        self.assertEqual(kr([[1.0, 2.0], [3.0, None]]), [(0.0, 1.0), (2.0, 3.0)])
+        self.assertEqual(kr([[0.0, 1.0]], duration=1.0), [])
+        self.assertEqual(kr([[1.0, 2.0]], duration=2.0), [(0.0, 1.0)])
+
+    def test_finish_track_cuts_and_pads(self):
+        os.makedirs(os.path.join(self.tmp, "state", "recorder"))
+        src = os.path.join(self.tmp, "src.flac")
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                        "sine=frequency=440:sample_rate=48000:duration=3", "-c:a", "flac", src], check=True)
+        out = os.path.join(self.tmp, "out.flac")
+        self.assertIsNone(self.mod.finish_track(src, out, [[1.0, 2.0]], 0.25, False))
+        self.assertFalse(os.path.exists(src))
+        self.assertAlmostEqual(self.mod.probe_duration(out), 2.25, delta=0.01)
+
+    def test_peaks_slices(self):
+        os.makedirs(os.path.join(self.tmp, "state", "recorder"))
+        src = os.path.join(self.tmp, "src.flac")
+        # 1 s of silence, then 1 s of tone.
+        subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-f", "lavfi", "-i",
+                        "aevalsrc='if(lt(t,1),0,0.5*sin(2*PI*440*t))':s=48000:d=2", "-c:a", "flac", src],
+                       check=True)
+        peaks = self.mod.compute_peaks(src)
+        self.assertEqual(len(peaks), 30)
+        self.assertTrue(all(p < 0.01 for p in peaks[:14]), peaks)
+        self.assertTrue(all(abs(p - 0.5) < 0.02 for p in peaks[16:]), peaks)
+        self.assertEqual(self.mod.compute_peaks(os.path.join(self.tmp, "missing.flac")), [])
+
+    def test_migration_from_v1(self):
+        os.makedirs(os.path.join(self.tmp, "data", "recorder"))
+        import sqlite3
+        con = sqlite3.connect(os.path.join(self.tmp, "data", "recorder", "recordings.db"))
+        con.executescript("BEGIN;" + self.mod.MIGRATIONS[1] + "PRAGMA user_version=1;COMMIT;")
+        con.execute("INSERT INTO recordings(started_at, source, format, created_at, updated_at)"
+                    " VALUES ('2026-10-23T14:05:12+05:00', 'system', 'flac', 'x', 'x')")
+        con.commit()
+        con.close()
+        row = self.json_cli("show", "--json", "1")
+        self.assertEqual(row["peaks"], [])
+        con = self.mod.connect()
+        self.assertEqual(con.execute("PRAGMA user_version").fetchone()[0], 2)
+        con.close()
+
     def test_level(self):
         self.assertEqual(self.mod.compute_level(b""), 0.0)
         self.assertEqual(self.mod.compute_level(bytes(1600)), 0.0)
@@ -269,6 +348,104 @@ class CaptureTests(Env):
         self.assertEqual(names[0][:19], names[1][:19])
         self.assertEqual(row["source"], "both")
         self.assertEqual(row["format"], "opus")
+
+    def probe(self, f):
+        r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                            "-of", "default=nw=1:nk=1", f], capture_output=True, text=True)
+        return float(r.stdout)
+
+    def pause_cycle_both(self, *extra):
+        t0 = time.monotonic()
+        self.json_cli("start", "--source", "both", *extra)
+        self.assertTrue(self.wait_for(lambda: self.state().get("level", 0) > 0.3))
+        time.sleep(0.6)
+        for _ in range(3):
+            self.assertEqual(self.json_cli("pause")["state"], "paused")
+            time.sleep(0.4)
+            self.assertEqual(self.json_cli("resume")["state"], "recording")
+            time.sleep(0.4)
+        row = self.json_cli("show", "--json", str(self.json_cli("stop")["id"]))
+        wall = time.monotonic() - t0
+        self.assertIsNone(row["error"])
+        lengths = [self.probe(f) for f in row["files"]]
+        self.assertEqual(len(lengths), 2)
+        self.assertLess(abs(lengths[0] - lengths[1]), 0.05, lengths)
+        # 1.2 s of the run was paused and has to be gone, at least 1.8 s was recorded.
+        self.assertGreater(min(lengths), 1.7, lengths)
+        self.assertLess(max(lengths), wall - 1.0, (lengths, wall))
+        return row
+
+    def test_pause_keeps_tracks_aligned_flac(self):
+        row = self.pause_cycle_both()
+        for f in row["files"]:
+            r = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "stream=codec_name",
+                                "-of", "default=nw=1:nk=1", f], capture_output=True, text=True)
+            self.assertEqual(r.stdout.strip(), "flac")
+
+    def test_pause_keeps_tracks_aligned_opus(self):
+        self.pause_cycle_both("--long")
+
+    def test_stop_while_paused(self):
+        t0 = time.monotonic()
+        self.json_cli("start")
+        time.sleep(0.8)
+        self.json_cli("pause")
+        before_pause = time.monotonic() - t0
+        time.sleep(1.0)
+        row = self.json_cli("show", "--json", str(self.json_cli("stop")["id"]))
+        self.assertIsNone(row["error"])
+        # The fake source runs a little ahead of the clock, the paused second must be gone.
+        self.assertLess(self.probe(row["files"][0]), before_pause + 0.5)
+
+    def test_capture_that_dies_is_still_saved(self):
+        self.env["RECORDER_CAPTURE_CMD"] = FAKE.format(freq=440) + ":duration=0.6"
+        self.json_cli("start")
+        self.assertTrue(self.wait_for(lambda: self.state().get("state") == "idle" and self.state().get("id"), 10))
+        rows = self.json_cli("list", "--json")
+        self.assertEqual(len(rows), 1)
+        self.assertGreater(rows[0]["duration_s"], 0.4)
+
+    def test_peaks(self):
+        self.json_cli("start")
+        self.assertTrue(self.wait_for(lambda: self.state().get("level", 0) > 0.3))
+        time.sleep(0.6)
+        rid = self.json_cli("stop")["id"]
+        peaks = self.json_cli("show", "--json", str(rid))["peaks"]
+        self.assertEqual(len(peaks), 30)
+        # ffmpeg's sine tone peaks at 1/8 of full scale.
+        for p in peaks:
+            self.assertAlmostEqual(p, 0.125, delta=0.01)
+        self.assertEqual(self.json_cli("list", "--json")[0]["peaks"], peaks)
+
+    def test_long_setting_and_override(self):
+        self.run_cli("set", "long", "true")
+        out = self.json_cli("start")
+        self.assertTrue(out["long"])
+        self.assertTrue(self.state()["long"])
+        time.sleep(0.5)
+        row = self.json_cli("show", "--json", str(self.json_cli("stop")["id"]))
+        self.assertEqual(row["format"], "opus")
+        self.assertTrue(row["files"][0].endswith(".opus"))
+        self.assertFalse(self.json_cli("toggle", "--no-long")["long"])
+        time.sleep(0.5)
+        row = self.json_cli("show", "--json", str(self.json_cli("toggle")["id"]))
+        self.assertEqual(row["format"], "flac")
+        self.run_cli("set", "long", "false")
+        self.assertTrue(self.json_cli("start", "--long")["long"])
+        time.sleep(0.5)
+        row = self.json_cli("show", "--json", str(self.json_cli("stop")["id"]))
+        self.assertEqual(row["format"], "opus")
+
+    def test_levels_per_track(self):
+        self.json_cli("start", "--source", "both")
+        self.assertTrue(self.wait_for(lambda: min(self.state().get("levels", {"x": 0}).values()) > 0.3))
+        st = self.state()
+        self.assertEqual(set(st["levels"]), {"system", "mic"})
+        self.assertEqual(st["level"], max(st["levels"].values()))
+        self.json_cli("pause")
+        self.assertEqual(self.state()["levels"], {"system": 0.0, "mic": 0.0})
+        self.json_cli("stop")
+        self.assertEqual(self.state()["levels"], {})
 
     def test_toggle_and_default_source(self):
         self.run_cli("set", "default_source", "mic")
