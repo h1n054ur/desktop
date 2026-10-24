@@ -35,8 +35,11 @@
 
 /* Rows that scroll by script (desktop) move their cards with a transform and never clipped them, so
    the off screen posters made the whole page wider than the window (2345px at 1876). They are
-   clipped at the row's edge now, sideways only, so the focus zoom still shows above and below. */
-.emby-scroller[data-scroll-mode-x=custom] {
+   clipped at the row's edge now, sideways only, so the focus zoom still shows above and below.
+   Only rows with scroll buttons: Jellyfin sets data-scroll-mode-x=custom on phone rows too, where
+   the row scrolls natively and clip computes to hidden, which stopped touch swipes. Phone rows have
+   no scroll buttons, so they keep their own overflow and swipe again. */
+.emby-scroller-container:has(> .emby-scrollbuttons) .emby-scroller[data-scroll-mode-x=custom] {
   overflow-x: clip;
   overflow-clip-margin: 0;
 }
