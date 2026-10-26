@@ -5,8 +5,9 @@
 -- Published as state "limits" = { windows, updated, plan, error, pending }.
 --
 -- OpenCode sessions come from sessions.sh (the OpenCode background service's own API, read-only), every
--- few seconds. With no service running it prints [] at once. With --codex it adds recent Codex CLI
--- sessions from Codex's own rollout files (app = "codex"). Published as state "sessions" =
+-- few seconds. With no service running it prints [] at once. With --codex it adds the Codex CLI runs
+-- that are working right now, from Codex's own rollout files (app = "codex", always busy: a finished run
+-- drops out of the list, and that counts as finished for the notification). Published as state "sessions" =
 -- [{ id, title, cwd, status = busy|waiting|idle, since, waitingFor, tool, pid, terminal, provider, model, app }],
 -- sorted waiting > busy > idle, newest first. Notifications use the same settings as the Claude widget.
 -- Only sessions whose model provider matches the "providers" setting (a regex, default ^openai$) show
@@ -92,7 +93,7 @@ end
 
 -- ── Sessions ────────────────────────────────────────────────────────────────
 
-local sess = { pending = false, tracked = {} } -- tracked: id -> { status, busySince }
+local sess = { pending = false, tracked = {} } -- tracked: id -> { status, busySince, app, title }
 
 local function cfg(key, fallback)
   local v = noctalia.getConfig(key)
@@ -106,7 +107,17 @@ local function dur(ms)
   return `{m // 60}h {m % 60}m`
 end
 
--- Notifications on waiting / finished, like the Claude widget (same setting names).
+-- "finished" notification for a run that was busy from busySince until endMs.
+local function finished(app, title, busySince, endMs)
+  if not (cfg("notify_finished", true) and busySince) then return end
+  local took = endMs - busySince
+  if took >= (tonumber(cfg("finished_min_minutes", 2)) or 2) * 60000 then
+    noctalia.notify(app == "codex" and "Codex finished" or "OpenCode finished", `{title} · {dur(took)}`)
+  end
+end
+
+-- Notifications on waiting / finished, like the Claude widget (same setting names). Codex CLI runs are
+-- listed only while busy, so one that drops out of the list after being busy has finished.
 local function track(list)
   local alive = {}
   for _, s in ipairs(list) do
@@ -115,20 +126,22 @@ local function track(list)
     if t then
       if t.status ~= "waiting" and s.status == "waiting" and cfg("notify_waiting", true) then
         noctalia.notify(s.app == "codex" and "Codex needs you" or "OpenCode needs you", s.title .. (s.waitingFor ~= "" and (": " .. s.waitingFor) or ""))
-      elseif t.status == "busy" and s.status == "idle" and cfg("notify_finished", true) and t.busySince then
-        local took = s.since - t.busySince
-        if took >= (tonumber(cfg("finished_min_minutes", 2)) or 2) * 60000 then
-          noctalia.notify(s.app == "codex" and "Codex finished" or "OpenCode finished", `{s.title} · {dur(took)}`)
-        end
+      elseif t.status == "busy" and s.status == "idle" then
+        finished(s.app, s.title, t.busySince, s.since)
       end
     else
       t = {}
       sess.tracked[s.id] = t
     end
     if s.status == "busy" and t.status ~= "busy" and t.status ~= "waiting" then t.busySince = s.since end
-    t.status = s.status
+    t.status, t.app, t.title = s.status, s.app, s.title
   end
-  for id in pairs(sess.tracked) do if not alive[id] then sess.tracked[id] = nil end end
+  for id, t in pairs(sess.tracked) do
+    if not alive[id] then
+      if t.app == "codex" and t.status == "busy" then finished(t.app, t.title, t.busySince, noctalia.nowMs()) end
+      sess.tracked[id] = nil
+    end
+  end
 end
 
 local function pollSessions()
