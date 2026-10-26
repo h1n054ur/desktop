@@ -5,7 +5,7 @@ Three bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) that 
 | Plugin | ID | What it shows |
 |---|---|---|
 | [Claude Sessions](claude-sessions/README.md) | `hani/claude-sessions` | Every [Claude Code](https://claude.com/claude-code) session: which ones are working, which are waiting for you, what each is doing, and your Claude plan limits. A fork of [lfdominguez/claude-sessions](https://github.com/noctalia-dev/community-plugins/tree/main/claude-sessions) 1.5.2. |
-| [Codex Usage](codex-usage/README.md) | `hani/codex-usage` | Your ChatGPT plan limits for Codex (5-hour and weekly windows) with reset countdowns, read through OpenCode's ChatGPT sign-in, and your open [OpenCode](https://opencode.ai) sessions on OpenAI models. |
+| [Codex Usage](codex-usage/README.md) | `hani/codex-usage` | Your ChatGPT plan limits for Codex (5-hour and weekly windows) with reset countdowns, read through OpenCode's ChatGPT sign-in, and your open [OpenCode](https://opencode.ai) sessions on OpenAI models, plus recent Codex CLI sessions. |
 | [Muse Usage](muse-usage/README.md) | `hani/muse-usage` | Your Muse Code plan limits (5-hour and weekly windows) with reset countdowns, and your open OpenCode sessions on Muse models. |
 
 All three look the same on the bar: an icon, then a small meter per plan window. A click opens a floating panel.
