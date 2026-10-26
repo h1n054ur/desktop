@@ -8,8 +8,8 @@
 #                     id, e.g. '^openai$'; empty or left out = every session. This is how the Codex and
 #                     Muse widgets split OpenCode's sessions between them.
 #   --keep-unknown    also keep sessions whose provider cannot be told at all (see below).
-#   --codex           also list Codex CLI sessions (see the end of this comment). Only the Codex widget
-#                     passes it, so the Muse widget never shows them.
+#   --codex           also list Codex CLI runs that are working right now (see the end of this comment).
+#                     Only the Codex widget passes it, so the Muse widget never shows them.
 # provider/model come from the session's own model (Session.Info.model = {providerID, id}, set when a
 # model is picked, so it is already in the list call). A brand new session can have none yet: then it
 # runs on OpenCode's default model, read from the config the service resolved for its directory
@@ -31,17 +31,19 @@
 # OpenCode TUI (an `opencode` process that is not the server or a one-shot command) claims one: the
 # session given with -s/--session, else the newest root session in its working directory. Claimed
 # sessions are shown with that process's pid (for focus.sh); busy or waiting sessions are shown even
-# with no TUI (`opencode run`, the web app). No service running prints [] (plus any Codex sessions).
+# with no TUI (`opencode run`, the web app). No service running prints [] (plus any working Codex runs).
 #
 # Codex CLI sessions (--codex, for example the ones Claude Code's codex plugin starts through
 # `codex app-server`) come from Codex's own rollout files, $CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl,
-# read-only. Only the day folders of today and yesterday are looked at, and in them only the 10 newest
-# files changed in the last $CODEX_RECENT_MIN minutes. Of each file: the first lines (session_meta for
-# id, cwd and provider, the first real user prompt for the title, cut to 80 characters) and the last MiB
-# (turn_context for the model, task_started and task_complete or turn_aborted for the turn state). A
-# turn that started and has not ended is busy, unless the file has not changed for $CODEX_STALE_MIN
-# minutes or no codex process runs (a crashed run). No message text is printed beyond the title.
-# These sessions have no terminal (pid and terminal are null) and carry app = "codex".
+# read-only. They are listed only while a turn runs: these runs are one-shot, so a finished one is
+# dropped instead of shown as idle. Nothing is read when no codex process runs. Otherwise only the day
+# folders of today and yesterday are looked at, and in them only the 10 newest files changed in the
+# last $CODEX_STALE_MIN minutes. Of each file: the first lines (session_meta for id, cwd and provider,
+# the first real user prompt for the title, cut to 80 characters) and the last MiB (turn_context for
+# the model, task_started and task_complete or turn_aborted for the turn state). A turn that started
+# and has not ended is busy, unless the file has not changed for $CODEX_STALE_MIN minutes (a crashed
+# run). No message text is printed beyond the title. These sessions are always busy, have no terminal
+# (pid and terminal are null) and carry app = "codex".
 keep_unknown=false
 codex=false
 while :; do
@@ -53,18 +55,16 @@ while :; do
 done
 pattern=${1:-}
 
-CODEX_RECENT_MIN=120 # idle Codex sessions show for this long after their last change
-CODEX_STALE_MIN=15   # a turn with no file change for this long no longer counts as busy
+CODEX_STALE_MIN=15 # a turn with no file change for this long no longer counts as busy
 
 # codex_sessions: Codex CLI sessions as a JSON array in the same shape as the OpenCode ones.
 codex_sessions() {
+  pgrep -x codex >/dev/null || { echo '[]'; return; }
   root=${CODEX_HOME:-$HOME/.codex}/sessions
   files=$(find "$root/$(date +%Y/%m/%d)" "$root/$(date -d yesterday +%Y/%m/%d)" -maxdepth 1 \
-    -name 'rollout-*.jsonl' -mmin -"$CODEX_RECENT_MIN" -printf '%T@ %p\n' 2>/dev/null \
+    -name 'rollout-*.jsonl' -mmin -"$CODEX_STALE_MIN" -printf '%T@ %p\n' 2>/dev/null \
     | sort -rn | head -n 10 | cut -d' ' -f2-)
   [ -n "$files" ] || { echo '[]'; return; }
-  running=false
-  pgrep -x codex >/dev/null && running=true
   now=$(date +%s)
   printf '%s\n' "$files" | while IFS= read -r f; do
     mtime=$(stat -c %Y "$f") || continue
@@ -82,32 +82,29 @@ codex_sessions() {
     tail -c 1048576 "$f" \
       | grep -E '"type":"(task_started|task_complete|turn_aborted|turn_context|custom_tool_call|custom_tool_call_output|function_call|function_call_output)"' \
       | jq -cR 'fromjson?' \
-      | jq -sc --argjson h "$head" --argjson mt "$mtime" --argjson now "$now" --argjson run "$running" \
+      | jq -sc --argjson h "$head" --argjson mt "$mtime" --argjson now "$now" \
           --argjson stale "$CODEX_STALE_MIN" '
         def ms: sub("\\.[0-9]+Z$"; "Z") as $s | ($s | fromdateiso8601) * 1000
           + ((capture("\\.(?<f>[0-9]{3})") | .f | tonumber) // 0);
         ([.[] | select(.type == "event_msg"
             and (.payload.type | IN("task_started", "task_complete", "turn_aborted")))] | last) as $turn
         | ([.[] | select(.type == "turn_context") | .payload.model] | last // $h.model // "") as $model
-        | ($turn != null and $turn.payload.type == "task_started" and $run
-            and ($now - $mt) < $stale * 60) as $busy
+        | select($turn != null and $turn.payload.type == "task_started" and ($now - $mt) < $stale * 60)
         # The tool of the newest call in the running turn that has no output yet.
-        | (if $busy then
-            ([.[] | select(.type == "response_item")] | . as $items
+        | (([.[] | select(.type == "response_item")] | . as $items
               | [.[] | select(.payload.type | IN("custom_tool_call", "function_call"))] | last
               | select(. != null)
               | .payload as $c
               | if [$items[] | select(.payload.call_id == $c.call_id
                   and (.payload.type | endswith("_output")))] | length > 0 then "" else $c.name end)
-             // ""
-           else "" end) as $tool
+            // "") as $tool
         | select($h.meta != null)
         | {
             id: $h.meta.id,
             title: ($h.title // "Untitled"),
             cwd: $h.meta.cwd,
-            status: (if $busy then "busy" else "idle" end),
-            since: (if $turn != null then ($turn.timestamp | ms) else $mt * 1000 end),
+            status: "busy",
+            since: ($turn.timestamp | ms),
             waitingFor: "",
             tool: ($tool // ""),
             pid: null,
