@@ -1,6 +1,6 @@
 # Codex Usage for Noctalia
 
-Your ChatGPT plan limits for Codex in the [Noctalia](https://github.com/noctalia-dev/noctalia) bar: how much of the 5-hour and weekly windows you have used, and when each one resets. It sits next to [Claude Sessions](../claude-sessions/README.md) and looks the same. Your open [OpenCode](https://opencode.ai) sessions show on it the way Claude Code sessions show on the Claude widget.
+Your ChatGPT plan limits for Codex in the [Noctalia](https://github.com/noctalia-dev/noctalia) bar: how much of the 5-hour and weekly windows you have used, and when each one resets. It sits next to [Claude Sessions](../claude-sessions/README.md) and looks the same. Your open [OpenCode](https://opencode.ai) sessions and recent [Codex CLI](https://github.com/openai/codex) sessions show on it the way Claude Code sessions show on the Claude widget.
 
 It reads the ChatGPT sign-in that OpenCode already keeps, so there is nothing extra to log in to.
 
@@ -8,7 +8,7 @@ It reads the ChatGPT sign-in that OpenCode already keeps, so there is nothing ex
 
 - On the bar: the OpenAI icon, one dot per open OpenCode session, then a meter and a percentage per window. Dots use the Claude widget's colours: red when a session waits for you (a permission or a question), accent while it works, grey when idle. The icon turns into a red bell while any session waits. The limit colour turns yellow from 70% and red from 90%.
 - Hover: each session and what it is doing, every window with its reset countdown, and when the numbers were last fetched.
-- Click: a floating panel with one meter per window, the reset times, your plan name (Plus, Pro and so on), any error, and the open sessions grouped as Needs you, Working and Idle. Each card shows the title, the project folder, how long ago it changed, and the tool it is running or what it is waiting for. Clicking a card jumps to the terminal running that session (the exact tab in kitty). The copy button gives the command that reopens it (`opencode -s <id>`).
+- Click: a floating panel with one meter per window, the reset times, your plan name (Plus, Pro and so on), any error, and the open sessions grouped as Needs you, Working and Idle. Each card shows the title, the project folder, how long ago it changed, and the tool it is running or what it is waiting for. Clicking a card jumps to the terminal running that session (the exact tab in kitty). The copy button gives the command that reopens it (`opencode -s <id>`, or `codex resume <id>` for a Codex CLI session).
 - Right-click: fetch fresh numbers now (at most once every 30 seconds).
 - Extra windows that ChatGPT reports (for example a per-model limit) show up in the panel, and on the bar when `Bar limits` is set to all windows.
 
@@ -71,6 +71,13 @@ For sessions, `sessions.sh` asks the OpenCode background service (`opencode serv
 
 Each session goes to a widget by the provider of its model. The session list already carries the model a session last used, so this costs no extra call. A new session that has no model yet runs on OpenCode's default model, which the widget reads from the service's config (`GET /api/config`) for that folder. If no default is set either, the session stays on this widget. Each card shows the model name.
 
+Codex CLI sessions (for example the runs Claude Code starts through OpenAI's codex plugin) come from Codex's own session files, read-only:
+
+- Only the day folders for today and yesterday under `~/.codex/sessions` (or `$CODEX_HOME/sessions`) are looked at, and in them only the 10 newest `rollout-*.jsonl` files changed in the last 2 hours.
+- Of each file it reads the first lines (session id, folder, provider and the first prompt, cut to 80 characters as the title) and the last MiB (model and turn state). No other message text is shown.
+- A turn that started and has not finished shows as working. It turns idle once Codex records the turn as complete or aborted, or when no `codex` process runs, or after 15 minutes without a change to the file (a run that crashed).
+- These sessions have no terminal to jump to. They show only on this widget, never on Muse Usage.
+
 OpenCode does not say which session a terminal is showing, so each running OpenCode TUI counts as one open session: the one it was started with (`-s`), or else the newest session in the folder it runs in. That TUI's process is what a click brings to the front. Sessions that are working or waiting show even without a TUI (for example `opencode run` or the web app).
 
 `limits.sh` does the work for limits and can be run by hand:
@@ -83,6 +90,7 @@ OpenCode does not say which session a terminal is showing, so each running OpenC
 ```sh
 ./sessions.sh             # every session: [{"id":"ses_...","title":"...","status":"idle","provider":"openai","model":"gpt-5.6-sol", ...}]
 ./sessions.sh '^openai$'  # only sessions whose provider id matches the expression
+./sessions.sh --codex     # also recent Codex CLI sessions ("app":"codex")
 ```
 
 `limits.sh` exits 2 when there is no usable sign-in, 3 when the token has expired or was rejected, and 1 for any other failure, with the reason on stderr.

@@ -3,11 +3,13 @@
 # [{id, title, cwd, status, since, waitingFor, tool, pid, terminal, provider, model}],
 # status busy | waiting | idle.
 #
-# Usage: sessions.sh [--keep-unknown] [PROVIDER_PATTERN]
+# Usage: sessions.sh [--keep-unknown] [--codex] [PROVIDER_PATTERN]
 #   PROVIDER_PATTERN  a regex (jq/Oniguruma, ERE syntax works) matched against each session's provider
 #                     id, e.g. '^openai$'; empty or left out = every session. This is how the Codex and
 #                     Muse widgets split OpenCode's sessions between them.
 #   --keep-unknown    also keep sessions whose provider cannot be told at all (see below).
+#   --codex           also list Codex CLI sessions (see the end of this comment). Only the Codex widget
+#                     passes it, so the Muse widget never shows them.
 # provider/model come from the session's own model (Session.Info.model = {providerID, id}, set when a
 # model is picked, so it is already in the list call). A brand new session can have none yet: then it
 # runs on OpenCode's default model, read from the config the service resolved for its directory
@@ -29,15 +31,100 @@
 # OpenCode TUI (an `opencode` process that is not the server or a one-shot command) claims one: the
 # session given with -s/--session, else the newest root session in its working directory. Claimed
 # sessions are shown with that process's pid (for focus.sh); busy or waiting sessions are shown even
-# with no TUI (`opencode run`, the web app). No service running prints [].
+# with no TUI (`opencode run`, the web app). No service running prints [] (plus any Codex sessions).
+#
+# Codex CLI sessions (--codex, for example the ones Claude Code's codex plugin starts through
+# `codex app-server`) come from Codex's own rollout files, $CODEX_HOME/sessions/YYYY/MM/DD/rollout-*.jsonl,
+# read-only. Only the day folders of today and yesterday are looked at, and in them only the 10 newest
+# files changed in the last $CODEX_RECENT_MIN minutes. Of each file: the first lines (session_meta for
+# id, cwd and provider, the first real user prompt for the title, cut to 80 characters) and the last MiB
+# (turn_context for the model, task_started and task_complete or turn_aborted for the turn state). A
+# turn that started and has not ended is busy, unless the file has not changed for $CODEX_STALE_MIN
+# minutes or no codex process runs (a crashed run). No message text is printed beyond the title.
+# These sessions have no terminal (pid and terminal are null) and carry app = "codex".
 keep_unknown=false
-[ "${1:-}" = --keep-unknown ] && { keep_unknown=true; shift; }
+codex=false
+while :; do
+  case ${1:-} in
+    --keep-unknown) keep_unknown=true; shift ;;
+    --codex) codex=true; shift ;;
+    *) break ;;
+  esac
+done
 pattern=${1:-}
 
+CODEX_RECENT_MIN=120 # idle Codex sessions show for this long after their last change
+CODEX_STALE_MIN=15   # a turn with no file change for this long no longer counts as busy
+
+# codex_sessions: Codex CLI sessions as a JSON array in the same shape as the OpenCode ones.
+codex_sessions() {
+  root=${CODEX_HOME:-$HOME/.codex}/sessions
+  files=$(find "$root/$(date +%Y/%m/%d)" "$root/$(date -d yesterday +%Y/%m/%d)" -maxdepth 1 \
+    -name 'rollout-*.jsonl' -mmin -"$CODEX_RECENT_MIN" -printf '%T@ %p\n' 2>/dev/null \
+    | sort -rn | head -n 10 | cut -d' ' -f2-)
+  [ -n "$files" ] || { echo '[]'; return; }
+  running=false
+  pgrep -x codex >/dev/null && running=true
+  now=$(date +%s)
+  printf '%s\n' "$files" | while IFS= read -r f; do
+    mtime=$(stat -c %Y "$f") || continue
+    head=$(head -n 40 "$f" | jq -cR 'fromjson? | select(.type == "session_meta"
+        or (.type == "response_item" and .payload.type == "message" and .payload.role == "user")
+        or .type == "turn_context")
+      | if .type == "session_meta" then {meta: (.payload | {id, cwd, provider: .model_provider})}
+        elif .type == "turn_context" then {model: .payload.model}
+        else {text: ([.payload.content[]? | select(.type == "input_text") | .text] | first // "")} end' \
+      | jq -sc '{meta: (map(.meta // empty) | first),
+          model: (map(.model // empty) | first),
+          title: (map(.text // empty
+            | select(startswith("# AGENTS.md instructions") or startswith("<") | not)
+            | gsub("\\s+"; " ") | ltrimstr(" ") | .[0:80]) | first)}')
+    tail -c 1048576 "$f" \
+      | grep -E '"type":"(task_started|task_complete|turn_aborted|turn_context|custom_tool_call|custom_tool_call_output|function_call|function_call_output)"' \
+      | jq -cR 'fromjson?' \
+      | jq -sc --argjson h "$head" --argjson mt "$mtime" --argjson now "$now" --argjson run "$running" \
+          --argjson stale "$CODEX_STALE_MIN" '
+        def ms: sub("\\.[0-9]+Z$"; "Z") as $s | ($s | fromdateiso8601) * 1000
+          + ((capture("\\.(?<f>[0-9]{3})") | .f | tonumber) // 0);
+        ([.[] | select(.type == "event_msg"
+            and (.payload.type | IN("task_started", "task_complete", "turn_aborted")))] | last) as $turn
+        | ([.[] | select(.type == "turn_context") | .payload.model] | last // $h.model // "") as $model
+        | ($turn != null and $turn.payload.type == "task_started" and $run
+            and ($now - $mt) < $stale * 60) as $busy
+        # The tool of the newest call in the running turn that has no output yet.
+        | (if $busy then
+            ([.[] | select(.type == "response_item")] | . as $items
+              | [.[] | select(.payload.type | IN("custom_tool_call", "function_call"))] | last
+              | select(. != null)
+              | .payload as $c
+              | if [$items[] | select(.payload.call_id == $c.call_id
+                  and (.payload.type | endswith("_output")))] | length > 0 then "" else $c.name end)
+             // ""
+           else "" end) as $tool
+        | select($h.meta != null)
+        | {
+            id: $h.meta.id,
+            title: ($h.title // "Untitled"),
+            cwd: $h.meta.cwd,
+            status: (if $busy then "busy" else "idle" end),
+            since: (if $turn != null then ($turn.timestamp | ms) else $mt * 1000 end),
+            waitingFor: "",
+            tool: ($tool // ""),
+            pid: null,
+            terminal: null,
+            provider: ($h.meta.provider // "openai"),
+            model: $model,
+            app: "codex"
+          }'
+  done | jq -sc --arg pat "$pattern" 'map(select($pat == "" or (.provider | test($pat))))'
+}
+cdx='[]'
+[ "$codex" = true ] && cdx=$(codex_sessions)
+
 state=${XDG_STATE_HOME:-$HOME/.local/state}/opencode/service.json
-[ -r "$state" ] || { echo '[]'; exit 0; }
+[ -r "$state" ] || { printf '%s\n' "$cdx"; exit 0; }
 spid=$(jq -r '.pid // empty' "$state" 2>/dev/null)
-if [ -z "$spid" ] || ! kill -0 "$spid" 2>/dev/null; then echo '[]'; exit 0; fi
+if [ -z "$spid" ] || ! kill -0 "$spid" 2>/dev/null; then printf '%s\n' "$cdx"; exit 0; fi
 
 # get PATH [DIRECTORY]: GET a service path, scoped to DIRECTORY when given (x-opencode-directory).
 get() {
@@ -115,7 +202,7 @@ tools=$(printf '%s' "$active" | jq -r --argjson roots "$roots" '
 done | jq -sc 'map({key: .id, value: .tool}) | from_entries')
 
 jq -nc --argjson roots "$roots" --argjson active "$active" --argjson tuis "$tuis" \
-  --argjson pending "$pending" --argjson tools "$tools" '
+  --argjson pending "$pending" --argjson tools "$tools" --argjson codex "$cdx" '
   ($roots.data | map(select(.time.archived == null))) as $all
   # Each TUI claims one session: its -s id, else the newest unclaimed root session in its cwd. Claims
   # run over the sessions of every provider, so a TUI on a Muse session never claims an older OpenAI one.
@@ -142,4 +229,4 @@ jq -nc --argjson roots "$roots" --argjson active "$active" --argjson tuis "$tuis
           terminal: (if $claimed[$s.id] == null then null elif $claimed[$s.id].kitty then "kitty" else "terminal" end),
           provider: .provider,
           model: .modelName
-        }]'
+        }] + $codex'

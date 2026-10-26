@@ -74,6 +74,10 @@ local function quote(s) return "'" .. string.gsub(s, "'", "'\\''") .. "'" end
 -- Brings the terminal of the OpenCode TUI with this pid to the front (focus.sh, copied from claude-sessions).
 function M.focus(pid) noctalia.runAsync({ PLUGIN .. "/focus.sh", tostring(pid) }) end
 
-function M.resumeCommand(cwd, id) return `cd {quote(cwd)} && opencode -s {id}` end
+-- Codex CLI sessions (app = "codex") reopen with `codex resume`, OpenCode ones with `opencode -s`.
+function M.resumeCommand(cwd, id, app)
+  if app == "codex" then return `cd {quote(cwd)} && codex resume {id}` end
+  return `cd {quote(cwd)} && opencode -s {id}`
+end
 
 return M

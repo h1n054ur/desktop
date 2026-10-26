@@ -1,11 +1,11 @@
 id = "hani/codex-usage"
 name = "Codex Usage"
-version = "0.3.0"
+version = "0.4.0"
 plugin_api = 24
 author = "hani"
 icon = "brand-openai"
 license = "MIT"
-description = "ChatGPT plan limits for Codex (5-hour and weekly windows) and live OpenCode sessions on the bar, with a panel to jump to each session."
+description = "ChatGPT plan limits for Codex (5-hour and weekly windows) and live OpenCode and Codex CLI sessions on the bar, with a panel to jump to each session."
 tags = ["bar", "panel", "service", "ai", "development", "productivity"]
 dependencies = ["sqlite3", "jq", "curl", "opencode", "kitty", "hyprctl", "niri", "swaymsg"]
 

@@ -52,8 +52,8 @@ local function sectionHeader(text, count, color)
   })
 end
 
--- One OpenCode session, laid out like the Claude panel's live card. Click jumps to its TUI's terminal
--- when sessions.sh found one (pid); the copy button gives the command that reopens it.
+-- One OpenCode or Codex CLI session, laid out like the Claude panel's live card. Click jumps to its TUI's
+-- terminal when sessions.sh found one (pid). The copy button gives the command that reopens it.
 local function sessionCard(s)
   local look = LOOK[s.status] or LOOK.idle
   local tool = s.tool ~= "" and string.match(s.tool, "^([^:]+)") or nil
@@ -68,8 +68,8 @@ local function sessionCard(s)
       ui.label({ text = shared.projectPath(s.cwd or ""), fontSize = 11, color = "on_surface_variant", maxLines = 1, flexGrow = 1 }),
       ui.button({ glyph = "copy", tooltip = "Copy resume command", variant = "ghost", controlSize = "sm", height = 24, width = 26,
         glyphSize = 13, onClick = function()
-          noctalia.copyToClipboard(shared.resumeCommand(s.cwd, s.id), "text/plain")
-          noctalia.notify("Copied", shared.resumeCommand(s.cwd, s.id))
+          noctalia.copyToClipboard(shared.resumeCommand(s.cwd, s.id, s.app), "text/plain")
+          noctalia.notify("Copied", shared.resumeCommand(s.cwd, s.id, s.app))
         end }),
     }),
   }
@@ -78,7 +78,7 @@ local function sessionCard(s)
   elseif s.status == "busy" and tool then
     body[#body + 1] = iconLine(TOOL_GLYPH[string.lower(tool)] or "tool", tool .. (toolArg and ("  " .. toolArg) or ""), shared.accent(), 12)
   end
-  local chips = { chip("terminal", s.terminal or "no terminal open") }
+  local chips = { chip("terminal", s.terminal or (s.app == "codex" and "codex cli" or "no terminal open")) }
   if (s.model or "") ~= "" then chips[#chips + 1] = chip("cpu", s.model) end
   body[#body + 1] = ui.row({ gap = 4, align = "center" }, chips)
   return ui.column({
@@ -165,7 +165,7 @@ function render()
   if #sessions > 0 then
     sessionList(content)
   else
-    content[#content + 1] = iconLine("moon", "No OpenCode sessions open")
+    content[#content + 1] = iconLine("moon", "No OpenCode or Codex sessions open")
   end
 
   local updated = limits.updated and `Last updated {shared.ago(limits.updated)} ago` or "Not updated yet"

@@ -5,8 +5,9 @@
 -- Published as state "limits" = { windows, updated, plan, error, pending }.
 --
 -- OpenCode sessions come from sessions.sh (the OpenCode background service's own API, read-only), every
--- few seconds; with no service running it prints [] at once. Published as state "sessions" =
--- [{ id, title, cwd, status = busy|waiting|idle, since, waitingFor, tool, pid, terminal, provider, model }],
+-- few seconds. With no service running it prints [] at once. With --codex it adds recent Codex CLI
+-- sessions from Codex's own rollout files (app = "codex"). Published as state "sessions" =
+-- [{ id, title, cwd, status = busy|waiting|idle, since, waitingFor, tool, pid, terminal, provider, model, app }],
 -- sorted waiting > busy > idle, newest first. Notifications use the same settings as the Claude widget.
 -- Only sessions whose model provider matches the "providers" setting (a regex, default ^openai$) show
 -- here, so another widget (Muse) can take the rest. Sessions whose provider cannot be told at all stay
@@ -113,11 +114,11 @@ local function track(list)
     local t = sess.tracked[s.id]
     if t then
       if t.status ~= "waiting" and s.status == "waiting" and cfg("notify_waiting", true) then
-        noctalia.notify("OpenCode needs you", s.title .. (s.waitingFor ~= "" and (": " .. s.waitingFor) or ""))
+        noctalia.notify(s.app == "codex" and "Codex needs you" or "OpenCode needs you", s.title .. (s.waitingFor ~= "" and (": " .. s.waitingFor) or ""))
       elseif t.status == "busy" and s.status == "idle" and cfg("notify_finished", true) and t.busySince then
         local took = s.since - t.busySince
         if took >= (tonumber(cfg("finished_min_minutes", 2)) or 2) * 60000 then
-          noctalia.notify("OpenCode finished", `{s.title} · {dur(took)}`)
+          noctalia.notify(s.app == "codex" and "Codex finished" or "OpenCode finished", `{s.title} · {dur(took)}`)
         end
       end
     else
@@ -134,7 +135,7 @@ local function pollSessions()
   if sess.pending then return end
   sess.pending = true
   local providers = noctalia.string.trim(tostring(cfg("providers", PROVIDERS)))
-  local started = noctalia.runAsync({ PLUGIN .. "/sessions.sh", "--keep-unknown", providers }, function(r)
+  local started = noctalia.runAsync({ PLUGIN .. "/sessions.sh", "--keep-unknown", "--codex", providers }, function(r)
     sess.pending = false
     local list = r.exitCode == 0 and noctalia.json.decode(r.stdout or "") or nil
     if type(list) ~= "table" then
