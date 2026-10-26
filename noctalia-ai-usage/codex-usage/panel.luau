@@ -53,7 +53,8 @@ local function sectionHeader(text, count, color)
 end
 
 -- One OpenCode or Codex CLI session, laid out like the Claude panel's live card. Click jumps to its TUI's
--- terminal when sessions.sh found one (pid). The copy button gives the command that reopens it.
+-- terminal when sessions.sh found one (pid). The copy button gives the command that reopens an OpenCode
+-- session. Codex CLI runs show only while they work, so they get no copy button.
 local function sessionCard(s)
   local look = LOOK[s.status] or LOOK.idle
   local tool = s.tool ~= "" and string.match(s.tool, "^([^:]+)") or nil
@@ -66,11 +67,11 @@ local function sessionCard(s)
     ui.row({ gap = 5, align = "center" }, {
       ui.glyph({ name = "folder", size = 12, color = "on_surface_variant" }),
       ui.label({ text = shared.projectPath(s.cwd or ""), fontSize = 11, color = "on_surface_variant", maxLines = 1, flexGrow = 1 }),
-      ui.button({ glyph = "copy", tooltip = "Copy resume command", variant = "ghost", controlSize = "sm", height = 24, width = 26,
-        glyphSize = 13, onClick = function()
-          noctalia.copyToClipboard(shared.resumeCommand(s.cwd, s.id, s.app), "text/plain")
-          noctalia.notify("Copied", shared.resumeCommand(s.cwd, s.id, s.app))
-        end }),
+      s.app ~= "codex" and ui.button({ glyph = "copy", tooltip = "Copy resume command", variant = "ghost", controlSize = "sm",
+        height = 24, width = 26, glyphSize = 13, onClick = function()
+          noctalia.copyToClipboard(shared.resumeCommand(s.cwd, s.id), "text/plain")
+          noctalia.notify("Copied", shared.resumeCommand(s.cwd, s.id))
+        end }) or nil,
     }),
   }
   if s.status == "waiting" then
@@ -165,7 +166,7 @@ function render()
   if #sessions > 0 then
     sessionList(content)
   else
-    content[#content + 1] = iconLine("moon", "No OpenCode or Codex sessions open")
+    content[#content + 1] = iconLine("moon", "No OpenCode sessions open or Codex runs working")
   end
 
   local updated = limits.updated and `Last updated {shared.ago(limits.updated)} ago` or "Not updated yet"
