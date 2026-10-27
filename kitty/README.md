@@ -27,6 +27,7 @@ Without Noctalia (macOS, WSL, other desktops) the installer drops the `include t
 | **kitty** | The terminal: tabs, splits, images, smart paste for screenshots and copied files | [docs/kitty.md](docs/kitty.md) |
 | **yazi** | File manager: image, video, PDF and archive previews; opens files in the desktop's apps | [docs/yazi.md](docs/yazi.md) |
 | **Shell tools** | `y`, `z` / `zi`, fzf keys, fd, ripgrep, `ytm`, clipboard | [docs/shell-tools.md](docs/shell-tools.md) |
+| **lw** | A log wall: several logs and status commands side by side, coloured by rule | [below](#lw-log-wall) |
 | **Music** | rmpc + MPD + cava: YouTube Music with Premium quality, album art, visualizer | [docs/music.md](docs/music.md) |
 | **Troubleshooting** | Everything that broke while building this, and the fix | [docs/troubleshooting.md](docs/troubleshooting.md) |
 
@@ -50,6 +51,38 @@ The keys you will use every day. Full lists are in the docs above.
 | `:searchyt song name` (in rmpc) | Find a song on YouTube and queue it |
 | `z <folder>` / `Ctrl+R` | Jump to a folder / search command history |
 | `Ctrl+Shift+F5` | Reload the kitty config |
+
+## lw log wall
+
+`lw <profile>` runs the commands of a profile in a grid of rounded panes, two columns when the terminal is wide, in the same green and cyan palette as the rest of the desktop. Each pane streams its command's output, or re-runs it on a timer and shows the latest result (JSON output is shown compactly). The title bar has a dot that pulses while lines arrive and dims when the pane goes quiet, the lines per minute, the time since the last line and an `error` badge when an error line arrived in the last 10 minutes. Lines that mention an API key, token, password, secret or authorization header are always dropped.
+
+Profiles are JSON files in `~/.config/lw/<name>.json`:
+
+```json
+{
+  "keep": 1000,
+  "panes": [
+    { "title": "App log", "command": "tail -n 50 -F \"$HOME/app/app.log\"",
+      "rules": [
+        { "match": "error|failed|Traceback", "color": "red" },
+        { "match": "warn|retry", "color": "amber" },
+        { "match": "\\bok\\b|done", "color": "green" },
+        { "match": "job \\d+:", "bold": true }
+      ] },
+    { "title": "Disk", "command": "df -h /", "every": 60 },
+    { "title": "Service", "command": "journalctl --user -fu myapp -o cat -n 50" }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `command` | run with `sh -c`, stdout and stderr together |
+| `every` | seconds: re-run the command and show its latest output instead of streaming (`timeout` caps a run) |
+| `rules` | `match` is a regex (case-insensitive), `color` one of green, mint, cyan, blue, purple, pink, red, amber, grey, white, dim or `#rrggbb`, `bold` and `line` (tint the whole line) are optional. Red rules also drive the error badge. Without them, words like error, failed and traceback do |
+| `keep` | lines kept per pane (default 1000) |
+
+Keys: `q` quit, `1`-`9` zoom a pane and back, `p` pause, `/` filter every pane by a word, `c` clear, `Esc` leave zoom or the filter. `lw --check <profile>` validates a profile and lists its panes, for scripts. Child commands run in their own process group and are stopped when lw exits.
 
 ## How it fits together
 
@@ -138,7 +171,7 @@ cd kitty-config && ./install.sh
 | `config/mpd/mpd.conf` | `~/.config/mpd/mpd.conf` |
 | `config/cava/config` | `~/.config/cava/config` |
 | `config/yt-dlp/config` | `~/.config/yt-dlp/config` |
-| `bin/ytm` | `~/.local/bin/` |
+| `bin/ytm`, `bin/lw` | `~/.local/bin/` |
 | `bashrc.snippet` | appended to `~/.bashrc` |
 | `install.sh` | runs all of the above |
 | `docs/` | controls, commands and troubleshooting per tool |

@@ -35,6 +35,7 @@ sedi() { if [ "$OS" = macos ]; then sed -i '' "$@"; else sed -i "$@"; fi; }
 
 mkdir -p "$HOME/.local/bin" "$HOME/.config/kitty" "$HOME/.config/yazi"
 install -m755 "$here/bin/ytm" "$HOME/.local/bin/ytm"
+install -m755 "$here/bin/lw" "$HOME/.local/bin/lw"   # log wall, runs on bun
 
 for f in kitty.conf ansi.conf smart_paste.py; do
   [ -f "$HOME/.config/kitty/$f" ] && cp "$HOME/.config/kitty/$f" "$HOME/.config/kitty/$f.bak"
