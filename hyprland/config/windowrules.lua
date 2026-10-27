@@ -131,3 +131,7 @@ hl.layer_rule({
   blur = true,
   blur_popups = true,
 })
+
+-- Browser pages can ask Wayland to inhibit compositor shortcuts (keyboard lock, popups), which left Super dead
+-- after a Helium pop-up on 2026-10-27. Browsers never get to swallow Hyprland's binds.
+hl.window_rule({ match = { class = "^(helium.*|google-chrome.*|chrome-.*|Chromium.*)$" }, no_shortcuts_inhibit = true })
