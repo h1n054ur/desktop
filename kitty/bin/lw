@@ -1,0 +1,580 @@
+#!/usr/bin/env bun
+// lw: a log wall for the terminal. Runs the commands of a profile side by side in rounded panes,
+// streams their output (or re-runs snapshot commands on a timer) and colours lines by rule.
+// Profiles live in ~/.config/lw/<name>.json. Zero dependencies: raw ANSI, Bun built-ins only.
+import { spawn, type ChildProcess } from "node:child_process";
+import { readFileSync, readdirSync, existsSync } from "node:fs";
+import { homedir } from "node:os";
+import { join, basename } from "node:path";
+
+// ---------- palette (h1n054ur) ----------
+const P = {
+  green: "#39ff14", greenSoft: "#7dff63", mint: "#2bf5a0", cyan: "#00e5ff", cyanSoft: "#4de8ff",
+  blue: "#3fa7ff", purple: "#c77dff", pink: "#ff8197", red: "#ff5c7a", amber: "#f5d76e",
+  grey: "#9fb2ac", light: "#cfdcd8", white: "#e8f2ee", subtle: "#3d4f4a", panel: "#101816", ink: "#06090a",
+};
+const NAMED: Record<string, string> = {
+  green: P.green, mint: P.mint, cyan: P.cyan, blue: P.blue, purple: P.purple, pink: P.pink,
+  red: P.red, amber: P.amber, yellow: P.amber, grey: P.grey, gray: P.grey, white: P.white, dim: P.subtle,
+};
+type RGB = [number, number, number];
+const rgb = (h: string): RGB => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16)) as RGB;
+const mix = (a: string, b: string, t: number): RGB => {
+  const x = rgb(a), y = rgb(b);
+  return x.map((v, i) => Math.round(v + (y[i] - v) * t)) as RGB;
+};
+const fgOf = (c: RGB | string) => { const [r, g, b] = typeof c === "string" ? rgb(c) : c; return `38;2;${r};${g};${b}`; };
+const bgOf = (c: RGB | string) => { const [r, g, b] = typeof c === "string" ? rgb(c) : c; return `48;2;${r};${g};${b}`; };
+const sgr = (fg?: RGB | string, opts: { bold?: boolean; bg?: RGB | string; dim?: boolean } = {}) =>
+  "\x1b[0" + (opts.bold ? ";1" : "") + (fg ? ";" + fgOf(fg) : "") + (opts.bg ? ";" + bgOf(opts.bg) : "") + "m";
+const resolveColour = (c?: string) => (c ? (c.startsWith("#") ? c : NAMED[c.toLowerCase()]) : undefined);
+
+// ---------- config ----------
+type Rule = { re: RegExp; color?: string; bold: boolean; line: boolean; src: string };
+type PaneCfg = { title: string; command: string; every?: number; timeout?: number; rules: Rule[] };
+type Profile = { name: string; keep: number; panes: PaneCfg[] };
+
+const SECRET = /api.?key|token|password|secret|authorization/i;
+const BUILTIN_ERR = /\b(error|errors|failed|failure|fatal|traceback|exception|panic)\b/i;
+const CONFIG_DIR = join(process.env.XDG_CONFIG_HOME || join(homedir(), ".config"), "lw");
+
+function profilePath(name: string) {
+  return name.endsWith(".json") || name.includes("/") ? name : join(CONFIG_DIR, `${name}.json`);
+}
+
+function loadProfile(name: string): Profile {
+  const path = profilePath(name);
+  if (!existsSync(path)) throw new Error(`no profile at ${path}`);
+  let raw: any;
+  try { raw = JSON.parse(readFileSync(path, "utf8")); } catch (e: any) { throw new Error(`${path}: invalid JSON: ${e.message}`); }
+  const list = Array.isArray(raw) ? raw : raw.panes;
+  if (!Array.isArray(list) || list.length === 0) throw new Error(`${path}: needs a "panes" list with at least one pane`);
+  if (list.length > 9) throw new Error(`${path}: at most 9 panes (keys 1-9 zoom them)`);
+  const keep = Number(raw.keep ?? 1000);
+  if (!Number.isFinite(keep) || keep < 10) throw new Error(`${path}: "keep" must be a number of lines, at least 10`);
+  const panes = list.map((p: any, i: number): PaneCfg => {
+    const where = `pane ${i + 1}`;
+    if (!p || typeof p !== "object") throw new Error(`${where}: must be an object`);
+    if (typeof p.command !== "string" || !p.command.trim()) throw new Error(`${where}: "command" is required`);
+    if (p.every !== undefined && !(typeof p.every === "number" && p.every > 0)) throw new Error(`${where}: "every" must be seconds above 0`);
+    if (p.timeout !== undefined && !(typeof p.timeout === "number" && p.timeout > 0)) throw new Error(`${where}: "timeout" must be seconds above 0`);
+    const rules = (p.rules ?? []).map((r: any, j: number): Rule => {
+      const rw = `${where}, rule ${j + 1}`;
+      if (typeof r?.match !== "string") throw new Error(`${rw}: "match" (a regex) is required`);
+      let re: RegExp;
+      try { re = new RegExp(r.match, r.case ? "g" : "gi"); } catch (e: any) { throw new Error(`${rw}: bad regex: ${e.message}`); }
+      const color = r.color === undefined ? undefined : resolveColour(String(r.color));
+      if (r.color !== undefined && !color) throw new Error(`${rw}: unknown colour "${r.color}" (use ${Object.keys(NAMED).join(", ")} or #rrggbb)`);
+      if (!color && !r.bold) throw new Error(`${rw}: give a "color", "bold": true, or both`);
+      return { re, color, bold: !!r.bold, line: !!r.line, src: r.match };
+    });
+    return { title: String(p.title ?? `pane ${i + 1}`), command: p.command, every: p.every, timeout: p.timeout, rules };
+  });
+  return { name: basename(path).replace(/\.json$/, ""), keep, panes };
+}
+
+// ---------- text width ----------
+function cw(cp: number): number {
+  if (cp < 32 || (cp >= 0x7f && cp < 0xa0)) return 0;
+  if ((cp >= 0x300 && cp <= 0x36f) || (cp >= 0x200b && cp <= 0x200f) || (cp >= 0xfe00 && cp <= 0xfe0f)) return 0;
+  if ((cp >= 0x1100 && cp <= 0x115f) || (cp >= 0x2e80 && cp <= 0xa4cf) || (cp >= 0xac00 && cp <= 0xd7a3) ||
+      (cp >= 0xf900 && cp <= 0xfaff) || (cp >= 0xfe30 && cp <= 0xfe4f) || (cp >= 0xff00 && cp <= 0xff60) ||
+      (cp >= 0xffe0 && cp <= 0xffe6) || (cp >= 0x1f300 && cp <= 0x1f64f) || (cp >= 0x1f900 && cp <= 0x1f9ff) ||
+      (cp >= 0x20000 && cp <= 0x3fffd)) return 2;
+  return 1;
+}
+const clean = (s: string) => {
+  const cr = s.lastIndexOf("\r", s.length - 2);
+  if (cr >= 0) s = s.slice(cr + 1);
+  return s.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)|\x1b[@-_]/g, "").replace(/\t/g, "  ")
+    .replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "");
+};
+
+// ---------- cells ----------
+type Cell = { c: string; w: number; s: string };
+type Seg = { t: string; s: string };
+function cellsOf(segs: Seg[]): Cell[] {
+  const out: Cell[] = [];
+  for (const g of segs) for (const ch of g.t) {
+    const w = cw(ch.codePointAt(0)!);
+    if (w === 0) { if (out.length) out[out.length - 1].c += ch; continue; }
+    out.push({ c: ch, w, s: g.s });
+  }
+  return out;
+}
+const width = (cells: Cell[]) => cells.reduce((a, c) => a + c.w, 0);
+function fit(cells: Cell[], W: number, fillStyle = "\x1b[0m"): Cell[] {
+  const out: Cell[] = []; let w = 0;
+  for (const c of cells) { if (w + c.w > W) break; out.push(c); w += c.w; }
+  if (w < width(cells) && out.length && W > 1) { // mark the cut
+    while (out.length && w > W - 1) w -= out.pop()!.w;
+    out.push({ c: "…", w: 1, s: out.length ? out[out.length - 1].s : fillStyle }); w += 1;
+  }
+  while (w < W) { out.push({ c: " ", w: 1, s: fillStyle }); w++; }
+  return out;
+}
+function serialize(cells: Cell[]): string {
+  let s = "", cur = "";
+  for (const c of cells) { if (c.s !== cur) { s += c.s; cur = c.s; } s += c.c; }
+  return s + "\x1b[0m";
+}
+
+// ---------- panes ----------
+type Line = { text: string; at: number; ts: number; stamped?: boolean; err: boolean; seq: number; segs?: Seg[]; cells?: Cell[] };
+const ISO = /^(\d{4}-\d\d-\d\d)[T ](\d\d:\d\d:\d\d)(?:[.,]\d+)?(Z|[+-]\d\d:?\d\d)?\s+/;
+
+class Pane {
+  lines: Line[] = [];
+  seq = 0;
+  arrivals: number[] = [];
+  lastAt = 0;          // arrival or log time of the newest line
+  lastArrival = 0;     // wall clock of the newest arrival, drives the pulse
+  lastErr = 0;
+  child?: ChildProcess;
+  exited?: string;
+  running = false;
+  lastRun = 0;
+  nextRun = 0;
+  startedAt = Date.now();
+  frozen?: Line[];     // snapshot lines shown while paused
+  hasRedRule: boolean;
+  constructor(public cfg: PaneCfg, public idx: number, public keep: number) {
+    this.hasRedRule = cfg.rules.some((r) => r.color === P.red);
+  }
+  get snapshot() { return this.cfg.every !== undefined; }
+
+  isErr(text: string) {
+    if (this.hasRedRule) return this.cfg.rules.some((r) => r.color === P.red && (r.re.lastIndex = 0, r.re.test(text)));
+    return BUILTIN_ERR.test(text);
+  }
+
+  makeLine(raw: string, now: number, segs?: Seg[]): Line | null {
+    const text = clean(raw);
+    if (SECRET.test(text)) return null;
+    let ts = now;
+    const m = ISO.exec(text);
+    if (m) {
+      const t = Date.parse(`${m[1]}T${m[2]}${m[3] ? (m[3] === "Z" ? "Z" : m[3]) : ""}`);
+      if (Number.isFinite(t) && t <= now + 60_000) ts = t;
+    }
+    return { text, at: now, ts, stamped: !!m, err: !segs && this.isErr(text), seq: ++this.seq, segs };
+  }
+
+  push(raw: string) {
+    const now = Date.now();
+    const l = this.makeLine(raw, now);
+    if (!l) return;
+    this.lines.push(l);
+    if (this.lines.length > this.keep) this.lines.splice(0, this.lines.length - this.keep);
+    const backlog = now - this.startedAt < 1500; // the first burst is history, not activity
+    if (!backlog) { this.arrivals.push(now); this.lastArrival = now; }
+    // history lines without a timestamp say nothing about when they were written
+    if (!backlog || l.stamped) this.lastAt = Math.max(this.lastAt, backlog ? l.ts : now);
+    if (l.err && (!backlog || l.stamped)) this.lastErr = Math.max(this.lastErr, backlog ? l.ts : now);
+    dirty = true;
+  }
+
+  setSnapshot(out: string, code: number | null) {
+    const now = Date.now();
+    const prev = this.lines.map((l) => l.text).join("\n");
+    const fresh: Line[] = [];
+    const body = out.replace(/\s+$/, "");
+    let json: any = undefined;
+    if (/^\s*[\[{]/.test(body)) { try { json = JSON.parse(body); } catch {} }
+    const rows: { raw: string; segs?: Seg[] }[] = json !== undefined ? compactJson(json) : body.split("\n").map((raw) => ({ raw }));
+    for (const r of rows) { const l = this.makeLine(r.raw, now, r.segs); if (l) fresh.push(l); }
+    if (!body) fresh.push({ text: "(no output)", at: now, ts: now, err: false, seq: ++this.seq, segs: [{ t: "(no output)", s: sgr(P.subtle) }] });
+    if (code) { const l = this.makeLine(`exit ${code}`, now); if (l) { l.err = true; fresh.push(l); } }
+    this.lines = fresh.slice(-this.keep);
+    if (fresh.map((l) => l.text).join("\n") !== prev) {
+      this.lastArrival = now; this.lastAt = now; this.arrivals.push(now);
+    }
+    if (fresh.some((l) => l.err)) this.lastErr = now;
+    dirty = true;
+  }
+
+  lpm(now: number) {
+    while (this.arrivals.length && this.arrivals[0] < now - 60_000) this.arrivals.shift();
+    return this.arrivals.length;
+  }
+}
+
+// JSON snapshot output: one line per top-level key, nested objects flattened to "key value" pairs
+function compactJson(v: any): { raw: string; segs: Seg[] }[] {
+  const K = sgr(P.cyan, { bold: true }), k = sgr(P.grey), val = sgr(P.white, { bold: true }), sep = sgr(P.subtle);
+  const scalar = (x: any) => x === null || typeof x !== "object";
+  const fmt = (x: any) => (typeof x === "string" ? x : JSON.stringify(x));
+  const row = (key: string | null, x: any): { raw: string; segs: Seg[] } => {
+    const segs: Seg[] = key !== null ? [{ t: key, s: K }, { t: "  ", s: sep }] : [];
+    if (scalar(x)) segs.push({ t: fmt(x), s: val });
+    else if (!Array.isArray(x) && Object.values(x).every(scalar)) {
+      Object.entries(x).forEach(([a, b], i) => {
+        if (i) segs.push({ t: " · ", s: sep });
+        segs.push({ t: a + " ", s: k }, { t: fmt(b), s: val });
+      });
+    } else segs.push({ t: JSON.stringify(x), s: sgr(P.light) });
+    return { raw: segs.map((g) => g.t).join(""), segs };
+  };
+  if (Array.isArray(v)) return v.map((x) => row(null, x));
+  if (v && typeof v === "object") return Object.entries(v).map(([a, b]) => row(a, b));
+  return [row(null, v)];
+}
+
+// ---------- styling a log line ----------
+const TEXT = sgr(P.light), TIME = sgr(P.grey), FAINT = sgr(P.subtle);
+function styleLine(p: Pane, l: Line): Cell[] {
+  if (l.cells) return l.cells;
+  if (l.segs) return (l.cells = cellsOf(l.segs));
+  let text = l.text, prefix: Seg[] = [];
+  const m = ISO.exec(text);
+  if (m) {
+    const d = new Date(l.ts);
+    prefix = [{ t: d.toTimeString().slice(0, 8) + " ", s: TIME }];
+    text = text.slice(m[0].length);
+  }
+  // per character style: base colour, then rule spans on top (earlier rules win)
+  const chars = [...text];
+  const style: (string | undefined)[] = new Array(chars.length);
+  // map UTF-16 offsets to code point indexes for rule spans
+  const offs: number[] = []; { let o = 0; for (const ch of chars) { offs.push(o); o += ch.length; } offs.push(o); }
+  const idxAt = (o: number) => { let lo = 0, hi = offs.length - 1; while (lo < hi) { const mid = (lo + hi) >> 1; if (offs[mid] < o) lo = mid + 1; else hi = mid; } return lo; };
+  let base = TEXT;
+  for (const r of p.cfg.rules) {
+    r.re.lastIndex = 0;
+    let mm: RegExpExecArray | null, hit = false;
+    while ((mm = r.re.exec(text))) {
+      if (mm[0] === "") { r.re.lastIndex++; continue; }
+      hit = true;
+      const a = idxAt(mm.index), b = idxAt(mm.index + mm[0].length);
+      for (let i = a; i < b; i++) if (style[i] === undefined) style[i] = "R" + p.cfg.rules.indexOf(r);
+    }
+    if (hit && r.line && base === TEXT && r.color) base = sgr(mix(r.color, P.light, 0.35));
+  }
+  const segs: Seg[] = [...prefix];
+  chars.forEach((ch, i) => {
+    let s = base;
+    const tag = style[i];
+    if (tag) { const r = p.cfg.rules[+tag.slice(1)]; s = sgr(r.color ?? P.white, { bold: r.bold || !!r.color }); }
+    segs.push({ t: ch, s });
+  });
+  return (l.cells = cellsOf(segs));
+}
+
+// wrap a styled line into rows of width W, continuation rows indented under the text
+function wrap(cells: Cell[], W: number, indent: number): Cell[][] {
+  if (W <= 0) return [];
+  const rows: Cell[][] = []; let row: Cell[] = [], w = 0;
+  const ind = Math.min(indent, Math.floor(W / 3));
+  for (const c of cells) {
+    if (w + c.w > W) { rows.push(row); row = []; w = 0; for (let i = 0; i < ind; i++) { row.push({ c: " ", w: 1, s: TEXT }); w++; } }
+    row.push(c); w += c.w;
+  }
+  rows.push(row);
+  return rows;
+}
+
+// ---------- state ----------
+let profile: Profile;
+let panes: Pane[] = [];
+let dirty = true, paused = false, pauseSeq: number[] = [], zoom = -1;
+let filter = "", typing = false, draft = "";
+let prevFrame: string[] = [];
+let lastSecond = 0;
+let quitting = false;
+
+function startStream(p: Pane) {
+  const ch = spawn("sh", ["-c", p.cfg.command], { detached: true, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, LW_PANE: String(p.idx + 1) } });
+  p.child = ch;
+  for (const stream of [ch.stdout!, ch.stderr!]) {
+    let buf = "";
+    stream.setEncoding("utf8");
+    stream.on("data", (d: string) => {
+      buf += d;
+      let i: number;
+      while ((i = buf.indexOf("\n")) >= 0) { p.push(buf.slice(0, i)); buf = buf.slice(i + 1); }
+      if (buf.length > 65536) { p.push(buf); buf = ""; }
+    });
+    stream.on("end", () => { if (buf) p.push(buf); buf = ""; });
+  }
+  ch.on("exit", (code, sig) => { p.exited = sig ? `stopped by ${sig}` : `exited ${code}`; p.child = undefined; dirty = true; });
+  ch.on("error", (e) => { p.exited = e.message; dirty = true; });
+}
+
+function runSnapshot(p: Pane) {
+  if (p.running || quitting) return;
+  p.running = true; p.lastRun = Date.now();
+  const limit = (p.cfg.timeout ?? Math.max(10, Math.min(p.cfg.every!, 120))) * 1000;
+  const ch = spawn("sh", ["-c", p.cfg.command], { detached: true, stdio: ["ignore", "pipe", "pipe"], env: { ...process.env, LW_PANE: String(p.idx + 1) } });
+  p.child = ch;
+  let out = "";
+  ch.stdout!.setEncoding("utf8"); ch.stderr!.setEncoding("utf8");
+  ch.stdout!.on("data", (d: string) => { if (out.length < 200_000) out += d; });
+  ch.stderr!.on("data", (d: string) => { if (out.length < 200_000) out += d; });
+  const killer = setTimeout(() => { try { process.kill(-ch.pid!, "SIGKILL"); } catch {} out += `\n(timed out after ${limit / 1000}s)`; }, limit);
+  ch.on("close", (code) => {
+    clearTimeout(killer);
+    p.running = false; p.child = undefined;
+    p.nextRun = Date.now() + p.cfg.every! * 1000;
+    p.setSnapshot(out, code);
+  });
+  ch.on("error", (e) => { clearTimeout(killer); p.running = false; p.nextRun = Date.now() + p.cfg.every! * 1000; p.setSnapshot(e.message, 1); });
+}
+
+// ---------- layout ----------
+type Box = { p: Pane; x: number; y: number; w: number; h: number };
+function layout(W: number, H: number): Box[] {
+  const top = 1, avail = H - 2;
+  if (zoom >= 0 && panes[zoom]) return [{ p: panes[zoom], x: 0, y: top, w: W, h: avail }];
+  const cols = W >= 140 && panes.length > 1 ? 2 : 1;
+  const groups: Pane[][] = [];
+  for (let i = 0; i < panes.length; i += cols) groups.push(panes.slice(i, i + cols));
+  // rows of only snapshot panes take what their output needs, stream rows share the rest
+  const want = groups.map((g) => g.every((p) => p.snapshot) ? Math.min(14, Math.max(...g.map((p) => Math.max(1, p.lines.length))) + 2) : 0);
+  const fixed = want.reduce((a, b) => a + b, 0), flexN = want.filter((v) => !v).length;
+  let heights: number[];
+  if (flexN && avail - fixed >= flexN * 6) {
+    const share = Math.floor((avail - fixed) / flexN); let extra = avail - fixed - share * flexN;
+    heights = want.map((v) => v || share + (extra-- > 0 ? 1 : 0));
+  } else if (!flexN && fixed <= avail) {
+    heights = want.slice(); heights[heights.length - 1] += avail - fixed;
+  } else {
+    const share = Math.floor(avail / groups.length); let extra = avail - share * groups.length;
+    heights = groups.map(() => share + (extra-- > 0 ? 1 : 0));
+  }
+  const boxes: Box[] = []; let y = top;
+  groups.forEach((g, gi) => {
+    const h = heights[gi]; let x = 0;
+    g.forEach((p, i) => {
+      const w = i === g.length - 1 ? W - x : Math.floor(W / g.length);
+      boxes.push({ p, x, y, w, h }); x += w;
+    });
+    y += h;
+  });
+  return boxes;
+}
+
+// ---------- drawing ----------
+const ago = (ms: number) => ms < 1000 ? "now" : ms < 60_000 ? `${Math.floor(ms / 1000)}s ago` : ms < 3_600_000 ? `${Math.floor(ms / 60_000)}m ago` : ms < 86_400_000 ? `${Math.floor(ms / 3_600_000)}h ago` : `${Math.floor(ms / 86_400_000)}d ago`;
+const SPIN = "⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏";
+
+function borderColour(x: number, w: number, fade: number): RGB {
+  const c = mix(P.green, P.cyan, w > 1 ? x / (w - 1) : 0);
+  const hex = "#" + c.map((v) => v.toString(16).padStart(2, "0")).join("");
+  return mix(hex, P.ink, fade);
+}
+
+function drawPane(grid: Cell[][], b: Box, now: number) {
+  const { p, x, y, w, h } = b;
+  if (w < 8 || h < 3) return;
+  const quiet = now - p.lastArrival;
+  const pulsing = quiet < 2500;
+  const fade = pulsing ? 0.05 : quiet < 60_000 ? 0.35 : 0.68;
+  const put = (r: number, cells: Cell[], at: number) => { const row = grid[r]; if (!row) return; let cx = at; for (const c of cells) { if (cx >= x + w - 1) break; row[cx] = c; if (c.w === 2 && cx + 1 < row.length) row[cx + 1] = { c: "", w: 0, s: c.s }; cx += c.w; } };
+  const bc = (i: number) => sgr(borderColour(i, w, fade));
+  // frame
+  for (let i = 0; i < w; i++) {
+    grid[y][x + i] = { c: i === 0 ? "╭" : i === w - 1 ? "╮" : "─", w: 1, s: bc(i) };
+    grid[y + h - 1][x + i] = { c: i === 0 ? "╰" : i === w - 1 ? "╯" : "─", w: 1, s: bc(i) };
+  }
+  for (let r = y + 1; r < y + h - 1; r++) {
+    grid[r][x] = { c: "│", w: 1, s: bc(0) };
+    grid[r][x + w - 1] = { c: "│", w: 1, s: bc(w - 1) };
+    for (let i = 1; i < w - 1; i++) grid[r][x + i] = { c: " ", w: 1, s: TEXT };
+  }
+  // activity dot
+  let dot: Seg;
+  if (p.snapshot && p.running) dot = { t: SPIN[Math.floor(now / 100) % SPIN.length], s: sgr(P.cyan, { bold: true }) };
+  else if (!p.snapshot && p.exited) dot = { t: "✕", s: sgr(P.red, { bold: true }) };
+  else if (pulsing) {
+    const t = (Math.sin(now / 130) + 1) / 2;
+    dot = { t: t > 0.5 ? "●" : "◉", s: sgr(mix(P.green, P.cyan, t), { bold: true }) };
+  } else if (quiet < 60_000 || (p.snapshot && p.lastRun)) dot = { t: "●", s: sgr(mix(P.green, P.ink, 0.45)) };
+  else dot = { t: "○", s: sgr(P.subtle) };
+  const left: Seg[] = [{ t: " ", s: bc(1) }, dot, { t: " ", s: TEXT }, { t: String(p.idx + 1), s: sgr(P.subtle, { bold: true }) },
+    { t: " ", s: TEXT }, { t: p.cfg.title, s: sgr(pulsing ? P.green : mix(P.green, P.light, 0.35), { bold: true }) }, { t: " ", s: TEXT }];
+  // stats on the right
+  const right: Seg[] = [{ t: " ", s: TEXT }];
+  if (now - p.lastErr < 600_000) right.push({ t: " error ", s: sgr(P.ink, { bold: true, bg: P.red }) }, { t: " ", s: TEXT });
+  const stat = sgr(P.grey), statHi = sgr(P.cyan);
+  if (p.snapshot) {
+    right.push({ t: `every ${p.cfg.every}s`, s: stat });
+    if (p.lastRun) right.push({ t: " · ", s: FAINT }, { t: p.running ? "running" : ago(now - p.lastRun), s: p.running ? statHi : stat });
+  } else {
+    const n = p.lpm(now);
+    right.push({ t: `${n}/min`, s: n ? statHi : stat }, { t: " · ", s: FAINT }, { t: p.lastAt ? ago(now - p.lastAt) : p.lines.length ? "earlier" : "waiting", s: stat });
+  }
+  right.push({ t: " ", s: TEXT });
+  const L = cellsOf(left), R = cellsOf(right);
+  const room = w - 4;
+  const rw = width(R) <= room - 8 ? width(R) : 0;
+  put(y, fit(L, Math.min(width(L), room - rw)), x + 2);
+  if (rw) put(y, R, x + w - 2 - rw);
+  // content
+  const cw2 = w - 4, ch = h - 2;
+  if (cw2 < 1 || ch < 1) return;
+  const limit = paused ? pauseSeq[p.idx] ?? Infinity : Infinity; // streams: hide lines that came after the pause
+  const f = filter.toLowerCase();
+  const rows: Cell[][] = [];
+  if (p.snapshot) {
+    for (const l of paused && p.frozen ? p.frozen : p.lines) {
+      if (f && !l.text.toLowerCase().includes(f)) continue;
+      for (const r of wrap(styleLine(p, l), cw2, 2)) rows.push(r);
+      if (rows.length > ch) break;
+    }
+    if (rows.length > ch) { rows.length = ch; rows[ch - 1] = cellsOf([{ t: "…", s: FAINT }]); }
+  } else {
+    for (let i = p.lines.length - 1; i >= 0 && rows.length < ch; i--) {
+      const l = p.lines[i];
+      if (l.seq > limit) continue;
+      if (f && !l.text.toLowerCase().includes(f)) continue;
+      const cells = styleLine(p, l);
+      const ind = ISO.test(l.text) ? 9 : 2;
+      const wr = wrap(cells, cw2, ind);
+      for (let j = wr.length - 1; j >= 0 && rows.length < ch; j--) rows.unshift(wr[j]);
+    }
+    if (p.exited && rows.length < ch) rows.push(cellsOf([{ t: `(${p.exited})`, s: sgr(P.subtle) }]));
+    else if (p.exited) { rows.shift(); rows.push(cellsOf([{ t: `(${p.exited})`, s: sgr(P.subtle) }])); }
+  }
+  if (!rows.length) {
+    const msg = f ? `nothing matches "${filter}"` : p.snapshot ? "running…" : "waiting for output…";
+    rows.push(cellsOf([{ t: msg, s: sgr(P.subtle) }]));
+  }
+  const startRow = p.snapshot ? y + 1 : y + 1 + Math.max(0, ch - rows.length);
+  rows.forEach((r, i) => put(startRow + i, fit(r, cw2, TEXT), x + 2));
+}
+
+function frame(): string[] {
+  const W = process.stdout.columns || 100, H = process.stdout.rows || 30;
+  const now = Date.now();
+  const blank = (): Cell[] => Array.from({ length: W }, () => ({ c: " ", w: 1, s: TEXT }));
+  const grid: Cell[][] = Array.from({ length: H }, blank);
+  // header
+  const totalLpm = panes.reduce((a, p) => a + (p.snapshot ? 0 : p.lpm(now)), 0);
+  const errs = panes.filter((p) => now - p.lastErr < 600_000).length;
+  const brand = [..."lw"].map((c, i) => ({ t: c, s: sgr(i ? P.cyan : P.green, { bold: true }) }));
+  const head: Seg[] = [{ t: " ◆ ", s: sgr(P.mint, { bold: true }) }, ...brand, { t: "  ", s: TEXT }, { t: profile.name, s: sgr(P.white, { bold: true }) },
+    { t: "   ", s: TEXT }, { t: `${panes.length} panes`, s: sgr(P.grey) }, { t: " · ", s: FAINT },
+    { t: `${totalLpm} lines/min`, s: sgr(totalLpm ? P.cyan : P.grey) }];
+  if (errs) head.push({ t: " · ", s: FAINT }, { t: `${errs} with errors`, s: sgr(P.red, { bold: true }) });
+  const tail: Seg[] = [];
+  if (paused) tail.push({ t: " paused ", s: sgr(P.ink, { bold: true, bg: P.amber }) }, { t: "  ", s: TEXT });
+  if (filter) tail.push({ t: "filter ", s: sgr(P.grey) }, { t: filter, s: sgr(P.amber, { bold: true }) }, { t: "  ", s: TEXT });
+  if (zoom >= 0) tail.push({ t: `zoom ${zoom + 1}`, s: sgr(P.purple, { bold: true }) }, { t: "  ", s: TEXT });
+  tail.push({ t: new Date(now).toTimeString().slice(0, 8), s: sgr(P.green, { bold: true }) }, { t: " ", s: TEXT });
+  const hc = cellsOf(head), tc = cellsOf(tail);
+  grid[0] = fit(hc, Math.max(0, W - width(tc)), TEXT).concat(tc).slice(0, W);
+  if (width(grid[0]) < W) grid[0] = fit(grid[0], W, TEXT);
+  // panes
+  for (const b of layout(W, H)) drawPane(grid, b, now);
+  // footer
+  let foot: Seg[];
+  if (typing) foot = [{ t: " / ", s: sgr(P.amber, { bold: true }) }, { t: draft, s: sgr(P.white, { bold: true }) }, { t: "▏", s: sgr(P.amber) },
+    { t: "   enter apply · esc clear", s: sgr(P.subtle) }];
+  else {
+    const key = (k: string, d: string): Seg[] => [{ t: k, s: sgr(P.cyan, { bold: true }) }, { t: ` ${d}   `, s: sgr(P.grey) }];
+    foot = [{ t: " ", s: TEXT }, ...key("q", "quit"), ...key(`1-${panes.length}`, "zoom"), ...key("p", paused ? "resume" : "pause"),
+      ...key("/", "filter"), ...key("c", "clear")];
+  }
+  grid[H - 1] = fit(cellsOf(foot), W, TEXT);
+  return grid.map((r) => serialize(r));
+}
+
+function render(force = false) {
+  const rows = frame();
+  let out = "\x1b[?2026h";
+  if (force || rows.length !== prevFrame.length) { out += "\x1b[2J"; prevFrame = []; }
+  rows.forEach((r, i) => { if (r !== prevFrame[i]) out += `\x1b[${i + 1};1H` + r; });
+  out += "\x1b[?2026l";
+  prevFrame = rows;
+  try { process.stdout.write(out); } catch { quit(0); }
+  dirty = false;
+}
+
+// ---------- lifecycle ----------
+function cleanup() {
+  quitting = true;
+  for (const p of panes) if (p.child?.pid) { try { process.kill(-p.child.pid, "SIGTERM"); } catch {} }
+  try { process.stdout.write("\x1b[?2026l\x1b[0m\x1b[?25h\x1b[?1049l"); } catch {} // the terminal may be gone already
+  try { process.stdin.setRawMode?.(false); } catch {}
+}
+function quit(code = 0) {
+  if (quitting) return;
+  cleanup();
+  setTimeout(() => {
+    for (const p of panes) if (p.child?.pid) { try { process.kill(-p.child.pid, "SIGKILL"); } catch {} }
+    process.exit(code);
+  }, 150);
+}
+
+function onKey(s: string) {
+  if (typing) {
+    if (s === "\r" || s === "\n") { filter = draft; typing = false; }
+    else if (s === "\x1b") { filter = ""; draft = ""; typing = false; }
+    else if (s === "\x7f" || s === "\b") draft = [...draft].slice(0, -1).join("");
+    else if (s === "\x03") return quit();
+    else if (!s.startsWith("\x1b")) draft += [...s].filter((c) => c >= " ").join("");
+    dirty = true; return;
+  }
+  if (s === "q" || s === "\x03") return quit();
+  if (s === "p") { paused = !paused; pauseSeq = panes.map((p) => p.seq); for (const p of panes) p.frozen = paused ? p.lines : undefined; }
+  else if (s === "/") { typing = true; draft = filter; }
+  else if (s === "c") { for (const p of panes) if (!p.snapshot) { p.lines = []; p.lastErr = 0; } }
+  else if (s === "\x1b") { if (zoom >= 0) zoom = -1; else filter = ""; }
+  else if (/^[1-9]$/.test(s)) { const i = +s - 1; if (i < panes.length) zoom = zoom === i ? -1 : i; }
+  else return;
+  dirty = true;
+}
+
+function usage(code: number) {
+  let names: string[] = [];
+  try { names = readdirSync(CONFIG_DIR).filter((f) => f.endsWith(".json")).map((f) => f.slice(0, -5)); } catch {}
+  const out = `usage: lw <profile>          watch the panes of ~/.config/lw/<profile>.json
+       lw --check <profile>  validate a profile and list its panes
+profiles: ${names.length ? names.join(", ") : `(none in ${CONFIG_DIR})`}
+keys: q quit · 1-9 zoom · p pause · / filter · c clear · esc unzoom
+`;
+  (code ? process.stderr : process.stdout).write(out);
+  process.exit(code);
+}
+
+function check(name: string) {
+  let prof: Profile;
+  try { prof = loadProfile(name); } catch (e: any) { process.stderr.write(`lw: ${e.message}\n`); process.exit(1); }
+  const tty = process.stdout.isTTY;
+  const c = (hex: string, t: string, bold = false) => (tty ? sgr(hex, { bold }) + t + "\x1b[0m" : t);
+  console.log(`${c(P.green, "ok", true)} ${prof!.name}: ${prof!.panes.length} panes, keep ${prof!.keep} lines`);
+  prof!.panes.forEach((p, i) => {
+    const mode = p.every ? `snapshot every ${p.every}s` : "stream";
+    console.log(`${c(P.cyan, String(i + 1), true)} ${c(P.white, p.title, true)}  ${c(P.grey, mode)}  ${p.rules.length} rules`);
+    console.log(`  ${c(P.grey, "$ " + p.command)}`);
+  });
+  process.exit(0);
+}
+
+const args = process.argv.slice(2);
+if (!args.length || args[0] === "-h" || args[0] === "--help") usage(args.length ? 0 : 1);
+if (args[0] === "--check") { if (!args[1]) usage(1); check(args[1]); }
+try { profile = loadProfile(args[0]); } catch (e: any) { process.stderr.write(`lw: ${e.message}\n`); process.exit(1); }
+if (!process.stdout.isTTY) { process.stderr.write("lw: needs a terminal (use --check for scripts)\n"); process.exit(1); }
+
+panes = profile.panes.map((c, i) => new Pane(c, i, profile.keep));
+process.stdout.write("\x1b[?1049h\x1b[?25l\x1b[2J");
+if (process.stdin.isTTY) { process.stdin.setRawMode(true); process.stdin.resume(); process.stdin.setEncoding("utf8"); process.stdin.on("data", (d: string) => {
+  // split pasted runs into keys, keep escape sequences whole
+  const keys = d.match(/\x1b\[[0-9;?]*[ -/]*[@-~]|\x1b.|[\s\S]/gu) ?? [];
+  for (const k of keys) onKey(k.startsWith("\x1b[") ? "" : k);
+}); }
+for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) process.on(sig, () => quit(0));
+process.on("uncaughtException", (e) => { cleanup(); process.stderr.write(`lw: ${e.stack ?? e}\n`); process.exit(1); });
+process.stdout.on("resize", () => render(true));
+
+for (const p of panes) p.snapshot ? runSnapshot(p) : startStream(p);
+setInterval(() => {
+  if (quitting) return;
+  const now = Date.now();
+  for (const p of panes) if (p.snapshot && !p.running && p.nextRun && now >= p.nextRun) runSnapshot(p);
+  const sec = Math.floor(now / 1000);
+  const animating = panes.some((p) => now - p.lastArrival < 2600 || p.running);
+  if (dirty || animating || sec !== lastSecond) { lastSecond = sec; render(); }
+}, 100);
+render(true);
