@@ -5,7 +5,7 @@
 # Build and push (when this file changes):
 #   docker build -t <registry>/<owner>/desktop-ci:1 tools/ci-image
 #   docker push <registry>/<owner>/desktop-ci:1
-FROM golang:1.22-bookworm AS build
+FROM golang:1.27-bookworm@sha256:972b4110ba0f47539a975c31e52c64765e1ff19f2d74469ae4a595c6676e80a5 AS build
 RUN apt-get update && apt-get install -y --no-install-recommends libgit2-dev pkg-config && rm -rf /var/lib/apt/lists/*
 RUN git clone --depth 1 --branch v2.0.0 https://github.com/splitsh/lite.git /src
 WORKDIR /src
@@ -14,7 +14,7 @@ RUN curl -fsSL -o /tmp/gl.tgz https://github.com/gitleaks/gitleaks/releases/down
  && echo "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb  /tmp/gl.tgz" | sha256sum -c - \
  && tar -xzf /tmp/gl.tgz -C /out gitleaks
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 RUN apt-get update && apt-get install -y --no-install-recommends libgit2-1.5 git ca-certificates openssh-client python3 shellcheck \
  && rm -rf /var/lib/apt/lists/*
 COPY --from=build /out/splitsh-lite /out/gitleaks /usr/local/bin/
