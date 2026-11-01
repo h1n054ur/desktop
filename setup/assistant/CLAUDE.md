@@ -7,4 +7,4 @@ Everything about the desktop (screen layout, `place`, every shortcut, Noctalia a
 the safety rules) is in the desktop skill, loaded here in full so you always have it:
 
 @.claude/skills/desktop/SKILL.md
-Hani's MCP servers (Telegram, Discord, UniFi, Tailscale, Activepieces, ...) are available for everything else.
+Hani's MCP servers (Telegram, Discord, UniFi, Tailscale, ...) are available for everything else.
