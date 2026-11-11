@@ -207,3 +207,6 @@ type = "hani/muse-usage:bar"
 
 [widget.record]
 type = "hani/glow-record:record"
+
+[plugin_settings."hani/codex-usage"]
+bar_limits = "7d"
