@@ -58,6 +58,9 @@ hl.window_rule({ match = { class = "^(dev\\.)?(noctalia\\.Noctalia(\\.Settings)?
 
 -- Ferdium always opens on workspace 1 (left monitor, DP-1); it starts at login from ~/.config/autostart/ferdium.desktop
 hl.window_rule({ match = { class = "^(ferdium)$" }, workspace = "1" })
+-- BTS Mail and Tasks app windows (Helium --app) live on 3 and 4 of the left screen, opened at login (autostart.lua)
+hl.window_rule({ match = { class = "^(chrome-mail\\.bts\\.ad__-Default)$" }, workspace = "3 silent" })
+hl.window_rule({ match = { class = "^(chrome-tasks\\.bts\\.ad__-Default)$" }, workspace = "4 silent" })
 
 -- YouTube Music (Chrome app window) opens maximised; Super+M puts it on the next empty workspace
 hl.window_rule({ match = { class = "^(chrome-music\\.youtube\\.com__-Default)$" }, maximize = true })

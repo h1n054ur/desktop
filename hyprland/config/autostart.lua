@@ -13,4 +13,9 @@ hl.on("hyprland.start", function ()
     -- first kitty: workspace per machine (KITTY_WORKSPACE, set in variables.lua / host files); started directly
     -- (not through uwsm) so the workspace rule matches its pid
     hl.exec_cmd(TERMINAL, { workspace = (KITTY_WORKSPACE or "6") .. " silent" })
+    -- workspaces 2 to 4 on the left screen: Helium on 2 first (it becomes the browser process), then the BTS
+    -- Mail and Tasks app windows, which Helium opens in that same process. Their window rules (windowrules.lua)
+    -- put them on 3 and 4. Workspace 5 stays empty.
+    hl.exec_cmd("helium-browser", { workspace = "2 silent" })
+    hl.exec_cmd("sh -c 'sleep 5; helium-browser --app=https://mail.bts.ad/; sleep 2; helium-browser --app=https://tasks.bts.ad/'")
 end)
