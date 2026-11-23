@@ -58,15 +58,16 @@ hl.window_rule({ match = { class = "^(dev\\.)?(noctalia\\.Noctalia(\\.Settings)?
 
 -- Ferdium always opens on workspace 1 (left monitor, DP-1); it starts at login from ~/.config/autostart/ferdium.desktop
 hl.window_rule({ match = { class = "^(ferdium)$" }, workspace = "1" })
--- BTS Mail and Tasks app windows (Helium --app) live on 3 and 4 of the left screen, opened at login (autostart.lua)
-hl.window_rule({ match = { class = "^(chrome-mail\\.bts\\.ad__-Default)$" }, workspace = "3 silent" })
+-- BTS Chat, Tasks and Mail app windows (Helium --app) live on 3, 4 and 5 of the left screen, opened at login (autostart.lua)
+hl.window_rule({ match = { class = "^(chrome-chat\\.bts\\.ad__-Default)$" }, workspace = "3 silent" })
 hl.window_rule({ match = { class = "^(chrome-tasks\\.bts\\.ad__-Default)$" }, workspace = "4 silent" })
--- MailCraft (desktop mail client, AppImage) lives on 5 of the left screen, opened at login (autostart.lua)
-hl.window_rule({ match = { class = "^(io\\.github\\.billsecond\\.mailcraft)$" }, workspace = "5 silent" })
+hl.window_rule({ match = { class = "^(chrome-mail\\.bts\\.ad__-Default)$" }, workspace = "5 silent" })
 
 -- YouTube Music (Chrome app window) opens maximised; Super+M puts it on the next empty workspace
 hl.window_rule({ match = { class = "^(chrome-music\\.youtube\\.com__-Default)$" }, maximize = true })
 
+-- Jellyfin Desktop (official app) opens fullscreen; its launcher (~/.local/bin/jellyfin-app) puts it on the next empty workspace
+hl.window_rule({ match = { class = "^(org\\.jellyfin\\.JellyfinDesktop)$" }, fullscreen = true })
 
 -- Opacity Overrides
 local terminals = "^(kitty|ghostty|[Kk]onsole|Alacritty|gnome-terminal|xfce[0-9]?-terminal)$"
@@ -136,6 +137,10 @@ hl.layer_rule({
   blur = true,
   blur_popups = true,
 })
+
+-- Keep the screens awake while any window is fullscreen (films, games): Hyprland sends an idle inhibit,
+-- which Noctalia's idle timers respect. Jellyfin Desktop does not inhibit idle on its own.
+hl.window_rule({ match = { class = ".*" }, idle_inhibit = "fullscreen" })
 
 -- Browser pages can ask Wayland to inhibit compositor shortcuts (keyboard lock, popups), which left Super dead
 -- after a Helium pop-up on 2026-10-27. Browsers never get to swallow Hyprland's binds.
