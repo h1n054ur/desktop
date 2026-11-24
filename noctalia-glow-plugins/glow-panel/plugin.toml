@@ -5,9 +5,9 @@ plugin_api  = 32
 author      = "hani"
 license     = "MIT"
 icon        = "volume"
-description = "Glow-icon volume and network bar widgets: volume level and mute; Ethernet link, or Wi-Fi with a glow icon per signal strength."
+description = "Glow-icon volume and network bar widgets: volume level and mute; Ethernet link, or Wi-Fi with a glow icon per signal strength; a headphone button that sets the output to full volume."
 tags        = ["bar", "audio", "network"]
-dependencies = ["pactl", "wpctl"]
+dependencies = ["pactl", "wpctl", "amixer"]
 
 [[widget]]
 id    = "volume"
@@ -32,3 +32,11 @@ entry = "network.luau"
   [widget.actions]
   left = "panel-toggle control-center network"
 
+
+[[widget]]
+id    = "boost"
+entry = "boost.luau"
+
+  # Left click runs the widget's own onClick. Middle would open settings, which it has none of.
+  [widget.actions]
+  middle = "none"

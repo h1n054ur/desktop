@@ -8,7 +8,7 @@ Six bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) built a
 |---|---|---|
 | glow-stats | `hani/glow-stats` | CPU load, CPU temperature, GPU temperature or RAM, one stat per widget |
 | glow-weather | `hani/glow-weather` | Temperature on the bar, with a forecast panel on click |
-| glow-panel | `hani/glow-panel` | Volume (`volume`) and network (`network`) widgets |
+| glow-panel | `hani/glow-panel` | Volume (`volume`), network (`network`) and full-volume (`boost`) widgets |
 | glow-window | `hani/glow-window` | The window on this screen's workspace, per bar, on Hyprland |
 | glow-speak | `hani/glow-speak` | The active voice/persona label and spoken-reply controls (`speak`), with mute, stop and replay |
 | glow-record | `hani/glow-record` | Records system sound, the mic or both (`recorder`), with time, level meter and transcript progress |
@@ -51,6 +51,8 @@ The panel is `floating`, so it brings its own card and suits transparent bars.
 `volume` shows a level icon (mute, low, medium, high) and the percentage. `pactl subscribe` pushes changes, so scrolling or muting updates it right away. Click for the audio tab of the control centre, right-click to mute, scroll to change the volume.
 
 `network` shows Ethernet when a cable link is up, otherwise Wi-Fi by signal strength, joining or off. Hover for the interface, address, SSID and signal. Click for the network tab of the control centre.
+
+`boost` is a headphone button. One click unmutes the default output and sets it to 100%. When that output is an ALSA card with a hardware PCM control, the card's PCM goes to 100% too, since some USB headsets lower it on their own. The icon lights up for a moment after the click.
 
 ## glow-window
 

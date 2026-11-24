@@ -95,17 +95,6 @@ local modalMatches = {
 }
 for _, m in ipairs(modalMatches) do hl.window_rule({ match = m, float = true }) end
 
--- WinApps: the full Windows desktop (FreeRDP) tiles to fill its workspace, and Hyprland
--- binds (close/move/workspaces) keep working while it has focus
-if WINAPPS_ENABLED then
-    hl.window_rule({
-        name  = "winapps-windows",
-        match = { class = "^(Microsoft Windows)$" },
-        tile  = true,
-        no_shortcuts_inhibit = true,
-    })
-end
-
 -- Ignore maximize requests from all apps. You'll probably like this.
 hl.window_rule({
     name  = "suppress-maximize-events",

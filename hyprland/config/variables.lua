@@ -8,7 +8,7 @@ CALCULATOR   = "gnome-calculator"
 
 -- Screens: set per machine in ../host/<hostname>.lua (matched by serial, not by port)
 MAIN_SCREEN = "" -- the left screen: workspaces 1-5, the full bar, the sign-in panel
-SIDE_SCREEN = "" -- the right screen: workspaces 6-10, the slim bar; Discord, Windows apps and games open here
+SIDE_SCREEN = "" -- the right screen: workspaces 6-10, the slim bar; Discord and games open here
 
 -- Workspaces
 KITTY_WORKSPACE = "6" -- where the first kitty opens at login (the right screen); host files can change it
@@ -17,4 +17,3 @@ WORKSPACE_COUNT = 10 -- laptop profile changes this to 5
 
 -- Optional pieces. Host profiles can turn them off without changing the two-screen desktop.
 LAPTOP_PROFILE = false
-WINAPPS_ENABLED = true

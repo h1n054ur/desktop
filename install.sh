@@ -3,7 +3,7 @@
 # h1n054ur desktop: install CachyOS (Hyprland edition), then run this. Sets up the whole two-screen desktop,
 # or only the pieces you pick.
 #   ./install.sh                       interactive: pick components, pick your main screen, watch it install
-#   ./install.sh --profile laptop      one-screen laptop, without WinApps
+#   ./install.sh --profile laptop      one-screen laptop, with voice tools
 #   ./install.sh theme plugins --yes   only those components, no questions
 #   ./install.sh all --yes             everything
 #   ./install.sh --dry-run             walk through it without changing anything
@@ -170,7 +170,7 @@ write_host_file() {
   local body
   if [ "$SINGLE" = 1 ]; then
     if [ "$PROFILE" = laptop ]; then
-      body=$(printf -- '-- written by h1n054ur install.sh (%s): laptop profile\nLAPTOP_PROFILE = true\nWORKSPACE_COUNT = 5\nWINAPPS_ENABLED = false\nMAIN_SCREEN = "%s"\nSIDE_SCREEN = MAIN_SCREEN\n\nhl.monitor({ output = MAIN_SCREEN, mode = "preferred", position = "0x0", scale = "1" })\n' "$STAMP" "$MAIN_OUTPUT")
+      body=$(printf -- '-- written by h1n054ur install.sh (%s): laptop profile\nLAPTOP_PROFILE = true\nWORKSPACE_COUNT = 5\nMAIN_SCREEN = "%s"\nSIDE_SCREEN = MAIN_SCREEN\n\nhl.monitor({ output = MAIN_SCREEN, mode = "preferred", position = "0x0", scale = "1" })\n' "$STAMP" "$MAIN_OUTPUT")
     else
       body=$(printf -- '-- written by h1n054ur install.sh (%s): one screen, so both roles use it\nMAIN_SCREEN = "desc:%s"\nSIDE_SCREEN = MAIN_SCREEN\nKITTY_WORKSPACE = "2"\n' "$STAMP" "$MAIN_DESC")
     fi

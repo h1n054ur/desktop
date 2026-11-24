@@ -114,15 +114,15 @@ hl.bind(mainMod .. " + D", function()
     end
 end)
 hl.bind(mainMod .. " + SHIFT + Z", focusOrLaunch("chrome-app.zoom.us__wc_home-Default", "helium-browser --app=https://app.zoom.us/wc/home"))
--- Windows desktop (WinApps, see h1n054ur-setup): focus it, or open it on the next empty workspace
-if WINAPPS_ENABLED then
-    hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(launchPrefix .. os.getenv("HOME") .. "/.local/bin/winapps-open windows"))
-end
 -- Obsidian (notes, ~/Notes vault): jump to it when open, start it otherwise
 hl.bind(mainMod .. " + O", focusOrLaunch("md.obsidian.Obsidian", "obsidian"))
+-- SilverBullet uses the same ~/Notes files through the notes server.
+hl.bind(mainMod .. " + N", focusOrLaunch("chrome-notes.nb.h1n054ur.dev__-Default", "helium-browser --app=https://notes.nb.h1n054ur.dev/"))
 hl.bind(mainMod .. " + V",         focusOrLaunch("codium", "codium"))
 hl.bind(mainMod .. " + B",         focusOrLaunch("calibre-gui", "calibre"))
 hl.bind(mainMod .. " + SHIFT + B", focusOrLaunch("com.github.johnfactotum.Foliate", "foliate")) -- ebook reader
+-- qBittorrent runs on the media server. The local desktop app is retired.
+hl.bind(mainMod .. " + SHIFT + Q", focusOrLaunch("chrome-arr.nb.h1n054ur.dev__qbittorrent_-Default", "helium-browser --app=https://arr.nb.h1n054ur.dev/qbittorrent/"))
 -- yazi and rmpc as their own kitty windows (Ctrl+Shift+Y / Ctrl+Shift+M still work inside kitty)
 hl.bind(mainMod .. " + Y",         focusOrLaunch("yazi", TERMINAL .. " --class yazi -e yazi"))
 -- YouTube Music as a Chrome app window: jump to it when open, otherwise start it on the next empty
