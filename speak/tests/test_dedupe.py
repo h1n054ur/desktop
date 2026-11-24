@@ -162,6 +162,20 @@ class DedupeTests(SayBase):
         self.wait_idle()
         self.assertIn(b"\r\nAll tests pass.\r\n", StubTTS.requests[0])
 
+    def test_remote_server_setting(self):
+        conf = os.path.join(self.tmp.name, "config", "speak")
+        os.makedirs(conf)
+        with open(os.path.join(conf, "config.toml"), "w") as fh:
+            fh.write(
+                f'server = "http://127.0.0.1:1"\n'
+                f'remote_server = "http://127.0.0.1:{PORT}"\n'
+                'use_remote_server = true\n'
+            )
+        self.env.pop("SPEAK_SERVER")
+        self.run_all([self.say("Remote speech works.")], ["Remote speech works."])
+        self.wait_idle()
+        self.assertEqual(len(StubTTS.requests), 1)
+
 
 class LabelTests(SayBase):
     """Name labels: `speak voice-from-reply` picks the voice, `say --strip-label` drops the label."""

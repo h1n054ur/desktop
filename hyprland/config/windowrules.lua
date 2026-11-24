@@ -57,7 +57,9 @@ hl.window_rule({ match = { class = "^(dev\\.)?(noctalia\\.Noctalia(\\.Settings)?
 -- Dolphin tiles like other apps (CachyOS floated it at the cursor, which landed it across both monitors)
 
 -- Ferdium always opens on workspace 1 (left monitor, DP-1); it starts at login from ~/.config/autostart/ferdium.desktop
-hl.window_rule({ match = { class = "^(ferdium)$" }, workspace = "1" })
+if FERDIUM_ENABLED then
+    hl.window_rule({ match = { class = "^(ferdium)$" }, workspace = "1" })
+end
 -- BTS Chat and Mail app windows (Helium --app) and Vicu (tasks) live on 3, 5 and 4 of the left screen, opened at login (autostart.lua)
 hl.window_rule({ match = { class = "^(chrome-chat\\.bts\\.ad__-Default)$" }, workspace = "3 silent" })
 hl.window_rule({ match = { class = "^(com\\.rendyhd\\.vicu)$" }, workspace = "4 silent" })
@@ -98,12 +100,14 @@ for _, m in ipairs(modalMatches) do hl.window_rule({ match = m, float = true }) 
 
 -- WinApps: the full Windows desktop (FreeRDP) tiles to fill its workspace, and Hyprland
 -- binds (close/move/workspaces) keep working while it has focus
-hl.window_rule({
-    name  = "winapps-windows",
-    match = { class = "^(Microsoft Windows)$" },
-    tile  = true,
-    no_shortcuts_inhibit = true,
-})
+if WINAPPS_ENABLED then
+    hl.window_rule({
+        name  = "winapps-windows",
+        match = { class = "^(Microsoft Windows)$" },
+        tile  = true,
+        no_shortcuts_inhibit = true,
+    })
+end
 
 -- Ignore maximize requests from all apps. You'll probably like this.
 hl.window_rule({

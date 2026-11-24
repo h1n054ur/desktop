@@ -10,7 +10,7 @@ Six bar widgets for [Noctalia](https://github.com/noctalia-dev/noctalia) built a
 | glow-weather | `hani/glow-weather` | Temperature on the bar, with a forecast panel on click |
 | glow-panel | `hani/glow-panel` | Volume (`volume`) and network (`network`) widgets |
 | glow-window | `hani/glow-window` | The window on this screen's workspace, per bar, on Hyprland |
-| glow-speak | `hani/glow-speak` | Whether coding-agent replies are read aloud (`speak`), with mute, stop and replay |
+| glow-speak | `hani/glow-speak` | The active voice/persona label and spoken-reply controls (`speak`), with mute, stop and replay |
 | glow-record | `hani/glow-record` | Records system sound, the mic or both (`recorder`), with time, level meter and transcript progress |
 
 ## glow-stats
@@ -60,7 +60,7 @@ This is what makes it useful with two screens. A plain window-title widget follo
 
 ## glow-speak
 
-A bar button for `speak`, the small CLI in the `speak/` folder of [h1n054ur/desktop](https://github.com/h1n054ur/desktop) that reads coding-agent replies aloud. The speaker icon is dim while nothing plays, lights up and pulses while a reply is spoken, and shows the red mute mark when speech is muted. Hover for the state, the voice and where the last reply came from.
+`persona` shows the voice/persona that is speaking, or the one that spoke the most recent reply. The `speak` button uses the small CLI in the `speak/` folder of [h1n054ur/desktop](https://github.com/h1n054ur/desktop) to read coding-agent replies aloud. The speaker icon is dim while nothing plays, lights up and pulses while a reply is spoken, and shows the red mute mark when speech is muted. Hover for the state, the voice and where the last reply came from.
 
 | Click | Runs | |
 |---|---|---|
@@ -109,6 +109,7 @@ flowchart LR
   end
   subgraph speak["glow-speak"]
     ST["speak state file<br/>and mute flag"] -->|changed| SC["speak status --json"]
+    ST --> SP["persona label"]
     SC --> SB["speaker button"]
     SB -->|click| SA["speak toggle, stop, replay"]
   end
@@ -158,13 +159,16 @@ type = "hani/glow-window:title"
 [widget.speak]
 type = "hani/glow-speak:speak"
 
+[widget.persona]
+type = "hani/glow-speak:persona"
+
 [widget.record]
 type = "hani/glow-record:record"
 
 [bar.default]
 start = [ "weather", "cpu" ]
 center = [ "title" ]
-end = [ "record", "speak", "volume", "network" ]
+end = [ "record", "persona", "speak", "volume", "network" ]
 ```
 
 glow-panel needs `pactl` and `wpctl` (PipeWire), glow-window needs `hyprctl` and `python3`, glow-speak needs `speak` and glow-record needs `recorder` on the `PATH`.

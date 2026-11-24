@@ -1,0 +1,33 @@
+# Single-screen laptop bar. Include this after h1n054ur.toml so only the bar layout changes.
+
+[bar.default]
+# Left to right: workspaces, search, clock, weather, performance, AI usage, voice, app drawer.
+# Volume, network and power stay pinned to the far right.
+start = [ "workspaces", "search", "group:time", "glow_weather", "gs_cpu", "claude", "codex", "persona", "casts", "speak", "tray" ]
+center = []
+end = [ "group:system" ]
+
+# One compact CPU widget carries the full performance tooltip and opens Noctalia's System panel on click.
+[widget.gs_cpu]
+type = "hani/glow-stats:stat"
+stat = "cpu"
+show_value = true
+
+# The label follows the voice/persona that spoke the current or most recent reply.
+[widget.persona]
+type = "hani/glow-speak:persona"
+
+# Noctalia's privacy widget shows active microphone, camera and screen casts.
+[widget.casts]
+type = "privacy"
+hide_inactive = true
+
+[widget.speak]
+type = "hani/glow-speak:speak"
+
+# A single tray button opens the floating app drawer on click.
+[widget.tray]
+drawer = true
+drawer_columns = 3
+drawer_item_size = 24
+detached_panel = true

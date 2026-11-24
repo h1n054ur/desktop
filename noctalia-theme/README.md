@@ -34,6 +34,7 @@ Noctalia's launcher uses compact rows in the same font (this setup uses [fuzzel]
 | Path | What |
 |---|---|
 | `noctalia/h1n054ur.toml` | the theme: palette choice, bar, pills, capsule groups, widgets, floating panels, font |
+| `noctalia/laptop.toml` | the single-screen bar override with five workspaces, AI and voice widgets, tray drawer and system controls |
 | `noctalia/palettes/h1n054ur.json` | the colour palette, including terminal colours for the kitty and alacritty templates |
 | `icons/glow/` | the glow icon set, recoloured green to cyan (the bar's search and power icons use it) |
 | `icons/rose/` | the original rose-tinted set |
@@ -56,6 +57,13 @@ ln -s ~/noctalia-h1n054ur/icons/glow ~/.local/share/glow-icons
 ```toml
 [include]
 files = [ "~/noctalia-h1n054ur/noctalia/h1n054ur.toml" ]
+```
+
+For the laptop bar, include its override second:
+
+```toml
+[include]
+files = [ "~/noctalia-h1n054ur/noctalia/h1n054ur.toml", "~/noctalia-h1n054ur/noctalia/laptop.toml" ]
 ```
 
 4. Give the second screen its own bar. Match the screen by part of its description (`hyprctl monitors` shows it), so swapping cables never swaps the layouts:

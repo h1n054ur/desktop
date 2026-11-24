@@ -12,7 +12,7 @@ uv tool install pocket-tts
 systemctl --user enable --now speak-tts
 ```
 
-`install.sh` links `speak` into `~/.local/bin`, links the `speak-tts` user unit and copies `config.example.toml` to `~/.config/speak/config.toml` if there is none yet. The server listens on `127.0.0.1:8777` and runs at low priority with a memory cap.
+`install.sh` links `speak` into `~/.local/bin`, installs the Claude Code Stop hook, links the `speak-tts` user unit and copies `config.example.toml` to `~/.config/speak/config.toml` if there is none yet. The server listens on `127.0.0.1:8777` and runs at low priority with a memory cap.
 
 ## Use
 
@@ -51,7 +51,37 @@ enabled = true
 state_dir = "~/.local/state/names/sessions"
 ```
 
-`SPEAK_SERVER` overrides the server URL and `SPEAK_PLAYER` the player command (default `pw-play -`).
+`SPEAK_SERVER` overrides every configured server URL and `SPEAK_PLAYER` overrides the player command, whose default is `pw-play -`.
+
+### Use the desktop server from a laptop
+
+Pocket TTS stays local by default. If it is too slow on the laptop, expose the desktop service only on its Tailscale address. On the desktop, run `systemctl --user edit speak-tts`, add this override with the desktop's tailnet IPv4 address, then restart the unit:
+
+```ini
+[Service]
+Environment=SPEAK_TTS_HOST=100.x.y.z
+```
+
+```sh
+systemctl --user daemon-reload
+systemctl --user restart speak-tts
+```
+
+Do not bind it to `0.0.0.0`. On the laptop, change these two values in `~/.config/speak/config.toml`:
+
+```toml
+remote_server = "http://desktop:8777"
+use_remote_server = true
+```
+
+The tailnet name can be replaced with the desktop's Tailscale IPv4 address. Set `use_remote_server = false` to return to the laptop's local server.
+
+Own voice clips are intentionally not stored in git. Copy them after installing the laptop profile:
+
+```sh
+mkdir -p ~/.local/share/speak/voices
+scp -rp desktop:.local/share/speak/voices/. ~/.local/share/speak/voices/
+```
 
 ## State
 

@@ -6,7 +6,7 @@
 
 ## The two screens
 
-Workspaces 1 to 5 live on the left screen (the main one), 6 to 10 on the right. `Super+1` ... `Super+9` and `Super+0` (10) go to a workspace, wherever it is; `Super+Shift+` the same number sends the focused window there. Screens are matched by serial number, so swapping cables never swaps them. With one screen unplugged, its workspaces move to the other and come back when it returns. On a laptop alone, all ten share its one screen.
+Workspaces 1 to 5 live on the left screen (the main one), 6 to 10 on the right. `Super+1` ... `Super+9` and `Super+0` (10) go to a workspace, wherever it is. `Super+Shift+` the same number sends the focused window there. Screens are matched by serial number, so swapping cables never swaps them. With one screen unplugged, its workspaces move to the other and come back when it returns. The laptop profile has only workspaces 1 to 5 on its built-in screen.
 
 ```mermaid
 flowchart LR
@@ -114,6 +114,10 @@ Focus the window first (click it or hover it) before sending it anywhere.
 | `Super+Alt+C` | Session menu, also the power icon on the bar: 1 lock, 2 log out, 3 sleep, 4 restart, 5 shut down (3 to 5 count down 3 s, Esc cancels) |
 | `Super+Minus` / `Super+Plus` | Zoom out / in |
 | `Super+/` | Searchable keybind cheat sheet |
+| Brightness up / down | Change the built-in screen brightness |
+| Battery key (laptop) | Open Noctalia's control centre |
+
+Closing the lid suspends the laptop. Hypridle locks it before sleep.
 
 ## Inside kitty
 

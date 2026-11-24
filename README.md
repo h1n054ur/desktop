@@ -17,6 +17,14 @@ or from a clone: `git clone https://github.com/h1n054ur/desktop && cd desktop &&
 
 The installer shows a checklist of components, everything ticked: untick what you don't want. It asks which software groups to install, detects your screens and lets you pick the main one, then sets each piece up with a spinner, a progress bar and a log. Anything it replaces is backed up next to the original first. `./install.sh --dry-run` walks through all of it without changing a thing, and `./install.sh theme plugins --yes` installs only those pieces.
 
+### Laptop profile
+
+On the single-screen laptop, run `./install.sh --profile laptop`. A host named `laptop` selects the same profile automatically. It keeps workspaces 1 to 5 on the built-in screen, leaves out WinApps and Ferdium, adds Handy dictation on Right Alt and spoken replies, and uses one combined Noctalia bar. The desktop profile and its two-screen layout stay the default.
+
+The laptop bar has workspace numbers, search, clock, expandable weather and performance, Claude and Codex usage, the current persona, cast indicators, spoken-reply controls, a compact tray drawer, then volume, network and power. The Quickshell lock and login screens are installed last. If the login screen fails, press Ctrl+Alt+F2 and run `sudo ~/desktop/quickshell/greeter/install.sh revert`.
+
+Personal voice clips do not live in git. After installation, copy `~/.local/share/speak/voices/` from the desktop. [The speak guide](speak) has the copy command and the optional setting that uses the desktop's Pocket TTS server over the tailnet.
+
 ![The installer's component checklist](docs/installer.png)
 
 | Component | What it sets up |
@@ -26,14 +34,15 @@ The installer shows a checklist of components, everything ticked: untick what yo
 | `hyprland` | the Hyprland config: workspaces 1-5 left and 6-10 right, keybinds, the gradient border |
 | `theme` | the Noctalia look: floating pills, floating panels, palette, glow icons, and the right screen's own bar |
 | `plugins` | the glow bar plugins: stats, weather, volume, network, per-screen window titles |
-| `claude` | Claude Code sessions and plan limits, plus Codex and Muse plan limits and OpenCode sessions, in the right screen's bar |
+| `claude` | Claude Code sessions and plan limits, plus Codex and Muse plan limits and OpenCode sessions, in the right screen's bar (on the laptop: Claude and Codex limits in its one bar) |
 | `lock` | the lock screen and session menu (Super+L, Super+Alt+C) |
 | `login` | the login screen for greetd (sudo; `sudo quickshell/greeter/install.sh revert` undoes it) |
 | `terminal` | the welcome banner, fastfetch panel and starship prompt |
 | `kitty` | kitty, yazi, rmpc music and cava |
 | `claudecode` | the Claude Code look: theme, status line, task sidebar and agent tabs |
+| `voice` | Pocket TTS spoken replies, Handy hold-to-talk, `handy-out`, and the persona label |
 
-It's built for **two screens**, and works on one: then all ten workspaces share it.
+The desktop profile is built for **two screens**. The laptop profile uses five workspaces on its built-in screen.
 
 ## Two screens
 
