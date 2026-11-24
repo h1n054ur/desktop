@@ -1,6 +1,5 @@
 # slug	Name	URL	dashboard-icon name (or -)	group	Helium profile (optional)	keywords (optional)
 ytmusic	YouTube Music	https://music.youtube.com/	youtube-music	media
-zoom	Zoom	https://app.zoom.us/wc/home	@zoom-app.png	work
 notes	Notes (SilverBullet)	https://notes.nb.h1n054ur.dev/	@silverbullet-app.png	home
 seerr	Seerr	https://requests.h1n054ur.dev/	jellyseerr	media
 sonarr	Sonarr	https://arr.nb.h1n054ur.dev/sonarr/	sonarr	media
