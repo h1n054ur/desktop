@@ -34,7 +34,7 @@ Personal voice clips do not live in git. After installation, copy `~/.local/shar
 | `hyprland` | the Hyprland config: workspaces 1-5 left and 6-10 right, keybinds, the gradient border |
 | `theme` | the Noctalia look: floating pills, floating panels, palette, glow icons, and the right screen's own bar |
 | `plugins` | the glow bar plugins: stats, weather, volume, network, per-screen window titles |
-| `claude` | Claude Code sessions and plan limits, plus Codex and Muse plan limits and OpenCode sessions, in the right screen's bar |
+| `claude` | Claude Code sessions and plan limits, plus Codex and Muse plan limits and OpenCode sessions, in the right screen's bar (on the laptop: Claude and Codex limits in its one bar) |
 | `lock` | the lock screen and session menu (Super+L, Super+Alt+C) |
 | `login` | the login screen for greetd (sudo; `sudo quickshell/greeter/install.sh revert` undoes it) |
 | `terminal` | the welcome banner, fastfetch panel and starship prompt |
