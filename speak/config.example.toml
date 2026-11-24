@@ -1,6 +1,10 @@
 # speak config. Copy to ~/.config/speak/config.toml (install.sh does this once).
 
 server = "http://127.0.0.1:8777"
+# A laptop can use the desktop's Pocket TTS server over the tailnet when local speech is too slow.
+# Keep this off until the desktop service is bound to its Tailscale address. See README.md.
+remote_server = "http://desktop:8777"
+use_remote_server = false
 max_sentences = 4
 
 # Voice name -> a built-in Pocket TTS voice (alba, marius, javert, jean, cosette,
@@ -27,4 +31,4 @@ default = "alba"
 # form {"persona": "ada"}, where tool is claude or opencode. Leave state_dir empty for no fallback.
 [labels]
 enabled = true
-state_dir = ""
+state_dir = "~/.local/state/names/sessions"

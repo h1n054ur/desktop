@@ -11,6 +11,7 @@ git clone https://github.com/h1n054ur/h1n054ur-setup ~/h1n054ur-setup
 cd ~/h1n054ur-setup
 ./install.sh                          # interactive: pick groups, see the plan, watch it install
 ./install.sh desktop terminal --yes   # no questions, for scripts
+./install.sh --profile laptop         # no WinApps or Ferdium, with the voice group
 ./install.sh --dry-run                # the whole walk-through without installing anything
 ```
 
@@ -29,12 +30,15 @@ The interactive run starts with the H1N054UR banner and a system check (OS, kern
 | `media` | MPD, rmpc and cava for music; mpv with uosc, yt-dlp, FreeTube, Stremio, the Jellyfin mpv shim; HandBrake, OBS, GIMP, Avidemux |
 | `dev` | git, GitHub CLI, Docker (with Compose, Buildx and the NVIDIA toolkit), Bun, uv, nvm, rbenv, VSCodium, opencode, CMake, Ninja, ShellCheck, Caddy, cloudflared, ngrok, DBeaver, MySQL Workbench, Meld, gitleaks, and **Claude Code** (Anthropic's own installer, which keeps itself up to date) |
 | `apps` | Helium (vertical tabs), Ferdium, Vesktop, Obsidian, Bitwarden with rbw and rofi-rbw, Calibre, Foliate, TeamSpeak, Figma, FileZilla, Remmina, Mission Center, Dolphin, Kate, Gwenview |
+| `voice` | uv and Pocket TTS prerequisites, Handy offline dictation, jq, PulseAudio tools and wtype |
 | `winapps` | Docker, FreeRDP and KVM/QEMU for the Windows container (section 3) |
 | `mail` | aerc, himalaya, isync, notmuch, khal, calcurse, newsboat, qutebrowser, w3m, zathura, timg, yt-x |
 | `network` | Tailscale, Syncthing with its tray, rclone, WireGuard tools, Cloudflare WARP, Surfshark |
 | `gaming` | Steam |
 
 Repo packages install in one go; AUR packages build one at a time with paru, and a failed build is listed at the end instead of stopping the run.
+
+`--profile laptop` removes `winapps` from the group list and Ferdium from `apps`. It adds `voice`. The desktop profile remains the default, and a host named `laptop` selects the laptop profile automatically.
 
 ## 3. Windows apps with WinApps
 

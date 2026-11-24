@@ -46,7 +46,35 @@ ln -sfn "$here/bin/speak-where" "$HOME/.local/bin/speak-where"
 if [ -L "$HOME/.local/bin/speak-focused" ]; then rm -f "$HOME/.local/bin/speak-focused"; fi
 mkdir -p "$HOME/.config/opencode/plugins"
 ln -sfn "$here/opencode/speak.ts" "$HOME/.config/opencode/plugins/speak.ts"
-# The Claude Code Stop hook runs from the repo path: add it to ~/.claude/settings.json (see README).
+# Claude Code reads the Stop hook from its settings. Preserve every existing setting and hook.
+claude_settings="$HOME/.claude/settings.json"
+if command -v jq >/dev/null; then
+  mkdir -p "$(dirname "$claude_settings")"
+  if [ -L "$claude_settings" ]; then
+    claude_settings=$(readlink -f "$claude_settings")
+  fi
+  if [ ! -e "$claude_settings" ]; then
+    printf '{}\n' > "$claude_settings"
+  fi
+  if jq empty "$claude_settings" >/dev/null 2>&1; then
+    hook="$here/hooks/claude-stop.sh"
+    tmp=$(mktemp "$(dirname "$claude_settings")/.speak-settings.XXXXXX")
+    jq --arg command "$hook" '
+      .hooks = (.hooks // {}) |
+      .hooks.Stop = (.hooks.Stop // []) |
+      if ([.hooks.Stop[]?.hooks[]?.command] | index($command)) then .
+      else .hooks.Stop += [{"hooks":[{"type":"command","command":$command,"timeout":5}]}]
+      end
+    ' "$claude_settings" > "$tmp"
+    chmod --reference="$claude_settings" "$tmp"
+    mv "$tmp" "$claude_settings"
+    echo "hooked  $claude_settings"
+  else
+    echo "warning $claude_settings is not valid JSON, so the Claude Code hook was not changed" >&2
+  fi
+else
+  echo "warning jq is missing, so the Claude Code hook was not installed" >&2
+fi
 
 # --- end speak-hooks ---
 

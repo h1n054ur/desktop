@@ -78,14 +78,16 @@ hl.bind(mainMod .. " + code:86", function() zoomfunction(0.3) end, { repeating =
 ------------------
 
 hl.bind(mainMod .. " + T",          hl.dsp.exec_cmd(launchPrefix .. TERMINAL))
--- Ferdium: jump to it when it is open, start it otherwise
-hl.bind(mainMod .. " + F", function()
-    if hl.get_window("class:ferdium") then
-        hl.dispatch(hl.dsp.focus({ window = "class:ferdium" }))
-    else
-        hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "ferdium"))
-    end
-end)
+-- Ferdium stays on the two-screen desktop. The laptop profile has neither the package nor its bind.
+if FERDIUM_ENABLED then
+    hl.bind(mainMod .. " + F", function()
+        if hl.get_window("class:ferdium") then
+            hl.dispatch(hl.dsp.focus({ window = "class:ferdium" }))
+        else
+            hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "ferdium"))
+        end
+    end)
+end
 -- Helium: jump to the normal (signed-in) window when open, start it otherwise; Shift opens an incognito window
 hl.bind(mainMod .. " + C", function()
     for _, w in ipairs(hl.get_windows({ class = "helium" })) do
@@ -124,7 +126,9 @@ end)
 hl.bind(mainMod .. " + SHIFT + T", focusOrLaunch("chrome-teams.microsoft.com__-Default", "helium-browser --app=https://teams.microsoft.com/"))
 hl.bind(mainMod .. " + SHIFT + Z", focusOrLaunch("chrome-app.zoom.us__wc_home-Default", "helium-browser --app=https://app.zoom.us/wc/home"))
 -- Windows desktop (WinApps, see h1n054ur-setup): focus it, or open it on the next empty workspace
-hl.bind(mainMod .. " + W",          hl.dsp.exec_cmd(launchPrefix .. os.getenv("HOME") .. "/.local/bin/winapps-open windows"))
+if WINAPPS_ENABLED then
+    hl.bind(mainMod .. " + W", hl.dsp.exec_cmd(launchPrefix .. os.getenv("HOME") .. "/.local/bin/winapps-open windows"))
+end
 -- Obsidian (notes, ~/Notes vault): jump to it when open, start it otherwise
 hl.bind(mainMod .. " + O", focusOrLaunch("md.obsidian.Obsidian", "obsidian"))
 hl.bind(mainMod .. " + V",         focusOrLaunch("codium", "codium"))
@@ -195,6 +199,13 @@ hl.bind("XF86AudioPrev",  hl.dsp.exec_cmd(noctCall .. "media previous"), { locke
 hl.bind("XF86MonBrightnessUp",   hl.dsp.exec_cmd(noctCall .. "brightness-up"),   { locked = true, repeating = true })
 hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(noctCall .. "brightness-down"), { locked = true, repeating = true })
 
+if LAPTOP_PROFILE then
+    -- The battery key opens the control centre, where Noctalia shows charge and power profile.
+    hl.bind("XF86Battery", hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"), { locked = true })
+    -- Closing the built-in screen suspends this single-screen profile. The lock command runs first through hypridle.
+    hl.bind("switch:on:Lid Switch", hl.dsp.exec_cmd("systemctl suspend"), { locked = true })
+end
+
 -------------------
 ---- UTILITIES ----
 -------------------
@@ -244,9 +255,8 @@ end)
 ---- WORKSPACES & MONITORS ----
 -------------------------------
 
--- Fixed workspaces: 1-5 live on the left monitor, 6-10 on the right (main) one (see workspaces.lua)
--- Super+N goes to workspace N (Super+0 is workspace 10), Super+Shift+N sends the focused window there
-for i = 1, 10 do
+-- Fixed workspaces: ten on the two-screen desktop, five on the laptop profile (see workspaces.lua).
+for i = 1, WORKSPACE_COUNT do
     hl.bind(mainMod .. " + " .. digitCode(i % 10), hl.dsp.focus({ workspace = i }))
     hl.bind(mainMod .. " + SHIFT + " .. digitCode(i % 10), hl.dsp.window.move({ workspace = tostring(i) }))
 end

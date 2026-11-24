@@ -1,11 +1,11 @@
 id          = "hani/glow-speak"
 name        = "Glow Speak"
-version     = "0.1.0"
+version     = "0.2.0"
 plugin_api  = 32
 author      = "hani"
 license     = "MIT"
 icon        = "volume"
-description = "Glow-icon bar button for the speak CLI that reads coding-agent replies aloud: dim when idle, bright while speaking, red when muted. Click to mute, right-click to stop, middle-click to replay."
+description = "Glow-icon controls and persona label for the speak CLI that reads coding-agent replies aloud."
 tags        = ["bar", "audio", "ai"]
 dependencies = ["speak"]
 
@@ -16,3 +16,7 @@ entry = "widget.luau"
 # Every widget's middle button opens its settings by default. Free it so middle-click replays.
 [widget.actions]
 middle = "none"
+
+[[widget]]
+id    = "persona"
+entry = "persona.luau"

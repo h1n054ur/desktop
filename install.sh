@@ -3,6 +3,7 @@
 # h1n054ur desktop: install CachyOS (Hyprland edition), then run this. Sets up the whole two-screen desktop,
 # or only the pieces you pick.
 #   ./install.sh                       interactive: pick components, pick your main screen, watch it install
+#   ./install.sh --profile laptop      one-screen laptop, without Ferdium or WinApps
 #   ./install.sh theme plugins --yes   only those components, no questions
 #   ./install.sh all --yes             everything
 #   ./install.sh --dry-run             walk through it without changing anything
@@ -21,30 +22,54 @@ if [ ! -f "$HERE/splits.toml" ]; then
 fi
 
 UI_ROOT="$HERE/setup"
-# shellcheck source=SCRIPTDIR/setup/lib/ui.sh
+# shellcheck source=setup/lib/ui.sh
 . "$HERE/setup/lib/ui.sh"
 
 STAMP=$(date +%Y%m%d-%H%M%S)
-ORDER=(packages screens hyprland theme plugins claude lock login terminal kitty claudecode)
+# The laptop profile can be selected explicitly, and the host named "laptop" selects it automatically.
+# Pull it out before component parsing so --profile laptop works beside any component list.
+PROFILE=""
+profile_args=()
+while [ "$#" -gt 0 ]; do
+  case $1 in
+    --profile)
+      [ "$#" -gt 1 ] || { echo "--profile needs desktop or laptop" >&2; exit 2; }
+      PROFILE=$2; shift 2; continue ;;
+    --profile=*) PROFILE=${1#*=} ;;
+    *) profile_args+=("$1") ;;
+  esac
+  shift
+done
+set -- "${profile_args[@]}"
+[ -n "$PROFILE" ] || { [ "$(hostname 2>/dev/null)" = laptop ] && PROFILE=laptop || PROFILE=desktop; }
+case $PROFILE in desktop|laptop) ;; *) echo "unknown profile: $PROFILE (desktop or laptop)" >&2; exit 2 ;; esac
+
+# Lock and login are last. That leaves the recovery path in place until every user-session piece is installed.
+if [ "$PROFILE" = laptop ]; then
+  ORDER=(packages screens hyprland theme plugins claude terminal kitty claudecode voice lock login)
+else
+  ORDER=(packages screens hyprland theme plugins claude terminal kitty claudecode lock login)
+fi
 declare -A DESC PICK
 DESC[packages]="the software, by group (asks which groups)"
 DESC[screens]="detect your screens; pick the main (left) one"
-DESC[hyprland]="Hyprland config: 1-5 left, 6-10 right, keybinds, border"
+DESC[hyprland]="Hyprland config: workspaces, keybinds, border"
 DESC[theme]="Noctalia look: floating pills, panels, palette, glow icons"
 DESC[plugins]="bar plugins: stats, weather, volume, network, titles"
 DESC[claude]="AI usage in the right screen's bar: Claude sessions, Codex and Muse limits"
-DESC[lock]="lock screen + session menu (Super+L, Super+Alt+C)"
-DESC[login]="login screen for greetd (needs sudo; easy to revert)"
 DESC[terminal]="welcome banner, fastfetch, starship prompt"
 DESC[kitty]="kitty, yazi, rmpc music, cava"
 DESC[claudecode]="Claude Code look: theme, status line, task sidebar, agent tabs"
+DESC[voice]="Pocket TTS, spoken replies, Handy dictation and its persona label"
+DESC[lock]="lock screen + session menu (Super+L, Super+Alt+C)"
+DESC[login]="login screen for greetd (needs sudo, easy to revert)"
 
 DRY=0 YES=0
 for a in "$@"; do
   case $a in
     --dry-run) DRY=1 ;; --yes|-y) YES=1 ;;
     --list) for c in "${ORDER[@]}"; do printf '%-9s %s\n' "$c" "${DESC[$c]}"; done; exit 0 ;;
-    -h|--help) sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    -h|--help) sed -n '2,12p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     all) for c in "${ORDER[@]}"; do PICK[$c]=1; done ;;
     *) [ -n "${DESC[$a]:-}" ] || { echo "unknown component: $a (see --list)"; exit 2; }; PICK[$a]=1 ;;
   esac
@@ -67,7 +92,7 @@ link() {  # link <target> <path>: point path at a file or folder in this checkou
 }
 
 clear 2>/dev/null; banner
-printf '  %sinstall CachyOS (Hyprland edition), then this: the whole two-screen desktop, or any piece of it%s\n\n' "$DIM" "$R"
+printf '  %sinstall CachyOS (Hyprland edition), then this: the %s profile, or any piece of it%s\n\n' "$DIM" "$PROFILE" "$R"
 command -v pacman >/dev/null || { printf '  %sthis needs CachyOS or Arch (pacman)%s\n' "$RED" "$R"; exit 1; }
 
 chosen=(); for c in "${ORDER[@]}"; do [ "${PICK[$c]:-0}" = 1 ] && chosen+=("$c"); done
@@ -82,13 +107,16 @@ want() { [ "${PICK[$1]:-0}" = 1 ]; }
 
 # ── packages ────────────────────────────────────────────────────────────────────────────────────────
 if want packages; then
-  args=(); [ "$DRY" = 1 ] && args+=(--dry-run); [ "$YES" = 1 ] && args+=(desktop terminal --yes)
+  args=(--profile "$PROFILE"); [ "$DRY" = 1 ] && args+=(--dry-run)
+  if [ "$YES" = 1 ]; then
+    if [ "$PROFILE" = laptop ]; then args+=(desktop terminal apps voice --yes); else args+=(desktop terminal --yes); fi
+  fi
   NO_ANIM=1 bash "$HERE/setup/install.sh" "${args[@]}" || printf '  %ssome packages failed, carrying on%s\n' "$RED" "$R"
   printf '\n'
 fi
 
 # ── screens: which one is the main (left) screen ────────────────────────────────────────────────────
-MAIN_DESC="" SIDE_DESC="" MAIN_W=1920 SINGLE=0
+MAIN_OUTPUT="" MAIN_DESC="" SIDE_DESC="" MAIN_W=1920 SINGLE=0
 detect_screens() {
   command -v hyprctl >/dev/null && hyprctl monitors -j >/dev/null 2>&1 || return 1
   mapfile -t MONS < <(hyprctl monitors -j | python3 -c '
@@ -99,8 +127,16 @@ for m in sorted(json.load(sys.stdin), key=lambda m: m["x"]):
 }
 if want screens || want hyprland || want login; then
   if detect_screens; then
-    if [ ${#MONS[@]} -eq 1 ]; then
-      SINGLE=1; IFS=$'\t' read -r _ MAIN_DESC MAIN_W _ _ <<< "${MONS[0]}"
+    if [ "$PROFILE" = laptop ]; then
+      laptop_mon=${MONS[0]}
+      for m in "${MONS[@]}"; do
+        IFS=$'\t' read -r n _ <<< "$m"
+        case $n in eDP-*|LVDS-*) laptop_mon=$m; break ;; esac
+      done
+      SINGLE=1; IFS=$'\t' read -r MAIN_OUTPUT MAIN_DESC MAIN_W _ _ <<< "$laptop_mon"
+      box "screens" "${CYN}built-in screen${R} ${FG}$MAIN_DESC${R}" "${DIM}workspaces 1 to 5 share it${R}"
+    elif [ ${#MONS[@]} -eq 1 ]; then
+      SINGLE=1; IFS=$'\t' read -r MAIN_OUTPUT MAIN_DESC MAIN_W _ _ <<< "${MONS[0]}"
       box "screens" "${CYN}one screen${R} ${FG}$MAIN_DESC${R}" "${DIM}all ten workspaces share it${R}"
     else
       # label each screen by where it sits now (MONS is sorted left to right), since port names say nothing
@@ -126,10 +162,17 @@ fi
 write_host_file() {
   local f host
   host=$(cat /etc/hostname 2>/dev/null || hostname); f="$HOME/.config/hypr/host/$host.lua"
+  if [ -z "$MAIN_DESC" ] && [ "$PROFILE" = laptop ]; then
+    MAIN_OUTPUT="eDP-1"; MAIN_DESC="built-in screen"; MAIN_W=1920; SINGLE=1
+  fi
   [ -n "$MAIN_DESC" ] || return 0
   local body
   if [ "$SINGLE" = 1 ]; then
-    body=$(printf -- '-- written by h1n054ur install.sh (%s): one screen, so both roles use it\nMAIN_SCREEN = "desc:%s"\nSIDE_SCREEN = MAIN_SCREEN\nKITTY_WORKSPACE = "2"\n' "$STAMP" "$MAIN_DESC")
+    if [ "$PROFILE" = laptop ]; then
+      body=$(printf -- '-- written by h1n054ur install.sh (%s): laptop profile\nLAPTOP_PROFILE = true\nWORKSPACE_COUNT = 5\nFERDIUM_ENABLED = false\nWINAPPS_ENABLED = false\nMAIN_SCREEN = "%s"\nSIDE_SCREEN = MAIN_SCREEN\nKITTY_WORKSPACE = "2"\n\nhl.monitor({ output = MAIN_SCREEN, mode = "preferred", position = "0x0", scale = "1" })\n' "$STAMP" "$MAIN_OUTPUT")
+    else
+      body=$(printf -- '-- written by h1n054ur install.sh (%s): one screen, so both roles use it\nMAIN_SCREEN = "desc:%s"\nSIDE_SCREEN = MAIN_SCREEN\nKITTY_WORKSPACE = "2"\n' "$STAMP" "$MAIN_DESC")
+    fi
   else
     body=$(printf -- '-- written by h1n054ur install.sh (%s)\n-- MAIN_SCREEN: the left screen, workspaces 1-5 and the full bar. SIDE_SCREEN: the right one, workspaces 6-10\nMAIN_SCREEN = "desc:%s"\nSIDE_SCREEN = "desc:%s"\n\nhl.monitor({ output = MAIN_SCREEN, mode = "preferred", position = "0x0", scale = "1" })\nhl.monitor({ output = SIDE_SCREEN, mode = "preferred", position = "%sx0", scale = "1" })\n' "$STAMP" "$MAIN_DESC" "$SIDE_DESC" "$MAIN_W")
   fi
@@ -155,8 +198,29 @@ if want theme; then
   link "$HERE/noctalia-theme/icons/glow" "$HOME/.local/share/glow-icons"
   link "$HERE/noctalia-theme/fuzzel/fuzzel.ini" "$HOME/.config/fuzzel/fuzzel.ini"
   cfg="$HOME/.config/noctalia/config.toml"
-  inc="files = [ \"$HERE/noctalia-theme/noctalia/h1n054ur.toml\" ]"
-  if [ -f "$cfg" ] && grep -q 'noctalia-theme/noctalia/h1n054ur.toml' "$cfg"; then :
+  theme_file="$HERE/noctalia-theme/noctalia/h1n054ur.toml"
+  laptop_theme="$HERE/noctalia-theme/noctalia/laptop.toml"
+  if [ "$PROFILE" = laptop ]; then
+    inc="files = [ \"$theme_file\", \"$laptop_theme\" ]"
+  else
+    inc="files = [ \"$theme_file\" ]"
+  fi
+  if [ -f "$cfg" ] && grep -qF "$theme_file" "$cfg"; then
+    if [ "$PROFILE" = laptop ] && ! grep -qF "$laptop_theme" "$cfg"; then
+      act "back up $cfg" cp "$cfg" "$cfg.bak-$STAMP"
+      act "add the laptop bar profile to $cfg" bash -c '
+        while IFS= read -r line || [ -n "$line" ]; do
+          if [[ $line == *"$2"* && $line == *"]"* ]]; then line="${line%]*}, \"$3\" ]"; fi
+          printf "%s\n" "$line"
+        done < "$1" > "$1.new" && mv "$1.new" "$1"' _ "$cfg" "$theme_file" "$laptop_theme"
+    elif [ "$PROFILE" = desktop ] && grep -qF "$laptop_theme" "$cfg"; then
+      act "back up $cfg" cp "$cfg" "$cfg.bak-$STAMP"
+      act "remove the laptop bar profile from $cfg" bash -c '
+        while IFS= read -r line || [ -n "$line" ]; do
+          line=${line//, \"$2\"/}
+          printf "%s\n" "$line"
+        done < "$1" > "$1.new" && mv "$1.new" "$1"' _ "$cfg" "$laptop_theme"
+    fi
   else
     [ -f "$cfg" ] && act "back up $cfg" cp "$cfg" "$cfg.bak-$STAMP"
     act "include the theme from $cfg" bash -c 'mkdir -p "$(dirname "$1")"; { printf "[include]\n%s\n\n" "$2"; cat "$1" 2>/dev/null; } > "$1.new" && mv "$1.new" "$1"' _ "$cfg" "$inc"
@@ -176,12 +240,65 @@ if want plugins; then
 fi
 if want claude; then
   step "ai usage widgets"
-  for p in claude-sessions codex-usage muse-usage; do
+  ai_plugins=(claude-sessions codex-usage)
+  [ "$PROFILE" = desktop ] && ai_plugins+=(muse-usage)
+  for p in "${ai_plugins[@]}"; do
     link "$HERE/noctalia-ai-usage/$p" "$HOME/.local/share/noctalia/plugins/$p"
     act "enable hani/$p" bash -c 'noctalia msg plugins enable "hani/$1" || true' _ "$p"
   done
 fi
 
+if want terminal; then
+  step "terminal"
+  if [ "$DRY" = 1 ]; then act "terminal/install.sh" true; else run_step "welcome banner, fastfetch, starship" 0 '' bash "$HERE/terminal/install.sh" "$USER"; fi
+fi
+if want kitty; then
+  step "kitty"
+  if [ "$DRY" = 1 ]; then act "kitty/install.sh" true; else run_step "kitty, yazi, rmpc, cava" 0 '' bash "$HERE/kitty/install.sh"; fi
+fi
+if want claudecode; then
+  step "claude code"
+  if [ "$DRY" = 1 ]; then act "claude-code/install.sh" true; else run_step "theme, status line, mods" 0 '' bash "$HERE/claude-code/install.sh"; fi
+fi
+
+if want voice; then
+  step "voice"
+  if command -v uv >/dev/null || [ "$DRY" = 1 ]; then
+    if ! command -v pocket-tts >/dev/null || [ "$DRY" = 1 ]; then
+      act "install Pocket TTS with uv" uv tool install pocket-tts
+    fi
+  else
+    printf '  %suv is missing. Pick the voice package group, then run this component again%s\n' "$RED" "$R"
+  fi
+  if [ "$DRY" = 1 ]; then act "speak/install.sh" true; else run_step "speak CLI, hooks and TTS unit" 0 '' bash "$HERE/speak/install.sh"; fi
+  for p in assistant handy-guard handy-out handy-ptt place presskeys; do
+    link "$HERE/setup/bin/$p" "$HOME/.local/bin/$p"
+  done
+  link "$HERE/setup/assistant/handy-guard.service" "$HOME/.config/systemd/user/handy-guard.service"
+  if [ "$PROFILE" = desktop ]; then
+    link "$HERE/setup/bin/ferdium-go" "$HOME/.local/bin/ferdium-go"
+  elif [ -e "$HOME/.local/bin/ferdium-go" ] || [ -L "$HOME/.local/bin/ferdium-go" ]; then
+    backup "$HOME/.local/bin/ferdium-go"
+  fi
+  handy_cfg="$HOME/.local/share/com.pais.handy/settings_store.json"
+  [ -f "$handy_cfg" ] && act "back up Handy settings" cp "$handy_cfg" "$handy_cfg.bak-$STAMP"
+  act "configure Handy for Right Alt and handy-out" bash -c '
+    set -e
+    cfg=$1; out=$1.new; mkdir -p "$(dirname "$cfg")"
+    if [ -f "$cfg" ]; then jq --arg script "$2" ".settings.start_hidden = true | .settings.autostart_enabled = false | .settings.overlay_position = \"none\" | .settings.paste_method = \"external_script\" | .settings.external_script_path = \$script" "$cfg" > "$out"
+    else jq -n --arg script "$2" "{settings:{start_hidden:true,autostart_enabled:false,overlay_position:\"none\",paste_method:\"external_script\",external_script_path:\$script}}" > "$out"; fi
+    mv "$out" "$cfg"' _ "$handy_cfg" "$HOME/.local/bin/handy-out"
+  act "enable the speech and dictation guard services" systemctl --user enable --now speak-tts.service handy-guard.service
+fi
+
+# The laptop never starts Ferdium, even if a user autostart file survived the old installation.
+if [ "$PROFILE" = laptop ] && { want packages || want hyprland || want voice; }; then
+  ferdium_autostart="$HOME/.config/autostart/ferdium.desktop"
+  [ -e "$ferdium_autostart" ] && backup "$ferdium_autostart"
+  act "disable Ferdium autostart for the laptop profile" bash -c 'mkdir -p "$(dirname "$1")"; printf "[Desktop Entry]\nType=Application\nName=Ferdium\nHidden=true\n" > "$1"' _ "$ferdium_autostart"
+fi
+
+# Login and lock are deliberately applied after every ordinary session component.
 if want lock; then
   step "lock screen + session menu"
   link "$HERE/quickshell/shell" "$HOME/.config/quickshell/h1n054ur"
@@ -207,22 +324,10 @@ if want login; then
   fi
 fi
 
-if want terminal; then
-  step "terminal"
-  if [ "$DRY" = 1 ]; then act "terminal/install.sh" true; else run_step "welcome banner, fastfetch, starship" 0 '' bash "$HERE/terminal/install.sh" "$USER"; fi
-fi
-if want kitty; then
-  step "kitty"
-  if [ "$DRY" = 1 ]; then act "kitty/install.sh" true; else run_step "kitty, yazi, rmpc, cava" 0 '' bash "$HERE/kitty/install.sh"; fi
-fi
-if want claudecode; then
-  step "claude code"
-  if [ "$DRY" = 1 ]; then act "claude-code/install.sh" true; else run_step "theme, status line, mods" 0 '' bash "$HERE/claude-code/install.sh"; fi
-fi
-
 echo
 lines=("${GRN}set up:${R} ${FG}${chosen[*]}${R}")
 [ "$DRY" = 1 ] && lines=("${GRN}dry run finished, nothing was changed${R}" "${DIM}would set up: ${chosen[*]}${R}")
 lines+=("${DIM}backups: *.bak-$STAMP next to each replaced file${R}" "${DIM}log: ${LOG/#$HOME/\~}${R}")
 box "done" "${lines[@]}"
+[ "$PROFILE" = laptop ] && printf '\n  %slogin recovery: Ctrl+Alt+F2, then sudo %s/quickshell/greeter/install.sh revert%s\n' "$DIM" "$HERE" "$R"
 printf '\n  %snext: log out and back in (or reboot, for the login screen). Super+/ shows every keybind.%s\n\n' "$DIM" "$R"

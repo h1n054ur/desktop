@@ -4,7 +4,8 @@ After=default.target
 
 [Service]
 Type=simple
-ExecStart=%h/.local/bin/pocket-tts serve --host 127.0.0.1 --port 8777
+Environment=SPEAK_TTS_HOST=127.0.0.1
+ExecStart=%h/.local/bin/pocket-tts serve --host ${SPEAK_TTS_HOST} --port 8777
 Restart=on-failure
 RestartSec=5
 # Low priority so speech never slows the desktop.

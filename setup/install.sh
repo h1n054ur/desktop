@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# shellcheck disable=SC2206,SC2086  # package lists are space-separated on purpose and split into words
+# shellcheck disable=SC2206,SC2086,SC2034,SC1091  # lists split on purpose. UI_ROOT belongs to sourced UI code
 # h1n054ur setup: installs the desktop's software on CachyOS (or Arch with the CachyOS repos), by group.
 #   ./install.sh                         interactive: pick groups with the arrow keys and Space
 #   ./install.sh dev apps --yes          install those groups without questions
+#   ./install.sh --profile laptop        laptop groups, without WinApps or Ferdium
 #   ./install.sh all --yes               everything
 #   ./install.sh --dry-run               walk through it without installing anything
 #   ./install.sh --list                  show the groups
@@ -11,8 +12,30 @@
 set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 
+# The desktop profile stays the default. The host named "laptop" selects the laptop profile unless
+# --profile overrides it, so the same checkout also works when the machine is installed non-interactively.
+PROFILE=""
+args=()
+while [ "$#" -gt 0 ]; do
+  case $1 in
+    --profile)
+      [ "$#" -gt 1 ] || { echo "--profile needs desktop or laptop" >&2; exit 2; }
+      PROFILE=$2; shift 2; continue ;;
+    --profile=*) PROFILE=${1#*=} ;;
+    *) args+=("$1") ;;
+  esac
+  shift
+done
+set -- "${args[@]}"
+[ -n "$PROFILE" ] || { [ "$(hostname 2>/dev/null)" = laptop ] && PROFILE=laptop || PROFILE=desktop; }
+case $PROFILE in desktop|laptop) ;; *) echo "unknown profile: $PROFILE (desktop or laptop)" >&2; exit 2 ;; esac
+
 # ── groups ──────────────────────────────────────────────────────────────────────────────────────────
-ORDER=(desktop terminal media dev apps winapps mail network gaming)
+if [ "$PROFILE" = laptop ]; then
+  ORDER=(desktop terminal media dev apps voice mail network gaming)
+else
+  ORDER=(desktop terminal media dev apps winapps mail network gaming)
+fi
 declare -A REPO AUR DESC
 DESC[desktop]="Hyprland, Noctalia, greetd, Quickshell, fuzzel, rofi, clipboard, audio"
 REPO[desktop]="hyprland hypridle hyprlock hyprpaper hyprpolkitagent cachyos-hypr-noctalia noctalia-greeter greetd quickshell fuzzel rofi cliphist wtype playerctl swaync easyeffects pavucontrol blueman"
@@ -26,7 +49,15 @@ REPO[dev]="git github-cli docker docker-compose docker-buildx nvidia-container-t
 AUR[dev]="bun-bin ngrok"
 DESC[apps]="Helium, Ferdium, Vesktop, Obsidian, Bitwarden, Calibre, Foliate"
 REPO[apps]="vesktop-bin obsidian bitwarden rbw rofi-rbw calibre foliate teamspeak3 filezilla remmina mission-center dolphin kate gwenview"
-AUR[apps]="helium-browser-bin ferdium-bin figma-linux"
+if [ "$PROFILE" = laptop ]; then
+  DESC[apps]="Helium, Vesktop, Obsidian, Bitwarden, Calibre, Foliate (no Ferdium)"
+  AUR[apps]="helium-browser-bin figma-linux"
+else
+  AUR[apps]="helium-browser-bin ferdium-bin figma-linux"
+fi
+DESC[voice]="Pocket TTS prerequisites and Handy offline dictation"
+REPO[voice]="uv jq libpulse wtype"
+AUR[voice]="handy-bin"
 DESC[winapps]="Docker, FreeRDP, KVM/QEMU for Windows apps (see README)"
 REPO[winapps]="docker docker-compose freerdp qemu-full virt-manager libvirt edk2-ovmf swtpm dnsmasq"
 DESC[mail]="aerc, himalaya, notmuch, khal, newsboat, qutebrowser, zathura"
@@ -40,7 +71,6 @@ REPO[gaming]="steam"
 
 # ── look and spinners (shared with the desktop installer) ───────────────────────────────────────────
 UI_ROOT="$HERE"
-# shellcheck source=SCRIPTDIR/lib/ui.sh
 . "$HERE/lib/ui.sh"
 
 # ── system check ────────────────────────────────────────────────────────────────────────────────────
@@ -98,10 +128,15 @@ DRY=0 YES=0 ARGS=()
 for a in "$@"; do
   case $a in
     --dry-run) DRY=1 ;; --yes|-y) YES=1 ;;
-    --list) for g in "${ORDER[@]}"; do printf '%-9s %3s packages  %s\n' "$g" "$(count "$g")" "${DESC[$g]}"; done; exit 0 ;;
-    -h|--help) sed -n '3,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --list) printf 'profile: %s\n' "$PROFILE"; for g in "${ORDER[@]}"; do printf '%-9s %3s packages  %s\n' "$g" "$(count "$g")" "${DESC[$g]}"; done; exit 0 ;;
+    -h|--help) sed -n '3,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     all) for g in "${ORDER[@]}"; do PICK[$g]=1; done ;;
-    *) [ -n "${DESC[$a]:-}" ] || { echo "unknown group: $a (see --list)"; exit 2; }; PICK[$a]=1; ARGS+=("$a") ;;
+    *)
+      if [ "$PROFILE" = laptop ] && [ "$a" = winapps ]; then
+        echo "winapps is not available in the laptop profile" >&2; exit 2
+      fi
+      [ -n "${DESC[$a]:-}" ] || { echo "unknown group: $a (see --list)"; exit 2; }
+      PICK[$a]=1; ARGS+=("$a") ;;
   esac
 done
 
@@ -121,7 +156,7 @@ mapfile -t repo < <(printf '%s\n' "${repo[@]}" | awk 'NF && !seen[$0]++')
 mapfile -t aur < <(printf '%s\n' "${aur[@]}" | awk 'NF && !seen[$0]++')
 
 LOG_DIR="$HOME/.cache/h1n054ur-setup"; mkdir -p "$LOG_DIR"; LOG="$LOG_DIR/install-$(date +%Y%m%d-%H%M%S).log"
-summary=("${CYN}groups ${FG} ${chosen[*]}${R}" "${CYN}repo   ${FG} ${#repo[@]} packages (pacman)${R}" "${CYN}aur    ${FG} ${#aur[@]} packages (paru, one at a time)${R}")
+summary=("${CYN}profile${FG} $PROFILE${R}" "${CYN}groups ${FG} ${chosen[*]}${R}" "${CYN}repo   ${FG} ${#repo[@]} packages (pacman)${R}" "${CYN}aur    ${FG} ${#aur[@]} packages (paru, one at a time)${R}")
 [ "$claude" = 1 ] && summary+=("${CYN}extra  ${FG} Claude Code (Anthropic's installer)${R}")
 [ "$DRY" = 1 ] && summary+=("${GRN}dry run: nothing will be installed${R}")
 summary+=("${CYN}log    ${DIM} ${LOG/#$HOME/\~}${R}")

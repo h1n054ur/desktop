@@ -13,7 +13,9 @@ My [Hyprland](https://hypr.land) setup in the Lua config format (Hyprland 0.55 a
 | Bar | the full bar: search, clock, weather, stats, volume, network, power | a slim bar: Claude sessions, tray |
 | Login screen | the sign-in panel | the clock |
 
-Each workspace is pinned to its screen (`config/workspaces.lua`), so `Super+1` to `Super+0` always land on the same physical screen. Screens are matched by description (make, model, serial) in `host/<hostname>.lua`, not by port: swapping cables never swaps them. If a screen is unplugged, its workspaces move to the other one and come back when it returns. A laptop on its own screen keeps all ten.
+Each workspace is pinned to its screen (`config/workspaces.lua`), so `Super+1` to `Super+0` always land on the same physical screen. Screens are matched by description (make, model, serial) in `host/<hostname>.lua`, not by port: swapping cables never swaps them. If a screen is unplugged, its workspaces move to the other one and come back when it returns.
+
+`host/laptop.lua` is the single-screen profile. It keeps workspaces 1 to 5 on `eDP-1`, uses scale 1, enables tap-to-click and palm rejection, suspends when the lid closes, and adds the brightness and battery keys. Ferdium and WinApps binds and rules stay disabled there. The default values still describe the two-screen desktop.
 
 ```mermaid
 flowchart LR
@@ -48,7 +50,7 @@ Then edit your host file: put your screens' descriptions from `hyprctl monitors`
 | `config/variables.lua` | terminal, file manager, browser, editor; where the first kitty opens |
 | `config/workspaces.lua` | workspaces 1-10 pinned to the two screens |
 | `config/binds.lua` | every keybind (bound by keycode, so other layouts work too) |
-| `config/autostart.lua` | Noctalia, the h1n054ur lock screen and session menu, hypridle, the first kitty |
+| `config/autostart.lua`, `config/apps.tsv` | Noctalia, the h1n054ur lock screen and session menu, hypridle, the first kitty, Helium app windows and Vicu |
 | `config/decorations.lua` | gaps, the `#39ff14` to `#00e5ff` border, blur |
 | `config/windowrules.lua` | where apps open, floating dialogs, WinApps tiling |
 | `host/example.lua`, `host/laptop.lua` | per-machine screens |

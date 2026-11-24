@@ -13,9 +13,26 @@ hl.on("hyprland.start", function ()
     -- first kitty: workspace per machine (KITTY_WORKSPACE, set in variables.lua / host files); started directly
     -- (not through uwsm) so the workspace rule matches its pid
     hl.exec_cmd(TERMINAL, { workspace = (KITTY_WORKSPACE or "6") .. " silent" })
-    -- workspaces 2 to 4 on the left screen: Helium on 2 first (it becomes the browser process), then the BTS
-    -- Chat and Mail app windows, which Helium opens in that same process, and the Vicu tasks app (AppImage). Their window rules (windowrules.lua)
-    -- put them on 3, 4 and 5.
-    hl.exec_cmd("helium-browser", { workspace = "2 silent" })
-    hl.exec_cmd("sh -c 'sleep 5; helium-browser --app=https://chat.bts.ad/; sleep 2; $HOME/.local/opt/vicu/Vicu-2.8.0-x86_64.AppImage & sleep 2; helium-browser --app=https://mail.bts.ad/'")
+    -- Login apps are data, shared by both profiles. Ferdium stays in the desktop's XDG autostart file and
+    -- the laptop disables that file, so this list only carries Helium, its app windows and Vicu.
+    local profile = LAPTOP_PROFILE and "laptop" or "desktop"
+    local elapsed = 0
+    local apps = os.getenv("HOME") .. "/.config/hypr/config/apps.tsv"
+    local file = io.open(apps, "r")
+    if file then
+        for line in file:lines() do
+            if line ~= "" and not line:match("^%s*#") then
+                local rowProfile, delay, workspace, command = line:match("^([^\t]+)\t([^\t]+)\t([^\t]+)\t(.+)$")
+                if rowProfile and (rowProfile == "all" or rowProfile == profile) then
+                    elapsed = elapsed + (tonumber(delay) or 0)
+                    local launch = command
+                    if elapsed > 0 then
+                        launch = "sh -c " .. string.format("%q", "sleep " .. elapsed .. "; exec " .. command)
+                    end
+                    hl.exec_cmd(launch, { workspace = workspace .. " silent" })
+                end
+            end
+        end
+        file:close()
+    end
 end)

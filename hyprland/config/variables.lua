@@ -13,3 +13,9 @@ SIDE_SCREEN = "" -- the right screen: workspaces 6-10, the slim bar; Discord, Wi
 -- Workspaces
 KITTY_WORKSPACE = "6" -- where the first kitty opens at login (the right screen); host files can change it
 NUM_WPM = 5 -- Number of workspaces per monitor (Max 10)
+WORKSPACE_COUNT = 10 -- laptop profile changes this to 5
+
+-- Optional pieces. Host profiles can turn them off without changing the two-screen desktop.
+LAPTOP_PROFILE = false
+FERDIUM_ENABLED = true
+WINAPPS_ENABLED = true
