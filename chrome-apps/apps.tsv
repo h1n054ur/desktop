@@ -42,11 +42,9 @@ flyio	Fly.io	https://fly.io/dashboard	fly-io	cloud
 digitalocean	DigitalOcean	https://cloud.digitalocean.com/	digitalocean	cloud
 hetzner	Hetzner	https://console.hetzner.com/	hetzner	cloud
 aws	AWS	https://console.aws.amazon.com/	aws	cloud
-gcloud	Google Cloud	https://console.cloud.google.com/?authuser=umerhani1@gmail.com	google-cloud-platform	cloud
 m365admin	M365 Admin	https://admin.cloud.microsoft/	microsoft-365	cloud
 exchangeadmin	Exchange Admin	https://admin.exchange.microsoft.com/	microsoft-exchange	cloud
 sharepointadmin	SharePoint Admin	https://admin.microsoft.com/sharepoint	microsoft-sharepoint	cloud
-teamsadmin	Teams Admin	https://admin.teams.microsoft.com/	microsoft-teams	cloud
 entra	Entra ID	https://entra.microsoft.com/	entra-id	cloud
 mylearn	UNE myLearn	https://mylearn.une.edu.au/course/view.php?id=33087	moodle	study
 filemaker	FileMaker	https://client-dht.littleman.com.au/fmi/webd	-	study
@@ -55,15 +53,10 @@ word	Word - BTS	https://word.cloud.microsoft/	microsoft-word	study
 excel	Excel - BTS	https://excel.cloud.microsoft/	microsoft-excel	study
 powerpoint	PowerPoint - BTS	https://powerpoint.cloud.microsoft/	microsoft-powerpoint	study
 onedrive	OneDrive - BTS	https://onedrive.cloud.microsoft/	microsoft-onedrive	study
-gdrive	Google Drive	https://drive.google.com/?authuser=umerhani1@gmail.com	google-drive	study
-gdocs	Google Docs	https://docs.google.com/document/?authuser=umerhani1@gmail.com	google-docs	study
-gsheets	Google Sheets	https://docs.google.com/spreadsheets/?authuser=umerhani1@gmail.com	google-sheets	study
-gslides	Google Slides	https://docs.google.com/presentation/?authuser=umerhani1@gmail.com	google-slides	study
 word-une	Word - UNE	https://word.cloud.microsoft/	microsoft-word	study	UNE
 excel-une	Excel - UNE	https://excel.cloud.microsoft/	microsoft-excel	study	UNE
 powerpoint-une	PowerPoint - UNE	https://powerpoint.cloud.microsoft/	microsoft-powerpoint	study	UNE
 onedrive-une	OneDrive - UNE	https://onedrive.cloud.microsoft/	microsoft-onedrive	study	UNE
-outlook-une	UNE Outlook	https://outlook.cloud.microsoft/mail/	microsoft-outlook	study	UNE
 databasus	Databasus	https://databasus.nb.h1n054ur.dev/	databasus	infra
 spotify	Spotify	https://open.spotify.com/	spotify	media
 binance	Binance	https://www.binance.com/en	@binance-app.png	home
