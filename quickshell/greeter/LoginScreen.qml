@@ -7,6 +7,7 @@ Item {
     id: login
     required property var shell
     required property var clock
+    property bool prominentClock: false
 
     Image {
         anchors.fill: parent
@@ -21,8 +22,32 @@ Item {
         anchors.verticalCenterOffset: -18
         spacing: 16
 
+        // A single-screen lock has nowhere else to put the large clock. Replace the banner there,
+        // while the greeter and multi-screen lock keep the original banner/clock split.
+        Column {
+            visible: login.prominentClock
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 0
+            GradientText {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: Qt.formatDateTime(login.clock.date, "HH:mm")
+                font.family: Theme.mono
+                font.pixelSize: 150
+                font.bold: true
+            }
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                text: Qt.formatDateTime(login.clock.date, "dddd, d MMMM").toLowerCase()
+                color: Theme.dim
+                font.family: Theme.mono
+                font.pixelSize: 26
+                font.letterSpacing: 1
+            }
+        }
+
         // The banner is pre-rendered (assets/banner.png, 24 px glow margin) so its box-drawing strokes match the mockup exactly
         Image {
+            visible: !login.prominentClock
             anchors.horizontalCenter: parent.horizontalCenter
             source: "file://" + login.shell.assets + "/banner.png"
             width: 880; height: 210

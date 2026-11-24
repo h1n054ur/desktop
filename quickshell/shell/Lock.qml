@@ -127,7 +127,14 @@ Scope {
                 focus: true
                 sourceComponent: surface.isLogin ? loginComp : clockComp
             }
-            Component { id: loginComp; LoginScreen { shell: lockState; clock: sysClock } }
+            Component {
+                id: loginComp
+                LoginScreen {
+                    shell: lockState
+                    clock: sysClock
+                    prominentClock: Quickshell.screens.length === 1
+                }
+            }
             Component { id: clockComp; ClockScreen { shell: lockState; clock: sysClock } }
         }
     }
