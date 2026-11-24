@@ -15,7 +15,7 @@ hl.on("hyprland.start", function ()
     if not LAPTOP_PROFILE then
         hl.exec_cmd(TERMINAL, { workspace = (KITTY_WORKSPACE or "6") .. " silent" })
     end
-    -- Login apps are data shared by both profiles: Helium, Chat, Vicu and Mail on workspaces 1 to 4.
+    -- Login apps are data shared by both profiles: Helium on 1, Tasks (Vicu) on 2, and kitty on 3 for the laptop.
     local profile = LAPTOP_PROFILE and "laptop" or "desktop"
     local elapsed = 0
     local apps = os.getenv("HOME") .. "/.config/hypr/config/apps.tsv"

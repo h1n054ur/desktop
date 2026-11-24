@@ -58,9 +58,7 @@ hl.window_rule({ match = { class = "^(dev\\.)?(noctalia\\.Noctalia(\\.Settings)?
 
 -- The main browser, Chat, Vicu and Mail occupy workspaces 1 to 4 on the desktop's left screen and the laptop.
 hl.window_rule({ match = { class = "^(helium)$" }, workspace = "1 silent" })
-hl.window_rule({ match = { class = "^(chrome-chat\\.bts\\.ad__-Default)$" }, workspace = "3 silent" })
-hl.window_rule({ match = { class = "^(com\\.rendyhd\\.vicu)$" }, workspace = "4 silent" })
-hl.window_rule({ match = { class = "^(chrome-mail\\.bts\\.ad__-Default)$" }, workspace = "2 silent" })
+hl.window_rule({ match = { class = "^(com\\.rendyhd\\.vicu)$" }, workspace = "2 silent" })
 
 -- YouTube Music (Chrome app window) opens maximised; Super+M puts it on the next empty workspace
 hl.window_rule({ match = { class = "^(chrome-music\\.youtube\\.com__-Default)$" }, maximize = true })
