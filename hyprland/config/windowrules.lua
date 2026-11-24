@@ -134,13 +134,11 @@ hl.window_rule({ match = { class = ".*" }, idle_inhibit = "fullscreen" })
 -- after a Helium pop-up on 2026-10-27. Browsers never get to swallow Hyprland's binds.
 hl.window_rule({ match = { class = "^(helium.*|google-chrome.*|chrome-.*|Chromium.*)$" }, no_shortcuts_inhibit = true })
 
--- Chromium and Helium screen-share bar ("... is sharing your screen"): float it small at the top centre, just under the bar
--- and pin it across workspaces, instead of the centred box that cannot be moved or hidden (bts-infra #423).
+-- Chromium and Helium screen-share bar ("... is sharing your screen"): every call app has its own stop button,
+-- so the bar goes straight to a hidden special workspace (bts-infra #423).
 hl.window_rule({
     name  = "screenshare-bar",
     match = { title = "^(.* is sharing (your screen|a window|a tab|your screen and audio).*)$" },
-    float = true,
-    pin   = true,
-    move  = { "(monitor_w*0.5)-(window_w*0.5)", "52" },
+    workspace = "special:sharebar silent",
     no_focus = true,
 })
