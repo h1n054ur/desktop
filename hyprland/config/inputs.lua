@@ -6,7 +6,7 @@ hl.config({
         accel_profile = "flat",
         -- The explicit laptop values match Hyprland's safe defaults and keep accidental palms out while typing.
         touchpad = LAPTOP_PROFILE and {
-            ["tap-to-click"] = true,
+            tap_to_click = true,
             disable_while_typing = true,
         } or nil,
     },
