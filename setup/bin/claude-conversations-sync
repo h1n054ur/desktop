@@ -1,0 +1,319 @@
+#!/usr/bin/env bash
+# Add the narrow Claude conversation folder to Syncthing through its local API.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: claude-conversations-sync [options]
+
+Options:
+  --dry-run          inspect and print the changes without writing anything
+  --peer NAME        Syncthing peer name (default: laptop or hani-desktop)
+  --api-url URL      local Syncthing API URL (default: read from config.xml)
+  --config PATH      Syncthing config.xml path
+  --folder-id ID     folder ID (default: claude-conversations)
+  -h, --help         show this help
+
+The folder root is ~/.claude. Its .stignore allows projects, project memory,
+history.jsonl and file-history while excluding credentials and runtime state.
+Do not open the same Claude session on both machines at once.
+EOF
+}
+
+dry_run=0
+peer_name=
+api_url=
+config_file=
+folder_id=claude-conversations
+
+while (($#)); do
+  case $1 in
+    --dry-run)
+      dry_run=1
+      shift
+      ;;
+    --peer)
+      (($# >= 2)) || { echo "claude-conversations-sync: --peer needs a name" >&2; exit 2; }
+      peer_name=$2
+      shift 2
+      ;;
+    --api-url)
+      (($# >= 2)) || { echo "claude-conversations-sync: --api-url needs a URL" >&2; exit 2; }
+      api_url=${2%/}
+      shift 2
+      ;;
+    --config)
+      (($# >= 2)) || { echo "claude-conversations-sync: --config needs a path" >&2; exit 2; }
+      config_file=$2
+      shift 2
+      ;;
+    --folder-id)
+      (($# >= 2)) || { echo "claude-conversations-sync: --folder-id needs an ID" >&2; exit 2; }
+      folder_id=$2
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    *)
+      echo "claude-conversations-sync: unknown option: $1" >&2
+      exit 2
+      ;;
+  esac
+done
+
+for command in curl jq python3; do
+  command -v "$command" >/dev/null || {
+    echo "claude-conversations-sync: $command is required" >&2
+    exit 127
+  }
+done
+
+if [[ -z $config_file ]]; then
+  state_config=${XDG_STATE_HOME:-$HOME/.local/state}/syncthing/config.xml
+  legacy_config=${XDG_CONFIG_HOME:-$HOME/.config}/syncthing/config.xml
+  if [[ -f $state_config ]]; then
+    config_file=$state_config
+  elif [[ -f $legacy_config ]]; then
+    config_file=$legacy_config
+  else
+    echo "claude-conversations-sync: Syncthing config.xml was not found" >&2
+    exit 1
+  fi
+fi
+[[ -f $config_file ]] || {
+  echo "claude-conversations-sync: config does not exist: $config_file" >&2
+  exit 1
+}
+
+if [[ -z $peer_name ]]; then
+  case $(hostname -s) in
+    laptop*) peer_name=hani-desktop ;;
+    desktop*|bts-hani-desktop*) peer_name=laptop ;;
+    *)
+      echo "claude-conversations-sync: use --peer on this host" >&2
+      exit 2
+      ;;
+  esac
+fi
+
+if [[ -z $api_url ]]; then
+  api_url=$(python3 - "$config_file" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+root = ET.parse(sys.argv[1]).getroot()
+gui = root.find("gui")
+if gui is None:
+    raise SystemExit("Syncthing config has no gui section")
+address = (gui.findtext("address") or "127.0.0.1:8384").strip()
+if address.startswith("unix://"):
+    raise SystemExit("use --api-url for a Unix socket GUI")
+port = address.rsplit(":", 1)[-1]
+if not port.isdigit():
+    raise SystemExit("could not read the Syncthing GUI port")
+scheme = "https" if gui.get("tls", "false").lower() == "true" else "http"
+print(f"{scheme}://127.0.0.1:{port}")
+PY
+  )
+fi
+case $api_url in
+  http://127.0.0.1:*|http://localhost:*|https://127.0.0.1:*|https://localhost:*) ;;
+  *)
+    echo "claude-conversations-sync: --api-url must use localhost" >&2
+    exit 2
+    ;;
+esac
+
+umask 077
+temp_root=${TMPDIR:-/tmp}
+[[ -d $temp_root ]] || {
+  echo "claude-conversations-sync: temporary directory does not exist: $temp_root" >&2
+  exit 1
+}
+header_file=$(mktemp "$temp_root/syncthing-header.XXXXXX")
+defaults_file=$(mktemp "$temp_root/syncthing-defaults.XXXXXX")
+devices_file=$(mktemp "$temp_root/syncthing-devices.XXXXXX")
+folders_file=$(mktemp "$temp_root/syncthing-folders.XXXXXX")
+payload_file=$(mktemp "$temp_root/syncthing-folder.XXXXXX")
+ignore_file=$(mktemp "$temp_root/claude-stignore.XXXXXX")
+
+cleanup() {
+  [[ ! -f $header_file ]] || shred -u "$header_file"
+  for file in "$defaults_file" "$devices_file" "$folders_file" "$payload_file" "$ignore_file"; do
+    [[ ! -f $file ]] || rm -f -- "$file"
+  done
+}
+trap cleanup EXIT
+
+api_key=$(python3 - "$config_file" <<'PY'
+import sys
+import xml.etree.ElementTree as ET
+
+root = ET.parse(sys.argv[1]).getroot()
+value = root.findtext("./gui/apikey") or ""
+if not value:
+    raise SystemExit("Syncthing config has no API key")
+print(value, end="")
+PY
+)
+printf 'X-API-Key: %s\n' "$api_key" > "$header_file"
+chmod 600 "$header_file"
+unset api_key
+
+api_get() {
+  curl --silent --show-error --fail --header @"$header_file" \
+    "$api_url$1"
+}
+
+api_get /rest/config/defaults/folder > "$defaults_file"
+api_get /rest/config/devices > "$devices_file"
+api_get /rest/config/folders > "$folders_file"
+
+peer_id=$(jq -er --arg name "$peer_name" \
+  '.[] | select(.name == $name) | .deviceID' "$devices_file") || {
+  echo "claude-conversations-sync: Syncthing peer not found: $peer_name" >&2
+  exit 1
+}
+
+folder_path=$HOME/.claude
+jq --arg id "$folder_id" --arg label "Claude conversations" \
+  --arg path "$folder_path" --arg device "$peer_id" \
+  '. + {
+    id: $id,
+    label: $label,
+    path: $path,
+    type: "sendreceive",
+    paused: false,
+    fsWatcherEnabled: true,
+    devices: [{deviceID: $device, introducedBy: "", encryptionPassword: ""}]
+  }' "$defaults_file" > "$payload_file"
+unset peer_id
+
+cat > "$ignore_file" <<'EOF'
+// Only Claude conversation history and project memory sync.
+// First match wins, so guards stay before the allowlist.
+
+// credentials and tokens
+(?d)/.credentials.json
+(?d)/.credentials.json.*
+(?d)/projects/**/.env
+(?d)/projects/**/.env.*
+(?d)/projects/**/credentials.json
+(?d)/projects/**/tokens.json
+(?d)/projects/**/secrets
+(?d)/projects/**/secrets/**
+
+// daemon state, transient sessions, locks and databases
+(?d)/daemon
+(?d)/daemon/**
+(?d)/daemon-auth-cooldown
+(?d)/daemon-auth-status.json
+(?d)/sessions
+(?d)/sessions/**
+(?d)/session-env
+(?d)/session-env/**
+(?d)/*.lock
+(?d)/**/*.lock
+(?d)/*.pid
+(?d)/**/*.pid
+(?d)/*.db
+(?d)/**/*.db
+(?d)/*.sqlite
+(?d)/**/*.sqlite
+(?d)/*.sqlite-wal
+(?d)/**/*.sqlite-wal
+(?d)/*.sqlite-shm
+(?d)/**/*.sqlite-shm
+
+// caches, debug output and conflict leftovers
+(?d)/cache
+(?d)/cache/**
+(?d)/debug
+(?d)/debug/**
+(?d)/paste-cache
+(?d)/paste-cache/**
+(?d)/shell-snapshots
+(?d)/shell-snapshots/**
+(?d)/projects/**/.cache
+(?d)/projects/**/.cache/**
+(?d)/projects/**/cache
+(?d)/projects/**/cache/**
+(?d)/projects/**/debug
+(?d)/projects/**/debug/**
+(?d)/*.cachyos
+(?d)/**/*.cachyos
+(?d)/*.sync-conflict-*
+(?d)/**/*.sync-conflict-*
+
+// conversations, file history and project memory
+!/projects
+!/projects/**
+!/history.jsonl
+!/file-history
+!/file-history/**
+
+*
+EOF
+
+ignore_target=$folder_path/.stignore
+if [[ -e $ignore_target ]] && ! cmp --silent "$ignore_file" "$ignore_target"; then
+  echo "claude-conversations-sync: $ignore_target exists with different rules" >&2
+  exit 1
+fi
+
+if jq -e --arg id "$folder_id" '.[] | select(.id == $id)' \
+  "$folders_file" >/dev/null; then
+  if jq -e --arg id "$folder_id" --arg path "$folder_path" --arg peer "$peer_name" \
+    --slurpfile devices "$devices_file" '
+      .[] | select(.id == $id) |
+      .path == $path and
+      ([.devices[].deviceID] == [($devices[0][] | select(.name == $peer) | .deviceID)])
+    ' "$folders_file" >/dev/null; then
+    if ((dry_run)); then
+      echo "dry-run: $folder_id is already configured"
+      [[ -e $ignore_target ]] || echo "dry-run: would install $ignore_target with mode 600"
+      echo "dry-run: no files or Syncthing settings changed"
+      exit 0
+    fi
+    mkdir -p "$folder_path"
+    install -m 600 "$ignore_file" "$ignore_target"
+    echo "claude-conversations-sync: $folder_id is already configured"
+    exit 0
+  fi
+  echo "claude-conversations-sync: $folder_id exists with different settings" >&2
+  exit 1
+fi
+
+active_parent=$(jq -r --arg path "$folder_path" '
+  first(
+    .[] |
+    .path as $existing |
+    select(.paused == false and ($path | startswith($existing + "/"))) |
+    .id
+  ) // empty
+  ' "$folders_file")
+if [[ -n $active_parent ]]; then
+  echo "claude-conversations-sync: active folder $active_parent contains $folder_path" >&2
+  echo "pause or remove it before adding the narrow folder" >&2
+  exit 1
+fi
+
+if ((dry_run)); then
+  echo "dry-run: would install $ignore_target with mode 600"
+  echo "dry-run: would add folder $folder_id at $folder_path for peer $peer_name"
+  echo "dry-run: no files or Syncthing settings changed"
+  exit 0
+fi
+
+mkdir -p "$folder_path"
+install -m 600 "$ignore_file" "$ignore_target"
+curl --silent --show-error --fail-with-body --request POST \
+  --header @"$header_file" --header 'Content-Type: application/json' \
+  --data-binary @"$payload_file" "$api_url/rest/config/folders" >/dev/null
+
+api_get "/rest/config/folders/$folder_id" | jq -e \
+  --arg id "$folder_id" --arg path "$folder_path" \
+  '.id == $id and .path == $path' >/dev/null
+echo "claude-conversations-sync: added $folder_id for peer $peer_name"
