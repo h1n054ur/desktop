@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Mount every readable OxiCloud drive at ~/Files without storing a secret in rclone.conf.
+set -euo pipefail
+
+credentials_file="${OXICLOUD_CREDENTIALS_FILE:-$HOME/.config/oxicloud/credentials}"
+config_file="${OXICLOUD_RCLONE_CONFIG:-$HOME/.config/oxicloud/rclone.conf}"
+mount_dir="${OXICLOUD_MOUNT_DIR:-$HOME/Files}"
+cache_dir="${OXICLOUD_CACHE_DIR:-$HOME/.cache/rclone/oxicloud}"
+syncthing_ignore="${OXICLOUD_SYNCTHING_IGNORE_FILE:-$HOME/.stignore}"
+remote_name="oxicloud"
+
+fail() {
+  printf 'oxicloud-files-mount: %s\n' "$*" >&2
+  exit 1
+}
+
+command -v rclone >/dev/null 2>&1 || fail "rclone is not installed"
+[ -f "$config_file" ] || fail "rclone config is missing: $config_file"
+[ -f "$credentials_file" ] || fail "credential file is missing: $credentials_file"
+[ "$(stat -c '%a' "$credentials_file")" = 600 ] || fail "credential file must be mode 600: $credentials_file"
+grep -Fqx '/Files' "$syncthing_ignore" 2>/dev/null || fail "Syncthing guard /Files is missing from $syncthing_ignore"
+
+mapfile -t credential_lines < "$credentials_file"
+[ "${#credential_lines[@]}" -eq 2 ] || fail "credential file must contain exactly two lines"
+[ -n "${credential_lines[0]}" ] && [ -n "${credential_lines[1]}" ] || fail "credential lines must not be empty"
+
+username="${credential_lines[0]}"
+app_password="${credential_lines[1]}"
+unset credential_lines
+
+obscured_password=$(printf '%s\n' "$app_password" | rclone obscure -)
+unset app_password
+
+export RCLONE_CONFIG_OXICLOUD_USER="$username"
+export RCLONE_CONFIG_OXICLOUD_PASS="$obscured_password"
+unset username obscured_password
+
+if [ "${1:-}" = --check ]; then
+  rclone config show --config "$config_file" "$remote_name" >/dev/null
+  printf 'OxiCloud mount configuration is ready.\n'
+  exit 0
+fi
+[ "$#" -eq 0 ] || fail "usage: oxicloud-files-mount [--check]"
+
+mkdir -p "$mount_dir" "$cache_dir"
+chmod 700 "$mount_dir" "$cache_dir"
+
+exec rclone mount "${remote_name}:" "$mount_dir" \
+  --config "$config_file" \
+  --cache-dir "$cache_dir" \
+  --dir-cache-time 5m \
+  --poll-interval 0 \
+  --umask 077 \
+  --vfs-cache-mode full \
+  --vfs-cache-max-size 10G \
+  --vfs-cache-max-age 24h \
+  --vfs-cache-min-free-space 5G \
+  --vfs-cache-poll-interval 1m \
+  --vfs-read-ahead 128M \
+  --vfs-write-back 5s \
+  --log-level INFO
