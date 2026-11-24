@@ -101,6 +101,34 @@ sed -i "s#^Exec=.*#Exec=$HOME/.local/bin/start-to-tray Surfshark /opt/Surfshark/
 
 The first argument is the window class (`hyprctl clients` shows it), the rest is the command. It works for any app that keeps running when its window is closed.
 
+## 5. AI harness on two machines
+
+Keep the harness configuration in the private bare dotfiles repo, conversation history in its own narrow Syncthing folder, and OpenCode's SQLite history on the machine that runs its server. Shell history stays local to each machine.
+
+[`bin/claude-conversations-sync`](bin/claude-conversations-sync) adds `~/.claude` as the `claude-conversations` Syncthing folder through the local REST API. It shares only `projects`, `history.jsonl` and `file-history`. Project memory is inside `projects`. Its `.stignore` excludes credentials, daemon state, transient sessions, locks, databases, caches and debug output. Run it on each machine after the old whole-home folder is paused or removed:
+
+```sh
+bin/claude-conversations-sync --dry-run
+bin/claude-conversations-sync
+```
+
+The script reads the API key from Syncthing's `config.xml` into a temporary mode-600 curl header and removes it on exit. It never prints the key. It refuses to replace an existing folder or ignore file with different settings.
+
+[`bin/opencode-hybrid`](bin/opencode-hybrid) uses the desktop OpenCode server when it answers and otherwise starts OpenCode locally. `--remote` and `--local` force either path. Put the private tailnet URL in a mode-600 `~/.config/opencode/remote-url`, and keep the same server password in the mode-600 `~/.config/opencode/service.json` on both machines. Neither file belongs in git.
+
+OpenCode 2 manages its background service itself, without a separate user systemd unit. Before using remote mode, set the desktop service to listen on its tailnet address and a fixed port, then put that URL on the laptop.
+
+```sh
+install -m 755 bin/opencode-hybrid ~/.local/bin/
+opencode-hybrid                 # remote when reachable, otherwise local
+opencode-hybrid --remote -c     # require the shared server and continue
+opencode-hybrid --local         # use this machine's history
+```
+
+OpenCode 2 uses `--server URL` for a remote TUI. Never open the same shared session from both machines at once.
+
+The dotfiles repo should keep its existing path allowlist. Add custom scripts and repo-backed links from `~/.local/bin` one at a time, not the whole directory, which also contains downloaded binaries and environment-generated shims. Add the selected Claude paths and non-secret OpenCode paths only after installing [`dotfiles.gitignore.example`](dotfiles.gitignore.example) as `~/.gitignore` and running gitleaks over the staged tree. Credentials, tokens, sessions, caches, databases and project state stay outside git.
+
 ## Part of h1n054ur/desktop
 
 This repo is generated from the `setup/` folder of [h1n054ur/desktop](https://github.com/h1n054ur/desktop). It is read-only: open issues and pull requests there.

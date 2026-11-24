@@ -1,0 +1,122 @@
+#!/usr/bin/env bash
+# Prefer the shared OpenCode server, then fall back to this machine's service.
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage: opencode-hybrid [--remote|--local] [opencode arguments...]
+
+The default mode probes the configured remote server and uses it when it
+answers. Otherwise it starts OpenCode normally with this machine's history.
+
+  --remote  require the remote server, without probing or falling back
+  --local   use this machine's OpenCode service
+
+Set OPENCODE_REMOTE_URL or put the URL in:
+  ~/.config/opencode/remote-url
+
+The URL file and ~/.config/opencode/service.json must not be readable by group
+or other users. The service JSON supplies the password without putting it on
+the command line.
+EOF
+}
+
+mode=auto
+case ${1:-} in
+  --remote)
+    mode=remote
+    shift
+    ;;
+  --local)
+    mode=local
+    shift
+    ;;
+  -h|--help)
+    usage
+    exit 0
+    ;;
+esac
+
+opencode_bin=$(command -v opencode) || {
+  echo "opencode-hybrid: opencode is not installed" >&2
+  exit 127
+}
+
+if [[ $mode == local ]]; then
+  exec "$opencode_bin" "$@"
+fi
+
+private_file() {
+  local path=$1 permissions
+
+  [[ -f $path ]] || return 1
+  permissions=$(stat -c '%a' "$path")
+  if (( (8#$permissions & 077) != 0 )); then
+    echo "opencode-hybrid: $path must not be readable by group or other users" >&2
+    exit 1
+  fi
+}
+
+url=${OPENCODE_REMOTE_URL:-}
+url_file=${OPENCODE_REMOTE_URL_FILE:-$HOME/.config/opencode/remote-url}
+if [[ -z $url && -f $url_file ]]; then
+  private_file "$url_file"
+  IFS= read -r url < "$url_file" || true
+fi
+
+if [[ -z $url ]]; then
+  if [[ $mode == remote ]]; then
+    echo "opencode-hybrid: set OPENCODE_REMOTE_URL or create $url_file" >&2
+    exit 2
+  fi
+  exec "$opencode_bin" "$@"
+fi
+
+url=${url%/}
+case $url in
+  http://*|https://*) ;;
+  *)
+    echo "opencode-hybrid: the remote URL must start with http:// or https://" >&2
+    exit 2
+    ;;
+esac
+case ${url#*://} in
+  *@*)
+    echo "opencode-hybrid: do not put credentials in the remote URL" >&2
+    exit 2
+    ;;
+esac
+
+use_remote() {
+  local service_file password
+
+  command -v jq >/dev/null || {
+    echo "opencode-hybrid: jq is required for remote mode" >&2
+    exit 127
+  }
+  service_file=${OPENCODE_SERVICE_CONFIG:-$HOME/.config/opencode/service.json}
+  private_file "$service_file" || {
+    echo "opencode-hybrid: missing service credentials at $service_file" >&2
+    exit 1
+  }
+  password=$(jq -er '.password | strings | select(length > 0)' "$service_file") || {
+    echo "opencode-hybrid: $service_file has no password" >&2
+    exit 1
+  }
+  export OPENCODE_PASSWORD=$password
+  unset password
+  exec "$opencode_bin" --server "$url" "$@"
+}
+
+if [[ $mode == remote ]]; then
+  use_remote "$@"
+fi
+
+# Any HTTP response proves the server is present. Authentication happens in
+# OpenCode itself, so the password never enters curl's arguments or output.
+if curl --silent --output /dev/null --connect-timeout 1 --max-time 2 \
+  "$url/api/info" 2>/dev/null; then
+  use_remote "$@"
+fi
+
+exec "$opencode_bin" "$@"
