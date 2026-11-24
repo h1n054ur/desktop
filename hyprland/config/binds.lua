@@ -157,16 +157,20 @@ hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle
 hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
 hl.bind(mainMod .. " + grave",      hl.dsp.exec_cmd("pkill -x fuzzel || fuzzel")) -- app launcher (fuzzel, h1n054ur look); toggles
 -- Assistant: a drop-down Claude (Haiku) that drives the desktop (setup/bin/assistant, setup/assistant/CLAUDE.md).
--- Tap Right Ctrl to show or hide it; only a quick tap (< 350 ms) counts, so Right Ctrl combos never open it. The press
--- arrives as plain Control_R and the release as CONTROL + Control_R. It also hides itself after each reply (Stop hook).
-hl.bind("Control_R",                hl.dsp.exec_cmd("assistant key-down"))
-hl.bind("CONTROL + Control_R",      hl.dsp.exec_cmd("assistant key-up"), { release = true })
+-- Tap Right Ctrl to show or hide it; only a quick tap (< 350 ms) counts, so Right Ctrl combos never open it.
+-- It also hides itself after each reply (Stop hook). Bound by keycode (code:105 is Right Ctrl, code:108 is Right Alt):
+-- Hyprland 0.57.0 (2026-10-31) broke both keys two ways: the Lua config cannot tell a left modifier keysym from a
+-- right one, and the modifier state is now applied BEFORE the bind is matched, so a press of Right Alt arrives as
+-- ALT + <key> and a press of Right Ctrl as CONTROL + <key>, release included. Measured on 2026-11-09 by reading
+-- /dev/input (the keyboard sends evdev 100 and 97 cleanly) and by probing each candidate bind. Hence keycode plus
+-- its own modifier on both the press and the release. code:105 is Right Ctrl, code:108 is Right Alt.
+hl.bind("CONTROL + code:105",       hl.dsp.exec_cmd("assistant key-down"))
+hl.bind("CONTROL + code:105",       hl.dsp.exec_cmd("assistant key-up"), { release = true })
 -- Dictation (Handy, offline): hold Right Alt and talk, let go and the text is typed. One key, so nothing is held
 -- when the text arrives. handy-ptt starts/stops only when Handy's real state needs it (its mic stream).
--- On this keyboard the press arrives as plain Alt_R and the release as ALT + Alt_R (an ALT + Alt_R press bind
--- would also fire on release, so there is none)
-hl.bind("Alt_R",                    hl.dsp.exec_cmd("handy-ptt down"))
-hl.bind("ALT + Alt_R",              hl.dsp.exec_cmd("handy-ptt up"), { release = true })
+-- Bound by keycode for the 0.57.0 reason above. handy-guard cancels any recording left running with the key up.
+hl.bind("ALT + code:108",           hl.dsp.exec_cmd("handy-ptt down"))
+hl.bind("ALT + code:108",           hl.dsp.exec_cmd("handy-ptt up"), { release = true })
 hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(h1nCall .. "lock lock"))
 hl.bind(mainMod .. " + ALT + C",    hl.dsp.exec_cmd(h1nCall .. "session toggle"))
 hl.bind(mainMod .. " + slash",      hl.dsp.exec_cmd(noctCall .. "panel-toggle kenn/keybind-cheatsheet:cheatsheet")) -- searchable keybind cheat sheet
