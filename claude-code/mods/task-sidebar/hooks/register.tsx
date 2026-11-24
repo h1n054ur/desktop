@@ -94,7 +94,7 @@ export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     await $.command
       .register({ name: 'task-sidebar', description: 'Show or hide the task list sidebar' })
-      .catch(() => undefined)
+      .catch(err => void $.ui.toast(`task-sidebar: command not registered (${String(err).slice(0, 120)})`).catch(() => undefined))
     await refresh($, true).catch(() => undefined)
     $.clock.every(POLL_MS, () => void refresh($).catch(() => undefined))
     return next(e)

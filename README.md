@@ -1,6 +1,6 @@
 # h1n054ur desktop
 
-**Install CachyOS, run one script, get this desktop.** A two-screen Hyprland setup with the Noctalia shell in a dark green-to-cyan terminal look, my own bar plugins, a matching login and lock screen, the terminal, and the software and Windows apps I use. Take all of it, or any single piece: most folders here are also published as their own repository, and a few, like `jellyfin-theme`, live only here.
+**Install CachyOS, run one script, get this desktop.** A two-screen Hyprland setup with the Noctalia shell in a dark green-to-cyan terminal look, my own bar plugins, a matching login and lock screen, the terminal, and the software I use. Take all of it, or any single piece: most folders here are also published as their own repository, and a few, like `jellyfin-theme`, live only here.
 
 ![Both screens: the left (main) screen and the right screen](docs/desktop.png)
 
@@ -19,7 +19,7 @@ The installer shows a checklist of components, everything ticked: untick what yo
 
 ### Laptop profile
 
-On the single-screen laptop, run `./install.sh --profile laptop`. A host named `laptop` selects the same profile automatically. It keeps workspaces 1 to 5 on the built-in screen, leaves out WinApps, adds Handy dictation on Right Alt and spoken replies, and uses one combined Noctalia bar. The desktop profile and its two-screen layout stay the default.
+On the single-screen laptop, run `./install.sh --profile laptop`. A host named `laptop` selects the same profile automatically. It keeps workspaces 1 to 5 on the built-in screen, adds Handy dictation on Right Alt and spoken replies, and uses one combined Noctalia bar. The desktop profile and its two-screen layout stay the default.
 
 The laptop bar has workspace numbers, search, clock, expandable weather and performance, Claude and Codex usage, the current persona, cast indicators, spoken-reply controls, a compact tray drawer, then volume, network and power. The Quickshell lock and login screens are installed last. If the login screen fails, press Ctrl+Alt+F2 and run `sudo ~/desktop/quickshell/greeter/install.sh revert`.
 
@@ -29,7 +29,7 @@ Personal voice clips do not live in git. After installation, copy `~/.local/shar
 
 | Component | What it sets up |
 |---|---|
-| `packages` | the software, by group: desktop, terminal, media, dev (with Claude Code), apps, WinApps, mail, network, gaming |
+| `packages` | the software, by group: desktop, terminal, media, dev (with Claude Code), apps, mail, network, gaming |
 | `screens` | finds your screens, asks which is the main one, writes the layout |
 | `hyprland` | the Hyprland config: workspaces 1-5 left and 6-10 right, keybinds, the gradient border |
 | `appwindows` | copies the checked-in Helium app-window list and builds its desktop launchers |
@@ -65,7 +65,7 @@ I use two 1080p screens side by side, and the whole setup is built around that s
 | [`quickshell/`](quickshell) | [quickshell-h1n054ur](https://github.com/h1n054ur/quickshell-h1n054ur) | login screen for greetd, lock screen and session menu, built with Quickshell |
 | [`hyprland/`](hyprland) | [hyprland-h1n054ur](https://github.com/h1n054ur/hyprland-h1n054ur) | the Hyprland Lua config: screens, workspaces, keybinds, window rules |
 | [`chrome-apps/`](chrome-apps) | this repo only | the Helium app-window list and desktop-launcher builder |
-| [`setup/`](setup) | [h1n054ur-setup](https://github.com/h1n054ur/h1n054ur-setup) | an interactive installer for the software by group, and Windows apps through WinApps |
+| [`setup/`](setup) | [h1n054ur-setup](https://github.com/h1n054ur/h1n054ur-setup) | an interactive installer for the software by group |
 | [`jellyfin-theme/`](jellyfin-theme) | this repo only | Jellyfin 10.11 in the h1n054ur palette: ElegantFin vendored at a pinned commit with a glowing wordmark, one CSS file that loads nothing from outside |
 
 ```mermaid
@@ -85,7 +85,7 @@ flowchart TB
     TM["h1n054ur-terminal<br/>banner, fastfetch, starship"]
     CC["claude-code-h1n054ur<br/>theme, status line, sidebar, agent tabs"]
   end
-  ST["h1n054ur-setup<br/>packages, WinApps"]
+  ST["h1n054ur-setup<br/>software packages"]
   ST -.->|installs| session
   GR -->|"sign in"| HY
   HY --> NT

@@ -25,17 +25,20 @@ Scope {
         property string status: ""
         property bool busy: false
         property string pending: ""
+        property bool hasPending: false
         // a key typed on a clock screen, for the sign-in panel (LoginScreen) to apply
         signal forwardedKey(int key, string text)
 
         function submit(text) {
-            if (busy) return;
+            // Enter on an empty field does nothing: an empty answer used to leave PAM waiting forever
+            if (busy || text === "") return;
             busy = true;
             status = "";
             if (pam.responseRequired) {
                 pam.respond(text);
             } else {
                 pending = text;
+                hasPending = true;
                 if (!pam.active) pam.start();
             }
         }
@@ -55,10 +58,15 @@ Scope {
         configDirectory: Quickshell.env("H1N_LOCK_PAM_DIR") || "/etc/pam.d"
         config: Quickshell.env("H1N_LOCK_PAM") || "hyprlock"
         onPamMessage: {
-            if (responseRequired && lockState.pending !== "") {
+            if (responseRequired && lockState.hasPending) {
                 const t = lockState.pending;
                 lockState.pending = "";
+                lockState.hasPending = false;
                 respond(t);
+            } else if (responseRequired) {
+                // PAM asks again (a module re-prompts): hand the field back to the user instead of waiting
+                lockState.busy = false;
+                if (messageIsError) lockState.status = message;
             } else if (messageIsError) {
                 lockState.status = message;
             }
@@ -80,13 +88,20 @@ Scope {
     SystemClock { id: sysClock; precision: SystemClock.Minutes }
 
     // Test hooks for tests/nested.sh only (never set in real use):
-    //   H1N_LOCK_AUTOLOCK=1     lock as soon as the shell starts
-    //   H1N_LOCK_AUTOTYPE=text  submit this as the password 1.5 s after locking
+    //   H1N_LOCK_AUTOLOCK=1      lock as soon as the shell starts
+    //   H1N_LOCK_AUTOTYPE=a|b|c  submit each entry as a password, 1.5 s apart (an empty entry is a bare Enter)
     Component.onCompleted: if (Quickshell.env("H1N_LOCK_AUTOLOCK") === "1") lockRoot.lock()
     Timer {
-        running: sessionLock.locked && (Quickshell.env("H1N_LOCK_AUTOTYPE") || "") !== ""
+        readonly property var entries: (Quickshell.env("H1N_LOCK_AUTOTYPE") || "").split("|")
+        property int next: 0
+        running: sessionLock.locked && (Quickshell.env("H1N_LOCK_AUTOTYPE") || "") !== "" && next < entries.length
         interval: 1500
-        onTriggered: lockState.submit(Quickshell.env("H1N_LOCK_AUTOTYPE"))
+        repeat: true
+        onTriggered: {
+            const t = entries[next++];
+            console.log("h1n-lock: test types \"" + t + "\" busy=" + lockState.busy);
+            lockState.submit(t);
+        }
     }
 
 

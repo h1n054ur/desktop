@@ -10,7 +10,7 @@ added_at = 1791403365
 author = "hani"
 license = "MIT"
 icon = "volume"
-description = "Glow-icon volume and network bar widgets: volume level and mute; Ethernet link, or Wi-Fi with a glow icon per signal strength."
+description = "Glow-icon volume and network bar widgets: volume level and mute; Ethernet link, or Wi-Fi with a glow icon per signal strength; a headphone button that sets the output to full volume."
 plugin_api = 32
 tags = ["bar", "audio", "network"]
 

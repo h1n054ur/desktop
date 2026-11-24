@@ -15,7 +15,7 @@ My [Hyprland](https://hypr.land) setup in the Lua config format (Hyprland 0.55 a
 
 Each workspace is pinned to its screen (`config/workspaces.lua`), so `Super+1` to `Super+0` always land on the same physical screen. Screens are matched by description (make, model, serial) in `host/<hostname>.lua`, not by port: swapping cables never swaps them. If a screen is unplugged, its workspaces move to the other one and come back when it returns.
 
-`host/laptop.lua` is the single-screen profile. It keeps workspaces 1 to 5 on `eDP-1`, uses scale 1, enables tap-to-click and palm rejection, suspends when the lid closes, and adds the brightness and battery keys. Helium, Chat, Tasks and Mail use workspaces 1 to 4 on both profiles. The laptop leaves workspace 5 empty and disables WinApps. The default values still describe the two-screen desktop.
+`host/laptop.lua` is the single-screen profile. It keeps workspaces 1 to 5 on `eDP-1`, uses scale 1, enables tap-to-click and palm rejection, suspends when the lid closes, and adds the brightness and battery keys. Helium, Chat, Tasks and Mail use workspaces 1 to 4 on both profiles. The laptop leaves workspace 5 empty. The default values still describe the two-screen desktop.
 
 ```mermaid
 flowchart LR
@@ -52,7 +52,7 @@ Then edit your host file: put your screens' descriptions from `hyprctl monitors`
 | `config/binds.lua` | every keybind (bound by keycode, so other layouts work too) |
 | `config/autostart.lua`, `config/apps.tsv` | Noctalia, the h1n054ur lock screen and session menu, hypridle, Helium, Chat, Vicu and Mail, plus the desktop's first kitty |
 | `config/decorations.lua` | gaps, the `#39ff14` to `#00e5ff` border, blur |
-| `config/windowrules.lua` | where apps open, floating dialogs, WinApps tiling |
+| `config/windowrules.lua` | where apps open and which dialogs float |
 | `host/example.lua`, `host/laptop.lua` | per-machine screens |
 | `KEYBINDS.md`, `tools/check_keybinds.py` | the keybind list and its check |
 

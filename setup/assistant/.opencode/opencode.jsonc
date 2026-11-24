@@ -1,0 +1,160 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    {
+      "action": "shell",
+      "resource": "grep *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "hyprctl activewindow *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "hyprctl activeworkspace *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "hyprctl clients *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "hyprctl dispatch *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "hyprctl monitors *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "hyprctl workspaces *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "journalctl -t handy- *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg bluetooth-status",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg caffeine- *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg mic- *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg nightlight- *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg notification- *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg screenshot- *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg status",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg volume- *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg wallpaper- *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "noctalia msg wifi-status",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "place *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "playerctl *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "presskeys *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "systemctl --user status laya *",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "wtype -M logo *",
+      "effect": "allow"
+    },
+    {
+      "action": "read",
+      "resource": "/home/hani/.config/hypr/config/binds.lua",
+      "effect": "allow"
+    },
+    {
+      "action": "read",
+      "resource": "/home/hani/Notes/shortcuts.md",
+      "effect": "allow"
+    },
+    {
+      "action": "shell",
+      "resource": "sudo *",
+      "effect": "ask"
+    },
+    {
+      "action": "shell",
+      "resource": "rm *",
+      "effect": "ask"
+    },
+    {
+      "action": "shell",
+      "resource": "git push *",
+      "effect": "ask"
+    },
+    {
+      "action": "shell",
+      "resource": "gh pr create *",
+      "effect": "ask"
+    },
+    {
+      "action": "shell",
+      "resource": "gh issue create *",
+      "effect": "ask"
+    },
+    {
+      "action": "shell",
+      "resource": "*wrangler deploy*",
+      "effect": "ask"
+    }
+  ]
+}

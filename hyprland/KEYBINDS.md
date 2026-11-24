@@ -29,8 +29,8 @@ Keys marked "jumps" go to the app if it is already open and start it if not.
 | `Right Ctrl` (tap) | Assistant: a drop-down Claude that does what you ask ("put Jellyfin on the right screen"); tap again to hide, and it hides itself after answering |
 | `Right Alt` (hold) | Dictation (Handy, offline): hold and talk, let go and the text is typed where you are |
 | `Super+T` | kitty |
-| `Super+W` | Windows desktop through WinApps: Office, OneDrive, FileMaker (jumps, or opens on an empty workspace) |
 | `Super+O` | Obsidian (jumps; starts it if closed) |
+| `Super+N` | Notes in SilverBullet (jumps; starts it if closed) |
 | `Super+C` | Helium browser, signed in, vertical tabs (jumps) |
 | `Super+Shift+C` | Helium incognito window (nothing saved) |
 | `Super+D` | Discord in Vesktop (jumps; opens on an empty workspace of the right screen) |
@@ -38,6 +38,7 @@ Keys marked "jumps" go to the app if it is already open and start it if not.
 | `Super+V` | VSCodium (jumps) |
 | `Super+B` | Calibre (jumps) |
 | `Super+Shift+B` | Foliate ebook reader (jumps) |
+| `Super+Shift+Q` | qBittorrent on the media server (jumps) |
 | `Super+Y` | yazi file manager in its own kitty window (jumps) |
 | `Super+Shift+M` | rmpc music player in its own kitty window (jumps) |
 | `Super+P` | Bitwarden app (jumps) |

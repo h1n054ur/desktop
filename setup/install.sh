@@ -3,7 +3,7 @@
 # h1n054ur setup: installs the desktop's software on CachyOS (or Arch with the CachyOS repos), by group.
 #   ./install.sh                         interactive: pick groups with the arrow keys and Space
 #   ./install.sh dev apps --yes          install those groups without questions
-#   ./install.sh --profile laptop        laptop groups, without WinApps
+#   ./install.sh --profile laptop        laptop groups, with voice tools
 #   ./install.sh all --yes               everything
 #   ./install.sh --dry-run               walk through it without installing anything
 #   ./install.sh --list                  show the groups
@@ -34,7 +34,7 @@ case $PROFILE in desktop|laptop) ;; *) echo "unknown profile: $PROFILE (desktop 
 if [ "$PROFILE" = laptop ]; then
   ORDER=(desktop terminal media dev apps voice mail network gaming)
 else
-  ORDER=(desktop terminal media dev apps winapps mail network gaming)
+  ORDER=(desktop terminal media dev apps mail network gaming)
 fi
 declare -A REPO AUR DESC
 DESC[desktop]="Hyprland, Noctalia, greetd, Quickshell, fuzzel, rofi, clipboard, audio"
@@ -53,8 +53,6 @@ AUR[apps]="helium-browser-bin figma-linux"
 DESC[voice]="Pocket TTS prerequisites and Handy offline dictation"
 REPO[voice]="uv jq libpulse wtype"
 AUR[voice]="handy-bin"
-DESC[winapps]="Docker, FreeRDP, KVM/QEMU for Windows apps (see README)"
-REPO[winapps]="docker docker-compose freerdp qemu-full virt-manager libvirt edk2-ovmf swtpm dnsmasq"
 DESC[mail]="aerc, himalaya, notmuch, khal, newsboat, qutebrowser, zathura"
 REPO[mail]="aerc himalaya isync notmuch khal calcurse newsboat qutebrowser python-adblock w3m zathura zathura-pdf-mupdf"
 AUR[mail]="timg yt-x"
@@ -127,9 +125,6 @@ for a in "$@"; do
     -h|--help) sed -n '3,11p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     all) for g in "${ORDER[@]}"; do PICK[$g]=1; done ;;
     *)
-      if [ "$PROFILE" = laptop ] && [ "$a" = winapps ]; then
-        echo "winapps is not available in the laptop profile" >&2; exit 2
-      fi
       [ -n "${DESC[$a]:-}" ] || { echo "unknown group: $a (see --list)"; exit 2; }
       PICK[$a]=1; ARGS+=("$a") ;;
   esac
@@ -187,7 +182,7 @@ docker_done=0
 # shellcheck disable=SC2016  # $USER expands in the inner shell, on purpose
 for g in "${chosen[@]}"; do
   case $g in
-    dev|winapps) [ "$docker_done" = 1 ] && continue; docker_done=1; run_step "docker service + group" 0 '' bash -c 'sudo systemctl enable --now docker.service && sudo usermod -aG docker "$USER"' || failed+=("docker service") ;;
+    dev)     [ "$docker_done" = 1 ] && continue; docker_done=1; run_step "docker service + group" 0 '' bash -c 'sudo systemctl enable --now docker.service && sudo usermod -aG docker "$USER"' || failed+=("docker service") ;;
     network)     run_step "tailscale service" 0 '' sudo systemctl enable --now tailscaled.service || failed+=("tailscale service") ;;
   esac
 done
