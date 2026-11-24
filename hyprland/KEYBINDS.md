@@ -29,13 +29,11 @@ Keys marked "jumps" go to the app if it is already open and start it if not.
 | `Right Ctrl` (tap) | Assistant: a drop-down Claude that does what you ask ("put Jellyfin on the right screen"); tap again to hide, and it hides itself after answering |
 | `Right Alt` (hold) | Dictation (Handy, offline): hold and talk, let go and the text is typed where you are |
 | `Super+T` | kitty |
-| `Super+F` | Ferdium (jumps) |
 | `Super+W` | Windows desktop through WinApps: Office, OneDrive, FileMaker (jumps, or opens on an empty workspace) |
 | `Super+O` | Obsidian (jumps; starts it if closed) |
 | `Super+C` | Helium browser, signed in, vertical tabs (jumps) |
 | `Super+Shift+C` | Helium incognito window (nothing saved) |
 | `Super+D` | Discord in Vesktop (jumps; opens on an empty workspace of the right screen) |
-| `Super+Shift+T` | Teams (jumps) |
 | `Super+Shift+Z` | Zoom (jumps) |
 | `Super+V` | VSCodium (jumps) |
 | `Super+B` | Calibre (jumps) |

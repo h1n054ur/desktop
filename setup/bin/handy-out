@@ -133,46 +133,7 @@ def by_pattern(words, cfg):
     return None
 
 
-FERDIUM_MAP = os.path.expanduser("~/.cache/ferdium-map.json")
 LEAD = re.compile(r"^(?:open|show|show me|go to|switch to|bring up|launch|start)\s+")
-
-
-def ferdium_services():
-    try:
-        if not os.path.exists(FERDIUM_MAP):
-            sh("ferdium-go", "--map")
-        with open(FERDIUM_MAP) as f:
-            return {re.sub(r"[^a-z0-9]+", " ", s.lower()).strip()
-                    for w in json.load(f)["workspaces"] for s in w["services"]}
-    except (OSError, ValueError, KeyError):
-        return set()
-
-
-def ferdium_target(words, cfg):
-    """'ferdium youtube', 'ferdium workspace 9', 'ferdium comms', or a Ferdium-only service name on its own."""
-    if re.search(r"\bferdium\b", words):
-        rest = re.sub(r"\bferdium\b|\b(workspace|tab|in|inside|on|the|to|my|app)\b", " ", LEAD.sub("", words))
-        rest = re.sub(r"\s+", " ", rest).strip()
-        return rest or "ferdium"
-    rest = LEAD.sub("", words)
-    if rest in ferdium_services() and not find_app(rest, cfg.get("aliases", {})):
-        return rest
-    return None
-
-
-def run_ferdium(target):
-    if target == "ferdium":
-        sh("assistant", "hide")
-        argv = ["presskeys", "super+f"]
-    else:
-        argv = ["ferdium-go", target]
-    r = sh(*argv)
-    log(f"ferdium: ran {' '.join(argv)} rc={r.returncode} {r.stdout.strip()} {r.stderr.strip()}")
-    if r.returncode == 0:
-        notify(r.stdout.strip() or "Ferdium")
-    else:
-        notify("Ferdium: " + (r.stderr.strip().split(": ", 1)[-1] or "failed"))
-    return r.returncode == 0
 
 
 IMPERATIVE = re.compile(r"^(?:please\s+)?(open|launch|start|switch to|go to|bring up|show me|show|put|move)\b")
@@ -196,10 +157,6 @@ def fast_path(text, cfg):
     if re.search(r"[^\x00-\x7f\u2018\u2019]", words):
         log("not plain English text, to the panel")
         return False
-    # 0. Ferdium first, so "ferdium workspace 9" never becomes "go to workspace 9"
-    target = ferdium_target(words, cfg)
-    if target:
-        return run_ferdium(target)
     # 1. plain code: "open/switch to/bring up/put <app> [where]" needs no model at all
     m = IMPERATIVE.match(words)
     if m:

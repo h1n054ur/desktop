@@ -1,0 +1,83 @@
+# slug	Name	URL	dashboard-icon name (or -)	group	Helium profile (optional)	keywords (optional)
+ytmusic	YouTube Music	https://music.youtube.com/	youtube-music	media
+zoom	Zoom	https://app.zoom.us/wc/home	@zoom-app.png	work
+notes	Notes (SilverBullet)	https://notes.nb.h1n054ur.dev/	@silverbullet-app.png	home
+seerr	Seerr	https://requests.h1n054ur.dev/	jellyseerr	media
+sonarr	Sonarr	https://arr.nb.h1n054ur.dev/sonarr/	sonarr	media
+radarr	Radarr	https://arr.nb.h1n054ur.dev/radarr/	radarr	media
+lidarr	Lidarr	https://arr.nb.h1n054ur.dev/lidarr/	lidarr	media
+prowlarr	Prowlarr	https://arr.nb.h1n054ur.dev/prowlarr/	prowlarr	media
+bazarr	Bazarr	https://arr.nb.h1n054ur.dev/bazarr/	bazarr	media
+sabnzbd	SABnzbd	https://arr.nb.h1n054ur.dev/sabnzbd/	sabnzbd	media
+qbittorrent	qBittorrent	https://arr.nb.h1n054ur.dev/qbittorrent/	qbittorrent	media
+jellystat	Jellystat	https://jellystat.nb.h1n054ur.dev/	jellystat	media
+ersatztv	ErsatzTV	https://ersatztv.nb.h1n054ur.dev/	ersatztv	media
+dispatcharr	Dispatcharr	https://dispatcharr.nb.h1n054ur.dev/	dispatcharr	media
+immich	Immich	https://photos.nb.h1n054ur.dev/	immich	home
+sink	Sink (bts.ad)	https://bts.ad/dashboard	sink	home
+vaultwarden	Vaultwarden	https://vault.h1n054ur.dev/	vaultwarden	home
+arcane	Arcane	https://arcane.nb.h1n054ur.dev/	arcane	infra
+authentik	Authentik	https://auth.h1n054ur.dev/if/admin/	authentik	infra
+adguard	AdGuard Home	http://10.10.0.157:3000/	adguard-home	infra
+proxmox	Proxmox	https://bts-pve01-khi.tail88abdf.ts.net/	proxmox	infra
+unifi	UniFi	https://unifi.ui.com/	unifi	infra
+netbird	NetBird	https://netbird.h1n054ur.dev/	netbird	infra
+tailscale	Tailscale	https://login.tailscale.com/admin/machines	tailscale	infra
+grafana	Grafana	https://grafana.nb.h1n054ur.dev/	grafana	monitor
+dozzle	Dozzle	https://dozzle.nb.h1n054ur.dev/	dozzle	monitor
+beszel	Beszel	https://beszel.nb.h1n054ur.dev/	beszel	monitor
+uptimekuma	Uptime Kuma	https://kuma.nb.h1n054ur.dev/	uptime-kuma	monitor
+pulse	Pulse	http://10.10.0.30:7655/	pulse	monitor
+ntopng	ntopng	https://ntopng.nb.h1n054ur.dev/	ntopng	infra
+chatgpt	ChatGPT	https://chatgpt.com/	chatgpt	tools
+claude	claude.ai	https://claude.ai/	claude-ai	tools
+characterai	Character.AI	https://character.ai/	@characterai-app.png	tools
+youtube	YouTube	https://www.youtube.com/	youtube	media
+fotmob	FotMob	https://www.fotmob.com/	-	media
+torrentleech	TorrentLeech	https://www.torrentleech.org/	-	media
+github	GitHub	https://github.com/h1n054ur	github	code
+forgejo	Forgejo	https://git.h1n054ur.dev/h1n054ur	forgejo	code
+paste	Paste	https://paste.h1n054ur.dev/	-	code
+cloudflare	Cloudflare	https://dash.cloudflare.com/	cloudflare	cloud
+flyio	Fly.io	https://fly.io/dashboard	fly-io	cloud
+digitalocean	DigitalOcean	https://cloud.digitalocean.com/	digitalocean	cloud
+hetzner	Hetzner	https://console.hetzner.com/	hetzner	cloud
+aws	AWS	https://console.aws.amazon.com/	aws	cloud
+gcloud	Google Cloud	https://console.cloud.google.com/?authuser=umerhani1@gmail.com	google-cloud-platform	cloud
+m365admin	M365 Admin	https://admin.cloud.microsoft/	microsoft-365	cloud
+exchangeadmin	Exchange Admin	https://admin.exchange.microsoft.com/	microsoft-exchange	cloud
+sharepointadmin	SharePoint Admin	https://admin.microsoft.com/sharepoint	microsoft-sharepoint	cloud
+teamsadmin	Teams Admin	https://admin.teams.microsoft.com/	microsoft-teams	cloud
+entra	Entra ID	https://entra.microsoft.com/	entra-id	cloud
+mylearn	UNE myLearn	https://mylearn.une.edu.au/course/view.php?id=33087	moodle	study
+filemaker	FileMaker	https://client-dht.littleman.com.au/fmi/webd	-	study
+readaloud	Read-Aloud	https://read-aloud.com/	@readaloud-logo.png	study
+word	Word - BTS	https://word.cloud.microsoft/	microsoft-word	study
+excel	Excel - BTS	https://excel.cloud.microsoft/	microsoft-excel	study
+powerpoint	PowerPoint - BTS	https://powerpoint.cloud.microsoft/	microsoft-powerpoint	study
+onedrive	OneDrive - BTS	https://onedrive.cloud.microsoft/	microsoft-onedrive	study
+gdrive	Google Drive	https://drive.google.com/?authuser=umerhani1@gmail.com	google-drive	study
+gdocs	Google Docs	https://docs.google.com/document/?authuser=umerhani1@gmail.com	google-docs	study
+gsheets	Google Sheets	https://docs.google.com/spreadsheets/?authuser=umerhani1@gmail.com	google-sheets	study
+gslides	Google Slides	https://docs.google.com/presentation/?authuser=umerhani1@gmail.com	google-slides	study
+word-une	Word - UNE	https://word.cloud.microsoft/	microsoft-word	study	UNE
+excel-une	Excel - UNE	https://excel.cloud.microsoft/	microsoft-excel	study	UNE
+powerpoint-une	PowerPoint - UNE	https://powerpoint.cloud.microsoft/	microsoft-powerpoint	study	UNE
+onedrive-une	OneDrive - UNE	https://onedrive.cloud.microsoft/	microsoft-onedrive	study	UNE
+outlook-une	UNE Outlook	https://outlook.cloud.microsoft/mail/	microsoft-outlook	study	UNE
+databasus	Databasus	https://databasus.nb.h1n054ur.dev/	databasus	infra
+spotify	Spotify	https://open.spotify.com/	spotify	media
+binance	Binance	https://www.binance.com/en	@binance-app.png	home
+groundnews	Ground News	https://ground.news/	@groundnews-logo.png	home
+rutorrent-seedhost	ruTorrent - seedhost.eu	https://kiwi.seedhost.eu/tegana/rutorrent/	rutorrent	media
+sabnzbd-seedhost	SABnzbd - seedhost.eu	https://kiwi.seedhost.eu/tegana/sabnzbd/	sabnzbd	media
+agentdash	Claude Dashboard	http://127.0.0.1:7311/	@agent-dashboard-app.png	monitor
+linkedin	LinkedIn	https://www.linkedin.com/feed/	linkedin	work
+upwork	Upwork	https://www.upwork.com/nx/find-work/	@upwork-app.png	work
+protonmail	Proton Mail	https://mail.proton.me/	proton-mail	work
+calcom	Cal.com	https://app.cal.com/	cal-com	work
+reddit	Reddit	https://www.reddit.com/	reddit	work
+mail	Mail	https://mail.bts.ad/	stalwart	work		email;inbox;webmail;stalwart;bulwark;bts;
+tasks	Tasks	https://tasks.bts.ad/	vikunja	work		project;projects;management;todo;kanban;board;sales;vikunja;bts;
+chat	Chat	https://chat.bts.ad/	zulip	work		zulip;team;messages;meet;bts;
+files	Files	https://files.bts.ad/	@oxicloud.png	work		drive;storage;documents;oxicloud;bts;

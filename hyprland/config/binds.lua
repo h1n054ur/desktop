@@ -78,16 +78,6 @@ hl.bind(mainMod .. " + code:86", function() zoomfunction(0.3) end, { repeating =
 ------------------
 
 hl.bind(mainMod .. " + T",          hl.dsp.exec_cmd(launchPrefix .. TERMINAL))
--- Ferdium stays on the two-screen desktop. The laptop profile has neither the package nor its bind.
-if FERDIUM_ENABLED then
-    hl.bind(mainMod .. " + F", function()
-        if hl.get_window("class:ferdium") then
-            hl.dispatch(hl.dsp.focus({ window = "class:ferdium" }))
-        else
-            hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "ferdium"))
-        end
-    end)
-end
 -- Helium: jump to the normal (signed-in) window when open, start it otherwise; Shift opens an incognito window
 hl.bind(mainMod .. " + C", function()
     for _, w in ipairs(hl.get_windows({ class = "helium" })) do
@@ -100,7 +90,7 @@ hl.bind(mainMod .. " + C", function()
     hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "helium-browser"))
 end)
 hl.bind(mainMod .. " + SHIFT + C", hl.dsp.exec_cmd(launchPrefix .. "helium-browser --incognito"))
--- Call apps that can share the screen (Ferdium can't for these): jump to the window when open, start it otherwise
+-- App windows: jump to the window when open, start it otherwise
 local function focusOrLaunch(class, cmd)
     return function()
         local w = hl.get_windows({ class = class })[1]
@@ -123,7 +113,6 @@ hl.bind(mainMod .. " + D", function()
         hl.dispatch(hl.dsp.exec_cmd(launchPrefix .. "vesktop"))
     end
 end)
-hl.bind(mainMod .. " + SHIFT + T", focusOrLaunch("chrome-teams.microsoft.com__-Default", "helium-browser --app=https://teams.microsoft.com/"))
 hl.bind(mainMod .. " + SHIFT + Z", focusOrLaunch("chrome-app.zoom.us__wc_home-Default", "helium-browser --app=https://app.zoom.us/wc/home"))
 -- Windows desktop (WinApps, see h1n054ur-setup): focus it, or open it on the next empty workspace
 if WINAPPS_ENABLED then

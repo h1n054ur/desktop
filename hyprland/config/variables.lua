@@ -17,5 +17,4 @@ WORKSPACE_COUNT = 10 -- laptop profile changes this to 5
 
 -- Optional pieces. Host profiles can turn them off without changing the two-screen desktop.
 LAPTOP_PROFILE = false
-FERDIUM_ENABLED = true
 WINAPPS_ENABLED = true
