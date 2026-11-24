@@ -1,0 +1,18 @@
+[Unit]
+Description=OxiCloud personal and shared files at %h/Files
+Documentation=https://github.com/AtalayaLabs/OxiCloud/blob/v0.10.1/docs/guide/webdav.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=notify
+ExecStart=%h/.local/libexec/oxicloud-files-mount
+ExecStop=-/usr/bin/fusermount3 -u %h/Files
+Restart=on-failure
+RestartSec=10s
+TimeoutStartSec=60s
+TimeoutStopSec=30s
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=default.target
