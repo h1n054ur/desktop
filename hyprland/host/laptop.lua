@@ -3,11 +3,9 @@
 
 LAPTOP_PROFILE = true
 WORKSPACE_COUNT = 5
-FERDIUM_ENABLED = false
 WINAPPS_ENABLED = false
 MAIN_SCREEN = "eDP-1"
 SIDE_SCREEN = "eDP-1"
-KITTY_WORKSPACE = "2"
 
 hl.monitor({
     output    = "eDP-1",

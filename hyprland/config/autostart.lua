@@ -10,11 +10,12 @@ hl.on("hyprland.start", function ()
     -- Handy: offline dictation in the tray, held on Right Alt through handy-ptt (Handy's own shortcut does not fire on Wayland)
     hl.exec_cmd("handy --start-hidden")
     hl.exec_cmd("xhost +SI:localuser:root")
-    -- first kitty: workspace per machine (KITTY_WORKSPACE, set in variables.lua / host files); started directly
-    -- (not through uwsm) so the workspace rule matches its pid
-    hl.exec_cmd(TERMINAL, { workspace = (KITTY_WORKSPACE or "6") .. " silent" })
-    -- Login apps are data, shared by both profiles. Ferdium stays in the desktop's XDG autostart file and
-    -- the laptop disables that file, so this list only carries Helium, its app windows and Vicu.
+    -- The desktop keeps its first kitty on the right screen. The laptop leaves workspace 5 empty at login.
+    -- Start it directly, rather than through uwsm, so the workspace rule matches its pid.
+    if not LAPTOP_PROFILE then
+        hl.exec_cmd(TERMINAL, { workspace = (KITTY_WORKSPACE or "6") .. " silent" })
+    end
+    -- Login apps are data shared by both profiles: Helium, Chat, Vicu and Mail on workspaces 1 to 4.
     local profile = LAPTOP_PROFILE and "laptop" or "desktop"
     local elapsed = 0
     local apps = os.getenv("HOME") .. "/.config/hypr/config/apps.tsv"

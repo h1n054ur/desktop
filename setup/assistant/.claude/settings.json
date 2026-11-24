@@ -1,7 +1,6 @@
 {
   "permissions": {
     "allow": [
-      "Bash(ferdium-go:*)",
       "Bash(grep:*)",
       "Bash(hyprctl activewindow:*)",
       "Bash(hyprctl activeworkspace:*)",

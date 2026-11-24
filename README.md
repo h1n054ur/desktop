@@ -19,7 +19,7 @@ The installer shows a checklist of components, everything ticked: untick what yo
 
 ### Laptop profile
 
-On the single-screen laptop, run `./install.sh --profile laptop`. A host named `laptop` selects the same profile automatically. It keeps workspaces 1 to 5 on the built-in screen, leaves out WinApps and Ferdium, adds Handy dictation on Right Alt and spoken replies, and uses one combined Noctalia bar. The desktop profile and its two-screen layout stay the default.
+On the single-screen laptop, run `./install.sh --profile laptop`. A host named `laptop` selects the same profile automatically. It keeps workspaces 1 to 5 on the built-in screen, leaves out WinApps, adds Handy dictation on Right Alt and spoken replies, and uses one combined Noctalia bar. The desktop profile and its two-screen layout stay the default.
 
 The laptop bar has workspace numbers, search, clock, expandable weather and performance, Claude and Codex usage, the current persona, cast indicators, spoken-reply controls, a compact tray drawer, then volume, network and power. The Quickshell lock and login screens are installed last. If the login screen fails, press Ctrl+Alt+F2 and run `sudo ~/desktop/quickshell/greeter/install.sh revert`.
 
@@ -32,6 +32,7 @@ Personal voice clips do not live in git. After installation, copy `~/.local/shar
 | `packages` | the software, by group: desktop, terminal, media, dev (with Claude Code), apps, WinApps, mail, network, gaming |
 | `screens` | finds your screens, asks which is the main one, writes the layout |
 | `hyprland` | the Hyprland config: workspaces 1-5 left and 6-10 right, keybinds, the gradient border |
+| `appwindows` | copies the checked-in Helium app-window list and builds its desktop launchers |
 | `theme` | the Noctalia look: floating pills, floating panels, palette, glow icons, and the right screen's own bar |
 | `plugins` | the glow bar plugins: stats, weather, volume, network, per-screen window titles |
 | `claude` | Claude Code sessions and plan limits, plus Codex and Muse plan limits and OpenCode sessions, in the right screen's bar |
@@ -42,7 +43,7 @@ Personal voice clips do not live in git. After installation, copy `~/.local/shar
 | `claudecode` | the Claude Code look: theme, status line, task sidebar and agent tabs |
 | `voice` | Pocket TTS spoken replies, Handy hold-to-talk, `handy-out`, and the persona label |
 
-The desktop profile is built for **two screens**. The laptop profile uses five workspaces on its built-in screen.
+The desktop profile is built for **two screens**. The laptop profile uses five workspaces on its built-in screen. Both start Helium, Chat, Tasks and Mail on workspaces 1 to 4. Workspace 5 stays free, while the desktop keeps its first kitty on workspace 6 of the right screen.
 
 ## Two screens
 
@@ -62,6 +63,7 @@ I use two 1080p screens side by side, and the whole setup is built around that s
 | [`claude-code/`](claude-code) | [claude-code-h1n054ur](https://github.com/h1n054ur/claude-code-h1n054ur) | Claude Code in the h1n054ur palette: a theme, a starship-style status line, a task sidebar and a tab bar for running agents |
 | [`quickshell/`](quickshell) | [quickshell-h1n054ur](https://github.com/h1n054ur/quickshell-h1n054ur) | login screen for greetd, lock screen and session menu, built with Quickshell |
 | [`hyprland/`](hyprland) | [hyprland-h1n054ur](https://github.com/h1n054ur/hyprland-h1n054ur) | the Hyprland Lua config: screens, workspaces, keybinds, window rules |
+| [`chrome-apps/`](chrome-apps) | this repo only | the Helium app-window list and desktop-launcher builder |
 | [`setup/`](setup) | [h1n054ur-setup](https://github.com/h1n054ur/h1n054ur-setup) | an interactive installer for the software by group, and Windows apps through WinApps |
 | [`jellyfin-theme/`](jellyfin-theme) | this repo only | Jellyfin 10.11 in the h1n054ur palette: ElegantFin vendored at a pinned commit with a glowing wordmark, one CSS file that loads nothing from outside |
 

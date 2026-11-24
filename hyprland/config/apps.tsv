@@ -1,5 +1,5 @@
 # profile	delay after previous app (seconds)	workspace	command
-all	0	2	helium-browser
-all	5	3	helium-browser --app=https://chat.bts.ad/
-all	2	4	$HOME/.local/opt/vicu/Vicu-2.8.0-x86_64.AppImage
-all	2	5	helium-browser --app=https://mail.bts.ad/
+all	0	1	helium-browser
+all	5	2	helium-browser --app=https://chat.bts.ad/
+all	2	3	$HOME/.local/opt/vicu/Vicu-2.8.0-x86_64.AppImage
+all	2	4	helium-browser --app=https://mail.bts.ad/

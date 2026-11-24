@@ -3,7 +3,7 @@
 # h1n054ur setup: installs the desktop's software on CachyOS (or Arch with the CachyOS repos), by group.
 #   ./install.sh                         interactive: pick groups with the arrow keys and Space
 #   ./install.sh dev apps --yes          install those groups without questions
-#   ./install.sh --profile laptop        laptop groups, without WinApps or Ferdium
+#   ./install.sh --profile laptop        laptop groups, without WinApps
 #   ./install.sh all --yes               everything
 #   ./install.sh --dry-run               walk through it without installing anything
 #   ./install.sh --list                  show the groups
@@ -47,14 +47,9 @@ AUR[media]="mpv-uosc freetube-bin stremio ff2mpv-rust"
 DESC[dev]="Docker, Bun, uv, VSCodium, opencode, Claude Code, gitleaks"
 REPO[dev]="git github-cli docker docker-compose docker-buildx nvidia-container-toolkit uv nvm rbenv opencode cmake ninja shellcheck caddy cloudflared dbeaver mysql-workbench meld gitleaks vscodium"
 AUR[dev]="bun-bin ngrok"
-DESC[apps]="Helium, Ferdium, Vesktop, Obsidian, Bitwarden, Calibre, Foliate"
+DESC[apps]="Helium, Vesktop, Obsidian, Bitwarden, Calibre, Foliate"
 REPO[apps]="vesktop-bin obsidian bitwarden rbw rofi-rbw calibre foliate teamspeak3 filezilla remmina mission-center dolphin kate gwenview"
-if [ "$PROFILE" = laptop ]; then
-  DESC[apps]="Helium, Vesktop, Obsidian, Bitwarden, Calibre, Foliate (no Ferdium)"
-  AUR[apps]="helium-browser-bin figma-linux"
-else
-  AUR[apps]="helium-browser-bin ferdium-bin figma-linux"
-fi
+AUR[apps]="helium-browser-bin figma-linux"
 DESC[voice]="Pocket TTS prerequisites and Handy offline dictation"
 REPO[voice]="uv jq libpulse wtype"
 AUR[voice]="handy-bin"

@@ -56,14 +56,11 @@ hl.window_rule({ match = { class = "^(.*swash)$", title = "^(Swash)$" }, min_siz
 hl.window_rule({ match = { class = "^(dev\\.)?(noctalia\\.Noctalia(\\.Settings)?)$" }, float = true, size = { "monitor_w*0.70", "monitor_h*0.70" } })
 -- Dolphin tiles like other apps (CachyOS floated it at the cursor, which landed it across both monitors)
 
--- Ferdium always opens on workspace 1 (left monitor, DP-1); it starts at login from ~/.config/autostart/ferdium.desktop
-if FERDIUM_ENABLED then
-    hl.window_rule({ match = { class = "^(ferdium)$" }, workspace = "1" })
-end
--- BTS Chat and Mail app windows (Helium --app) and Vicu (tasks) live on 3, 5 and 4 of the left screen, opened at login (autostart.lua)
-hl.window_rule({ match = { class = "^(chrome-chat\\.bts\\.ad__-Default)$" }, workspace = "3 silent" })
-hl.window_rule({ match = { class = "^(com\\.rendyhd\\.vicu)$" }, workspace = "4 silent" })
-hl.window_rule({ match = { class = "^(chrome-mail\\.bts\\.ad__-Default)$" }, workspace = "5 silent" })
+-- The main browser, Chat, Vicu and Mail occupy workspaces 1 to 4 on the desktop's left screen and the laptop.
+hl.window_rule({ match = { class = "^(helium)$" }, workspace = "1 silent" })
+hl.window_rule({ match = { class = "^(chrome-chat\\.bts\\.ad__-Default)$" }, workspace = "2 silent" })
+hl.window_rule({ match = { class = "^(com\\.rendyhd\\.vicu)$" }, workspace = "3 silent" })
+hl.window_rule({ match = { class = "^(chrome-mail\\.bts\\.ad__-Default)$" }, workspace = "4 silent" })
 
 -- YouTube Music (Chrome app window) opens maximised; Super+M puts it on the next empty workspace
 hl.window_rule({ match = { class = "^(chrome-music\\.youtube\\.com__-Default)$" }, maximize = true })

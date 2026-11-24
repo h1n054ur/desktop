@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # presskeys: press key combos in order, through the virtual keyboard (wtype), for the voice router and the assistant.
-#   presskeys super+f ctrl+alt+9 ctrl+1      each argument is one combo; modifiers: super ctrl alt shift
+#   presskeys super+3                         each argument is one combo; modifiers: super ctrl alt shift
 #   presskeys wait:0.6 ctrl+tab               wait:<seconds> pauses (default 0.25 s between combos)
 # Keys are wtype/xkb names: letters, digits, tab, return, escape, space, left, right, up, down, f1..f12, plus, minus.
-# Super combos fire Hyprland binds (Super+F jumps to Ferdium); the rest go to the focused window.
+# Super combos fire Hyprland binds. The rest go to the focused window.
 set -eu
 gap=0.25
 for combo in "$@"; do

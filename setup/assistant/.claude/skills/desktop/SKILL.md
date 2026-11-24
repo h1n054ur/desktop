@@ -1,6 +1,6 @@
 ---
 name: desktop
-description: Everything about driving Hani's CachyOS + Hyprland desktop from the assistant panel - how requests arrive (voice via Handy, the fast command router), screens and workspaces, every keyboard shortcut, opening and moving apps (place), system controls (Noctalia), media, the apps and app windows, Ferdium, diagnosing voice problems, and the safety rules. Loaded in full at every start.
+description: Everything about driving Hani's CachyOS + Hyprland desktop from the assistant panel - how requests arrive (voice via Handy, the fast command router), screens and workspaces, every keyboard shortcut, opening and moving apps (place), system controls (Noctalia), media, the apps and app windows, diagnosing voice problems, and the safety rules. Loaded in full at every start.
 ---
 
 # Driving the desktop
@@ -8,8 +8,7 @@ description: Everything about driving Hani's CachyOS + Hyprland desktop from the
 ## How requests reach you
 1. Hani taps **Right Ctrl** to open this panel, holds **Right Alt** and talks; Handy (offline speech to text) turns it
    into text and hands it to `handy-out`.
-2. `handy-out` first tries the **fast path**: Ferdium ("Ferdium YouTube", "Ferdium workspace 9", "WhatsApp" ->
-   `ferdium-go`), plain code for "open/switch to/bring up/put <app> [where]", patterns for the commands below, then
+2. `handy-out` first tries the **fast path**: plain code for "open/switch to/bring up/put <app> [where]", patterns for the commands below, then
    **Laya** (a local decision model, ~0.4 s) for phrasings no pattern knows. When it is sure, it runs the command itself and
    hides the panel, and you never see the request.
 3. Everything else is typed here and sent: **so what reaches you is what the fast path could not do on its own**
@@ -40,7 +39,7 @@ Fast path commands (setup/assistant/commands.json):
 ## The screens
 | Name | Monitor | Workspaces | Notes |
 |---|---|---|---|
-| left (main) | DP-1, x=0 | 1 to 5 | Ferdium lives on 1 |
+| left (main) | DP-1, x=0 | 1 to 5 | Helium 1, Chat 2, Tasks 3, Mail 4, workspace 5 free |
 | right | DP-2, x=1920 | 6 to 10 | the first kitty opens on 6 |
 "here" = the screen Hani is on, "other" = the one Hani is not on. `hyprctl monitors -j` shows each one's active workspace.
 
@@ -49,7 +48,7 @@ Fast path commands (setup/assistant/commands.json):
    - `place <app> left|right|here|other`, `place <app> ws N`: open it there or move it there.
    - `place left|right|other|ws N`: move the window Hani is on. `place fullscreen`, `place max`.
    - `place focus <app>`: jump to it. `place list`: every app name it knows (names are loose).
-2. **Any key combo, in order: `presskeys`**: `presskeys super+3`, `presskeys super+f ctrl+alt+9 ctrl+1`,
+2. **Any key combo, in order: `presskeys`**: `presskeys super+3`,
    `presskeys ctrl+tab wait:0.5 ctrl+r` (modifiers super ctrl alt shift; keys like tab, return, escape, left, f5).
    Super combos fire Hyprland binds; the rest go to the focused window, so focus the app first. Never press Super+Q, Ctrl+W or anything that closes or quits unless
    Hani asked for exactly that.
@@ -76,31 +75,14 @@ Fast path commands (setup/assistant/commands.json):
 ## Every keyboard shortcut
 Hani's cheat sheet `/home/hani/Notes/shortcuts.md` is kept in sync with the live binds; read it or
 `grep -i <word>` it. If something is not there, the live binds in `/home/hani/.config/hypr/config/binds.lua` are
-the final word. Highlights: Super+T kitty, Super+C Helium browser, Super+F Ferdium, Super+V VSCodium, Super+B Calibre,
+the final word. Highlights: Super+T kitty, Super+C Helium browser, Super+V VSCodium, Super+B Calibre,
 Super+Shift+B Foliate, Super+M YouTube Music, Super+Shift+M rmpc music, Super+N Notes, Super+` app search (fuzzel),
 Right Ctrl (tap) this assistant, Right Alt (hold) dictation, Print region screenshot (Super+Print whole screen),
 Super+1..0 workspaces, Super+Shift+1..0 send the window there.
 
 ## Shortcuts inside apps
-Focus the app first (`place focus <app>`), then `presskeys`. Hani's cheat sheet has the full Ferdium, kitty and Dolphin
+Focus the app first (`place focus <app>`), then `presskeys`. Hani's cheat sheet has the full kitty and Dolphin
 tables; these are the ones you will need most.
-
-**Ferdium** (from Ferdium's own menus; use `ferdium-go` rather than pressing these by hand):
-| Keys | Does |
-|---|---|
-| Ctrl+Alt+1..9 | workspace 1..9 in sidebar order: Comms, Inbox, Code, Infra, Monitor, UNE, Study, Admin, Personal |
-| Ctrl+Alt+0 | all services (no workspace) |
-| Ctrl+1..9 | tab 1..9 of the current workspace (past 9: Ctrl+1 then Ctrl+Tab) |
-| Ctrl+Tab / Ctrl+Shift+Tab | next / previous tab |
-| Ctrl+S | quick switch by name |
-| Alt+W | workspaces drawer |
-| Ctrl+R / Ctrl+Shift+R | reload this service / reload Ferdium |
-| Ctrl+Shift+H | service home page |
-| Ctrl+F | find in page |
-| Alt+Left / Alt+Right | back / forward |
-| Ctrl+Q | quits Ferdium: never press it unless asked |
-- `ferdium-go <service|workspace|number>` does the whole thing ("ferdium-go youtube" = Super+F, Ctrl+Alt+9, Ctrl+1).
-- `ferdium-go --map` prints the live layout (workspace number, tab number, service); tab order follows Hani's drags.
 
 **kitty** (Hani's terminal, Hani's own mapping): Ctrl+Shift+T new tab here, Ctrl+Tab / Ctrl+Shift+Tab next / previous
 tab, Ctrl+Shift+Q close tab (ask first), Ctrl+Shift+Enter split horizontally, Ctrl+Shift+\ split vertically,
@@ -122,13 +104,11 @@ s screenshot, > / < next / previous file, q quit (keeps the position).
 trash (ask first). **Foliate** (ebooks): Left/Right or Space page, Ctrl+F search, Ctrl+B bookmarks, F11 fullscreen.
 
 ## Apps
-- Desktop apps: kitty, Helium (browser), VSCodium, Ferdium, Dolphin (files), Kate, Calibre, Foliate (ebooks), Zotero,
+- Desktop apps: kitty, Helium (browser), VSCodium, Dolphin (files), Kate, Calibre, Foliate (ebooks), Zotero,
   OnlyOffice, Audacity, mpv, Snapshot (camera), LocalSend, the Craft suite (PhotoCraft, VectorCraft, FilmCraft,
   LightCraft, PrintCraft, EffectCraft, DesignCraft), Meetily (meeting notes), Handy (dictation), Mission Center.
-- App windows (Helium `--app`, open with place by name): YouTube Music, Microsoft Teams, Zoom, Notes (SilverBullet), Jellyfin, Seerr, Sonarr, Radarr, Lidarr, Prowlarr, Bazarr, SABnzbd, qBittorrent, Jellystat, ErsatzTV, Dispatcharr, Immich, Paperless, n8n, Sink (bts.ad), Vaultwarden, FreshRSS, SearXNG, IT-Tools, ExcaliDash, draw.io, OpenSpeedTest, Kasm, Arcane, Authentik, AdGuard Home, Headlamp (k3s), Proxmox, UniFi, Tailscale, Grafana, Dozzle, Beszel, Uptime Kuma, Pulse, ntopng, Activepieces, Stirling PDF, Files (FileBrowser).
-- Ferdium (Super+F) holds the web inboxes and chats in workspaces: Comms (WhatsApp, Discord, Telegram, Slack, Teams),
-  Inbox (Outlook, Gmail x3, Proton, Cal.com, LinkedIn, Upwork), Code, Infra, Monitor, UNE, Study, Admin, Personal.
-  It has no command line: `place focus ferdium`, then tell Hani which workspace to pick.
+- App windows come from `~/.local/share/chrome-apps/apps.tsv` and open with `place` by name. They include LinkedIn, Upwork, Proton Mail, Cal.com, Reddit, UNE Outlook, UniFi, Beszel, Uptime Kuma, Arcane, Proxmox, Dozzle and NetBird.
+- WhatsApp, Telegram, Slack, Teams and Discord are pinned tabs in the main Helium window, not app windows.
 
 ## When voice misbehaves
 - "it didn't hear me / typed half": `journalctl -t handy-ptt -n 20` (key presses and starts/stops) and
@@ -138,11 +118,10 @@ trash (ask first). **Foliate** (ebooks): Left/Right or Space page, Ctrl+F search
 - Report what the logs say in one or two lines; don't change settings unless Hani asks.
 
 ## Check before you say it worked
-Never report success from the command alone. After acting, look: `hyprctl activewindow -j` (class and title: Ferdium's
-title is "Ferdium - <service> - ..."), `hyprctl clients -j` for where a window landed, `playerctl status` for media.
-If it did not happen, say so plainly and what you saw. `ferdium-go` and `place` already check and exit non-zero when
-they fail: read their output. Keys only reach the focused window, and this panel holds the keyboard while it is
-shown, so focus the target first (place / ferdium-go do).
+Never report success from the command alone. After acting, look: `hyprctl activewindow -j` for the class and title,
+`hyprctl clients -j` for where a window landed, and `playerctl status` for media. If it did not happen, say so plainly
+and what you saw. `place` already checks and exits non-zero when it fails, so read its output. Keys only reach the
+focused window, and this panel holds the keyboard while it is shown, so focus the target first.
 If Hani's words arrive in another language or look garbled (a wrong-language transcript), don't translate and act:
 ask what was meant.
 

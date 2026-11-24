@@ -3,7 +3,7 @@
 # h1n054ur desktop: install CachyOS (Hyprland edition), then run this. Sets up the whole two-screen desktop,
 # or only the pieces you pick.
 #   ./install.sh                       interactive: pick components, pick your main screen, watch it install
-#   ./install.sh --profile laptop      one-screen laptop, without Ferdium or WinApps
+#   ./install.sh --profile laptop      one-screen laptop, without WinApps
 #   ./install.sh theme plugins --yes   only those components, no questions
 #   ./install.sh all --yes             everything
 #   ./install.sh --dry-run             walk through it without changing anything
@@ -46,14 +46,15 @@ case $PROFILE in desktop|laptop) ;; *) echo "unknown profile: $PROFILE (desktop 
 
 # Lock and login are last. That leaves the recovery path in place until every user-session piece is installed.
 if [ "$PROFILE" = laptop ]; then
-  ORDER=(packages screens hyprland theme plugins claude terminal kitty claudecode voice lock login)
+  ORDER=(packages screens hyprland appwindows theme plugins claude terminal kitty claudecode voice lock login)
 else
-  ORDER=(packages screens hyprland theme plugins claude terminal kitty claudecode lock login)
+  ORDER=(packages screens hyprland appwindows theme plugins claude terminal kitty claudecode lock login)
 fi
 declare -A DESC PICK
 DESC[packages]="the software, by group (asks which groups)"
 DESC[screens]="detect your screens; pick the main (left) one"
 DESC[hyprland]="Hyprland config: workspaces, keybinds, border"
+DESC[appwindows]="Helium app-window launchers from the checked-in list"
 DESC[theme]="Noctalia look: floating pills, panels, palette, glow icons"
 DESC[plugins]="bar plugins: stats, weather, volume, network, titles"
 DESC[claude]="AI usage in the right screen's bar: Claude sessions, Codex and Muse limits"
@@ -169,7 +170,7 @@ write_host_file() {
   local body
   if [ "$SINGLE" = 1 ]; then
     if [ "$PROFILE" = laptop ]; then
-      body=$(printf -- '-- written by h1n054ur install.sh (%s): laptop profile\nLAPTOP_PROFILE = true\nWORKSPACE_COUNT = 5\nFERDIUM_ENABLED = false\nWINAPPS_ENABLED = false\nMAIN_SCREEN = "%s"\nSIDE_SCREEN = MAIN_SCREEN\nKITTY_WORKSPACE = "2"\n\nhl.monitor({ output = MAIN_SCREEN, mode = "preferred", position = "0x0", scale = "1" })\n' "$STAMP" "$MAIN_OUTPUT")
+      body=$(printf -- '-- written by h1n054ur install.sh (%s): laptop profile\nLAPTOP_PROFILE = true\nWORKSPACE_COUNT = 5\nWINAPPS_ENABLED = false\nMAIN_SCREEN = "%s"\nSIDE_SCREEN = MAIN_SCREEN\n\nhl.monitor({ output = MAIN_SCREEN, mode = "preferred", position = "0x0", scale = "1" })\n' "$STAMP" "$MAIN_OUTPUT")
     else
       body=$(printf -- '-- written by h1n054ur install.sh (%s): one screen, so both roles use it\nMAIN_SCREEN = "desc:%s"\nSIDE_SCREEN = MAIN_SCREEN\nKITTY_WORKSPACE = "2"\n' "$STAMP" "$MAIN_DESC")
     fi
@@ -190,6 +191,16 @@ if want hyprland; then
   write_host_file
 elif want screens; then
   step "screens"; write_host_file
+fi
+
+if want appwindows; then
+  step "app windows"
+  appwindows_dir="$HOME/.local/share/chrome-apps"
+  act "install the Helium app-window list and builder" bash -c '
+    mkdir -p "$2"
+    install -m 644 "$1/apps.tsv" "$2/apps.tsv"
+    install -m 755 "$1/build.py" "$2/build.py"' _ "$HERE/chrome-apps" "$appwindows_dir"
+  act "build the Helium app-window launchers" "$appwindows_dir/build.py"
 fi
 
 if want theme; then
@@ -275,11 +286,6 @@ if want voice; then
     link "$HERE/setup/bin/$p" "$HOME/.local/bin/$p"
   done
   link "$HERE/setup/assistant/handy-guard.service" "$HOME/.config/systemd/user/handy-guard.service"
-  if [ "$PROFILE" = desktop ]; then
-    link "$HERE/setup/bin/ferdium-go" "$HOME/.local/bin/ferdium-go"
-  elif [ -e "$HOME/.local/bin/ferdium-go" ] || [ -L "$HOME/.local/bin/ferdium-go" ]; then
-    backup "$HOME/.local/bin/ferdium-go"
-  fi
   handy_cfg="$HOME/.local/share/com.pais.handy/settings_store.json"
   [ -f "$handy_cfg" ] && act "back up Handy settings" cp "$handy_cfg" "$handy_cfg.bak-$STAMP"
   act "configure Handy for Right Alt and handy-out" bash -c '
@@ -289,13 +295,6 @@ if want voice; then
     else jq -n --arg script "$2" "{settings:{start_hidden:true,autostart_enabled:false,overlay_position:\"none\",paste_method:\"external_script\",external_script_path:\$script}}" > "$out"; fi
     mv "$out" "$cfg"' _ "$handy_cfg" "$HOME/.local/bin/handy-out"
   act "enable the speech and dictation guard services" systemctl --user enable --now speak-tts.service handy-guard.service
-fi
-
-# The laptop never starts Ferdium, even if a user autostart file survived the old installation.
-if [ "$PROFILE" = laptop ] && { want packages || want hyprland || want voice; }; then
-  ferdium_autostart="$HOME/.config/autostart/ferdium.desktop"
-  [ -e "$ferdium_autostart" ] && backup "$ferdium_autostart"
-  act "disable Ferdium autostart for the laptop profile" bash -c 'mkdir -p "$(dirname "$1")"; printf "[Desktop Entry]\nType=Application\nName=Ferdium\nHidden=true\n" > "$1"' _ "$ferdium_autostart"
 fi
 
 # Login and lock are deliberately applied after every ordinary session component.
